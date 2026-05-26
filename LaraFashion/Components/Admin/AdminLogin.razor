@@ -1,0 +1,60 @@
+﻿@page "/admin/login"
+
+@inject LaraFashion.Services.AdminAuthService AdminAuthService
+@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject NavigationManager Navigation
+
+<div class="admin-login-page">
+
+    <div class="admin-login-card">
+
+        <h1>Admin Login</h1>
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="checkout-error">
+                @ErrorMessage
+            </div>
+        }
+
+        <div class="form-group">
+            <label>Username</label>
+            <input @bind="Username" />
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" @bind="Password" />
+        </div>
+
+        <button class="checkout-button"
+                @onclick="Login">
+            Login
+        </button>
+
+    </div>
+
+</div>
+
+@code {
+    private string Username = string.Empty;
+    private string Password = string.Empty;
+    private string ErrorMessage = string.Empty;
+
+    private async Task Login()
+    {
+        ErrorMessage = string.Empty;
+
+        var token = await AdminAuthService.LoginAsync(Username, Password);
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            ErrorMessage = "Invalid username or password.";
+            return;
+        }
+
+        await BrowserStorageService.SetItemAsync("admin_token", token);
+
+        Navigation.NavigateTo("/admin/orders");
+    }
+}

@@ -1,0 +1,234 @@
+﻿@page "/admin/orders"
+
+@using LaraFashion.Models
+@using LaraFashion.Models.Enums
+@using LaraFashion.Services
+
+@inject OrderService OrderService
+@inject LaraFashion.Services.AdminAuthService AdminAuthService
+@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject NavigationManager Navigation
+
+<PageTitle>Orders</PageTitle>
+
+@if (IsCheckingAuth)
+{
+    <div class="empty-cart">
+        Checking admin access...
+    </div>
+
+    return;
+}
+
+<button class="logout-button"
+        @onclick="Logout">
+    Logout
+</button>
+
+<h2 class="mb-4">Orders</h2>
+
+@if (orders.Count == 0)
+{
+    <div class="empty-cart-card">
+        <p>No orders yet</p>
+    </div>
+}
+else
+{
+    <div class="orders-grid">
+        @foreach (var order in orders)
+        {
+            <div class="order-card" @onclick="() => OpenOrder(order.Id)">
+                <div class="order-header">
+                    <h4>@order.OrderNumber</h4>
+
+                    <span class="status-badge">
+                        @GetStatusText(order.Status)
+                    </span>
+                </div>
+
+                <div class="order-info">
+                    <p><strong>Customer:</strong> @order.Customer.FullName</p>
+                    <p><strong>Phone:</strong> @order.Customer.PhoneNumber</p>
+                    <p><strong>Total:</strong> ₪@order.TotalPrice</p>
+                    <p><strong>Products:</strong> @order.Items.Count</p>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (selectedOrder is not null)
+{
+    <div class="modal-overlay">
+        <div class="order-modal">
+
+            <button class="close-btn"
+                    @onclick="CloseModal">
+                ×
+            </button>
+
+            <h2>@selectedOrder.OrderNumber</h2>
+
+            <p>
+                <strong>Created:</strong>
+                @selectedOrder.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+            </p>
+
+            <p>
+                <strong>Last Update:</strong>
+                @selectedOrder.UpdatedAt.ToString("dd/MM/yyyy HH:mm")
+            </p>
+
+            <hr />
+
+            <h3>Customer Info</h3>
+
+            <p><strong>Name:</strong> @selectedOrder.Customer.FullName</p>
+            <p><strong>Phone:</strong> @selectedOrder.Customer.PhoneNumber</p>
+            <p><strong>City:</strong> @selectedOrder.Customer.City</p>
+            <p><strong>Street:</strong> @selectedOrder.Customer.Street</p>
+            <p><strong>House Number:</strong> @selectedOrder.Customer.HouseNumber</p>
+
+            <hr />
+
+            <h3>Products</h3>
+
+            @foreach (var item in selectedOrder.Items)
+            {
+                <div class="product-row">
+
+                    <img src="@item.ProductImageUrl"
+                         class="admin-order-item-image" />
+
+                    <div>
+                        <h4>@item.ProductName</h4>
+
+                        <p>SN: @item.ProductSerialNumber</p>
+
+                        <p>Size: @item.Size</p>
+
+                        <p>Quantity: @item.Quantity</p>
+
+                        <p>Unit Price: ₪@item.UnitPrice</p>
+
+                        <p>Total: ₪@item.TotalPrice</p>
+                    </div>
+
+                </div>
+            }
+
+            <h3>Total: ₪@selectedOrder.TotalPrice</h3>
+
+            <hr />
+
+            <h3>Status</h3>
+
+            <select class="form-select"
+                    @bind="selectedStatus">
+
+                @foreach (var status in Enum.GetValues<OrderStatus>())
+                {
+                    <option value="@status">
+                        @GetStatusText(status)
+                    </option>
+                }
+
+            </select>
+
+            <button class="send-order-btn mt-3"
+                    @onclick="SaveStatus">
+                Save Status
+            </button>
+
+        </div>
+    </div>
+}
+
+@code {
+
+    private bool IsCheckingAuth = true;
+    private bool HasAccess;
+
+    private List<Order> orders = new();
+
+    private Order? selectedOrder;
+
+    private OrderStatus selectedStatus;
+
+    protected override Task OnInitializedAsync()
+    {
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenOrder(Guid id)
+    {
+        selectedOrder = await OrderService.GetOrderAsync(id);
+
+        if (selectedOrder is not null)
+        {
+            selectedStatus = selectedOrder.Status;
+        }
+    }
+
+    private void CloseModal()
+    {
+        selectedOrder = null;
+    }
+
+    private async Task SaveStatus()
+    {
+        if (selectedOrder is null)
+            return;
+
+        await OrderService.UpdateStatusAsync(
+            selectedOrder.Id,
+            selectedStatus);
+
+        orders = await OrderService.GetOrdersAsync();
+
+        selectedOrder = await OrderService.GetOrderAsync(selectedOrder.Id);
+    }
+
+    private string GetStatusText(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.New => "جديد",
+            OrderStatus.Preparing => "قيد التحضير",
+            OrderStatus.Ready => "جاهز",
+            OrderStatus.Shipped => "تم الإرسال",
+            OrderStatus.Cancelled => "ملغاة",
+            _ => status.ToString()
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var token = await BrowserStorageService.GetItemAsync("admin_token");
+
+        if (string.IsNullOrWhiteSpace(token) ||
+            !AdminAuthService.IsTokenValid(token))
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        HasAccess = true;
+        IsCheckingAuth = false;
+
+        orders = await OrderService.GetOrdersAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Logout()
+    {
+        await BrowserStorageService.RemoveItemAsync("admin_token");
+
+        Navigation.NavigateTo("/admin/login");
+    }
+}

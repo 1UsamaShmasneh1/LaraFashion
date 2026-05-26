@@ -1,0 +1,109 @@
+﻿@using LaraFashion.Models
+
+@if (IsOpen)
+{
+    <div class="modal-overlay">
+        <div class="checkout-modal">
+
+            <h2>Confirm Order</h2>
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="checkout-error">
+                    @ErrorMessage
+                </div>
+            }
+
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input @bind="Customer.FullName" />
+            </div>
+
+            <div class="form-group">
+                <label>Phone Number *</label>
+                <input @bind="Customer.PhoneNumber" />
+            </div>
+
+            <div class="form-group">
+                <label>City *</label>
+                <input @bind="Customer.City" />
+            </div>
+
+            <div class="form-group">
+                <label>Street</label>
+                <input @bind="Customer.Street" />
+            </div>
+
+            <div class="form-group">
+                <label>House Number</label>
+                <input @bind="Customer.HouseNumber" />
+            </div>
+
+            <div class="delivery-note-box">
+                <strong>Confirmation</strong>
+
+                <div>
+                    التوصيل متاح لجميع مناطق الضفة والداخل:
+                </div>
+
+                <div>الضفة: ٣٠ شيقل.</div>
+                <div>الداخل: ٥٠ شيقل.</div>
+                <div>الداخل الشمالي والجنوبي: ٧٠ شيقل.</div>
+
+                <label class="confirmation-check">
+                    <input type="checkbox" @bind="IsDeliveryConfirmed" />
+                    أوافق بعد قراءة الملاحظة
+                </label>
+            </div>
+
+            <div class="checkout-buttons">
+                <button class="continue-shopping-button"
+                        @onclick="BackToCart">
+                    Back To Cart
+                </button>
+
+                <button class="checkout-button"
+                        @onclick="ConfirmOrder">
+                    Confirm Order
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<CustomerInfo> OnConfirm { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private CustomerInfo Customer { get; set; } = new();
+    private bool IsDeliveryConfirmed;
+    private string ErrorMessage = string.Empty;
+
+    private async Task ConfirmOrder()
+    {
+        ErrorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(Customer.FullName) ||
+            string.IsNullOrWhiteSpace(Customer.PhoneNumber) ||
+            string.IsNullOrWhiteSpace(Customer.City))
+        {
+            ErrorMessage = "Full Name, Phone Number, and City are required.";
+            return;
+        }
+
+        if (!IsDeliveryConfirmed)
+        {
+            ErrorMessage = "You must confirm the delivery note.";
+            return;
+        }
+
+        await OnConfirm.InvokeAsync(Customer);
+    }
+
+    private async Task BackToCart()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

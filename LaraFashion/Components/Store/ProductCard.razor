@@ -1,0 +1,72 @@
+﻿@using LaraFashion.Models
+
+<div class="product-card">
+
+    <div class="product-image-container">
+
+        <img src="@Product.ImageUrl"
+             class="product-image" />
+
+        @if (Product.DiscountType != LaraFashion.Models.Enums.DiscountType.None)
+        {
+            <div class="discount-badge">
+
+                @if (Product.DiscountType == LaraFashion.Models.Enums.DiscountType.Percent)
+                {
+                    <span>
+                        -@Product.DiscountValue%
+                    </span>
+                }
+                else
+                {
+                    <span>
+                        Sale
+                    </span>
+                }
+
+            </div>
+        }
+
+    </div>
+
+    <div class="product-content">
+
+        <div class="product-name">
+            @Product.Name
+        </div>
+
+        <div class="product-serial">
+            SN: @Product.SerialNumber
+        </div>
+
+        <div class="product-price-container">
+
+            @if (Product.DiscountType != LaraFashion.Models.Enums.DiscountType.None)
+            {
+                <div class="old-price">
+                    ₪@Product.OriginalPrice
+                </div>
+            }
+
+            <div class="final-price">
+                ₪@Product.FinalPrice
+            </div>
+
+        </div>
+
+        <button class="view-product-button">
+
+            View Product
+
+        </button>
+
+    </div>
+
+</div>
+
+@code {
+
+    [Parameter]
+    public Product Product { get; set; } = new();
+
+}

@@ -1,0 +1,74 @@
+﻿@page "/"
+
+@using LaraFashion.Models
+@using LaraFashion.Components.Store
+@using LaraFashion.Components.Modals
+
+@inject LaraFashion.Services.ProductService ProductService
+
+<h1 class="home-title">
+    Latest Products
+</h1>
+
+@if (IsLoading)
+{
+    <div class="empty-cart">
+        Loading products...
+    </div>
+}
+else if (!Products.Any())
+{
+    <div class="empty-cart">
+        No products available yet
+    </div>
+}
+else
+{
+    <div class="products-grid">
+
+        @foreach (var product in Products)
+        {
+            <div @onclick="(() => OpenProduct(product))">
+
+                <ProductCard Product="product" />
+
+            </div>
+        }
+
+    </div>
+}
+
+<ProductModal IsOpen="IsModalOpen"
+              Product="SelectedProduct"
+              OnClose="CloseModal" />
+
+@code {
+    private bool IsLoading = true;
+
+    private bool IsModalOpen;
+
+    private Product SelectedProduct = new();
+
+    private List<Product> Products = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Products = await ProductService.GetActiveProductsAsync();
+
+        IsLoading = false;
+    }
+
+    private void OpenProduct(Product product)
+    {
+        SelectedProduct = product;
+
+        IsModalOpen = true;
+    }
+
+    private Task CloseModal()
+    {
+        IsModalOpen = false;
+
+        return Task.CompletedTask;
+    }
+}

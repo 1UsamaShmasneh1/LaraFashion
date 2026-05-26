@@ -1,0 +1,35 @@
+﻿@inject NavigationManager Navigation
+@inject LaraFashion.Services.CartService CartService
+
+@implements IDisposable
+
+<div class="cart-button"
+     @onclick="OpenCart">
+
+    Cart (@CartService.TotalItems)
+
+</div>
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        CartService.OnChange += Refresh;
+    }
+
+    private void OpenCart()
+    {
+        Navigation.NavigateTo("/cart");
+    }
+
+    private void Refresh()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CartService.OnChange -= Refresh;
+    }
+
+}

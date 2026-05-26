@@ -1,0 +1,40 @@
+﻿@inherits LayoutComponentBase
+@using LaraFashion.Components.Cart
+
+<div class="main-layout">
+
+    <header class="store-header">
+
+        <div class="logo-container">
+
+            <img src="images/logo.png"
+                 alt="LaraFashion Logo"
+                 class="store-logo" />
+
+            <div class="store-title">
+                LaraFashion
+            </div>
+
+        </div>
+
+        <div style="display:flex; gap:15px; align-items:center;">
+
+            <CartButton />
+
+            <a class="whatsapp-button"
+               href="https://wa.me/972000000000"
+               target="_blank">
+
+                WhatsApp
+
+            </a>
+
+        </div>
+
+    </header>
+
+    <main class="main-content">
+        @Body
+    </main>
+
+</div>

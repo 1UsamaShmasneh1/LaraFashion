@@ -1,0 +1,222 @@
+﻿@using LaraFashion.Components.Modals
+@using LaraFashion.Models
+
+@page "/cart"
+
+@inject LaraFashion.Services.CartService CartService
+@inject LaraFashion.Services.OrderService OrderService
+
+@inject NavigationManager Navigation
+
+<h1 class="cart-page-title">
+
+    Shopping Cart
+
+</h1>
+
+@if (!CartService.Items.Any())
+{
+    <div class="empty-cart">
+
+        <div>
+            Your cart is empty
+        </div>
+
+        <button class="continue-shopping-button"
+                @onclick="ContinueShopping">
+            Continue Shopping
+        </button>
+
+    </div>
+}
+else
+{
+    <div class="cart-items-container">
+
+        @foreach (var item in CartService.Items)
+        {
+            <div class="cart-item-card">
+
+                <img src="@item.ProductImageUrl"
+                     class="cart-item-image" />
+
+                <div class="cart-item-content">
+
+                    <div class="cart-item-name">
+                        @item.ProductName
+                    </div>
+
+                    <div class="cart-item-serial">
+                        SN: @item.ProductSerialNumber
+                    </div>
+
+                    <div class="cart-item-size">
+                        Size: @item.Size
+                    </div>
+
+                    <div class="cart-item-price">
+                        ₪@item.UnitPrice
+                    </div>
+
+                </div>
+
+                <div class="cart-item-actions">
+
+                    <div class="cart-quantity-container">
+
+                        <button class="quantity-button"
+                                @onclick="(() => Decrease(item))">
+
+                            -
+
+                        </button>
+
+                        <span class="quantity-value">
+
+                            @item.Quantity
+
+                        </span>
+
+                        <button class="quantity-button"
+                                @onclick="(() => Increase(item))">
+
+                            +
+
+                        </button>
+
+                    </div>
+
+                    <div class="cart-total-price">
+
+                        ₪@item.TotalPrice
+
+                    </div>
+
+                    <button class="remove-item-button"
+                            @onclick="(() => Remove(item))">
+
+                        Remove
+
+                    </button>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+
+    <div class="cart-summary">
+
+        <div class="cart-summary-total">
+
+            Total:
+            ₪@CartService.TotalPrice
+
+            <div class="delivery-price-note">
+                السعر لا يشمل التوصيل
+            </div>
+
+        </div>
+
+        <div style="display:flex; gap:15px;">
+
+            <button class="continue-shopping-button"
+                    @onclick="ContinueShopping">
+                Continue Shopping
+            </button>
+
+            <button class="checkout-button"
+                    @onclick="OpenCheckout">
+                Send Order
+            </button>
+
+        </div>
+
+    </div>
+
+
+}
+
+<CheckoutModal IsOpen="IsCheckoutOpen"
+                OnClose="CloseCheckout"
+                OnConfirm="ConfirmOrder" />
+
+@if (IsOrderSuccess)
+{
+    <div class="modal-overlay">
+        <div class="success-modal">
+
+            <h2>Order Sent Successfully</h2>
+
+            <p dir="rtl" class="success-message-ar">
+                تم إرسال الطلب بنجاح.
+                <br />
+                سيتم التواصل معك عبر تطبيق واتساب عند استلام الطلب وتجهيزه من قبل البائع.
+            </p>
+
+            <button class="checkout-button"
+                    @onclick="CloseSuccess">
+                OK
+            </button>
+
+        </div>
+    </div>
+}
+
+@code {
+    private bool IsOrderSuccess;
+    private bool IsCheckoutOpen;
+
+    private void Remove(LaraFashion.Models.CartItem item)
+    {
+        CartService.RemoveItem(item);
+    }
+
+    private void Increase(LaraFashion.Models.CartItem item)
+    {
+        CartService.IncreaseQuantity(item);
+    }
+
+    private void Decrease(LaraFashion.Models.CartItem item)
+    {
+        CartService.DecreaseQuantity(item);
+    }
+
+    private void ContinueShopping()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void OpenCheckout()
+    {
+        IsCheckoutOpen = true;
+    }
+
+    private Task CloseCheckout()
+    {
+        IsCheckoutOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmOrder(CustomerInfo customer)
+    {
+        await OrderService.CreateOrderAsync(
+            customer,
+            CartService.Items.ToList());
+
+        IsCheckoutOpen = false;
+
+        CartService.Clear();
+
+        IsOrderSuccess = true;
+    }
+
+    private void CloseSuccess()
+    {
+        IsOrderSuccess = false;
+
+        Navigation.NavigateTo("/");
+    }
+
+}

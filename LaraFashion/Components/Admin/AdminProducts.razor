@@ -1,0 +1,366 @@
+﻿@page "/admin/products"
+
+@using LaraFashion.Models
+@using LaraFashion.Models.Enums
+@using SkiaSharp
+
+@inject IWebHostEnvironment WebHostEnvironment
+@inject LaraFashion.Services.ProductService ProductService
+@inject LaraFashion.Services.AdminAuthService AdminAuthService
+@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject NavigationManager Navigation
+
+<h1 class="admin-page-title">
+    Products
+</h1>
+
+<button class="checkout-button admin-add-product-button"
+        @onclick="OpenAddModal">
+    Add Product
+</button>
+
+@if (IsLoading)
+{
+    <div class="empty-cart">
+        Loading...
+    </div>
+}
+else if (!Products.Any())
+{
+    <div class="empty-cart">
+        No products found
+    </div>
+}
+else
+{
+    <div class="products-grid">
+
+        @foreach (var product in Products)
+        {
+            <div class="product-card">
+
+                <div class="product-image-container">
+
+                    <img src="@product.ImageUrl"
+                         class="product-image" />
+
+                </div>
+
+                <div class="product-content">
+
+                    <div class="product-name">
+                        @product.Name
+                    </div>
+
+                    <div class="product-serial">
+                        SN: @product.SerialNumber
+                    </div>
+
+                    <div class="final-price">
+                        ₪@product.FinalPrice
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button class="continue-shopping-button"
+                                @onclick="(() => OpenEditModal(product))">
+                            Edit
+                        </button>
+
+                        <button class="remove-item-button"
+                                @onclick="(() => DeleteProduct(product.Id))">
+                            Delete
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </div>
+}
+
+@if (IsAddModalOpen)
+{
+    <div class="modal-overlay">
+
+        <div class="checkout-modal" @onclick:stopPropagation="true">
+
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="checkout-error">
+                    @ErrorMessage
+                </div>
+            }
+
+            <h2>@(IsEditMode ? "Edit Product" : "Add Product")</h2>
+
+            <div class="form-group">
+                <label>Name</label>
+                <input @bind="NewProduct.Name" />
+            </div>
+
+            <div class="form-group">
+                <label>Serial Number</label>
+                <input @bind="NewProduct.SerialNumber" />
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <input @bind="NewProduct.Description" />
+            </div>
+
+            <div class="form-group">
+                <label>Price</label>
+                <input type="number"
+                       @bind="NewProduct.OriginalPrice" />
+            </div>
+
+            <div class="form-group">
+                <label>Discount Type</label>
+
+                <select @bind="NewProduct.DiscountType"
+                        class="form-select">
+
+                    <option value="@DiscountType.None">None</option>
+                    <option value="@DiscountType.Percent">Percent</option>
+                    <option value="@DiscountType.FixedPrice">Fixed Price</option>
+
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Discount Value</label>
+
+                <input type="number"
+                       @bind="NewProduct.DiscountValue" />
+            </div>
+
+            <div class="form-group">
+                <label>Image</label>
+
+                <InputFile OnChange="OnImageSelected" />
+            </div>
+
+            <h3>Sizes</h3>
+
+            @foreach (var size in NewProduct.Sizes)
+            {
+                <div class="size-admin-row">
+
+                    <input placeholder="Size"
+                           @bind="size.SizeName" />
+
+                    <input type="number"
+                           placeholder="Quantity"
+                           @bind="size.Quantity" />
+
+                </div>
+            }
+
+            <button type="button"
+                    class="continue-shopping-button mb-3"
+                    @onclick="AddSize">
+                Add Size
+            </button>
+
+            <div class="checkout-buttons">
+
+                <button type="button"
+                        class="continue-shopping-button"
+                        @onclick="CloseAddModal">
+                    Cancel
+                </button>
+
+                <button type="button"
+                        class="checkout-button"
+                        disabled="@IsSaving"
+                        @onclick="SaveProduct">
+                    @(IsSaving ? "Saving..." : IsEditMode ? "Update Product" : "Save Product")
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+
+@code {
+
+    private bool IsLoading = true;
+
+    private bool IsAddModalOpen;
+
+    private bool IsEditMode;
+
+    private string ErrorMessage = string.Empty;
+    
+    private bool IsSaving;
+
+    private List<Product> Products = new();
+
+    private Product NewProduct = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var token =
+            await BrowserStorageService.GetItemAsync("admin_token");
+
+        if (string.IsNullOrWhiteSpace(token) ||
+            !AdminAuthService.IsTokenValid(token))
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        await LoadProducts();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadProducts()
+    {
+        Products = await ProductService.GetAllProductsAsync();
+
+        IsLoading = false;
+    }
+
+    private void OpenAddModal()
+    {
+        IsEditMode = false;
+
+        NewProduct = new Product
+        {
+            Sizes = new()
+        };
+
+        IsAddModalOpen = true;
+    }
+
+    private void CloseAddModal()
+    {
+        IsAddModalOpen = false;
+        IsEditMode = false;
+        NewProduct = new Product();
+
+        StateHasChanged();
+    }
+
+    private void AddSize()
+    {
+        NewProduct.Sizes.Add(new ProductSize());
+    }
+
+    private async Task SaveProduct()
+    {
+        if (IsSaving)
+            return;
+
+        try
+        {
+            IsSaving = true;
+            ErrorMessage = string.Empty;
+
+            if (IsEditMode)
+            {
+                await ProductService.UpdateProductWithSizesAsync(NewProduct);
+            }
+            else
+            {
+                await ProductService.AddProductAsync(NewProduct);
+            }
+
+            IsAddModalOpen = false;
+            IsEditMode = false;
+            NewProduct = new Product();
+
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsSaving = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OpenEditModal(Product product)
+    {
+        IsEditMode = true;
+
+        NewProduct = new Product
+        {
+            Id = product.Id,
+            Name = product.Name,
+            SerialNumber = product.SerialNumber,
+            Description = product.Description,
+            OriginalPrice = product.OriginalPrice,
+            DiscountType = product.DiscountType,
+            DiscountValue = product.DiscountValue,
+            ImageUrl = product.ImageUrl,
+            IsActive = product.IsActive,
+            Sizes = product.Sizes.Select(x => new ProductSize
+            {
+                Id = x.Id,
+                ProductId = x.ProductId,
+                SizeName = x.SizeName,
+                Quantity = x.Quantity
+            }).ToList()
+        };
+
+        IsAddModalOpen = true;
+    }
+
+    private async Task DeleteProduct(Guid id)
+    {
+        await ProductService.DeleteProductAsync(id);
+
+        await LoadProducts();
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        using var stream = file.OpenReadStream(10 * 1024 * 1024);
+
+        using var memoryStream = new MemoryStream();
+
+        await stream.CopyToAsync(memoryStream);
+
+        var originalBytes = memoryStream.ToArray();
+
+        using var bitmap = SKBitmap.Decode(originalBytes);
+
+        using var image = SKImage.FromBitmap(bitmap);
+
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+        var uploadsFolder = Path.Combine(
+            WebHostEnvironment.WebRootPath,
+            "uploads");
+
+        if (!Directory.Exists(uploadsFolder))
+        {
+            Directory.CreateDirectory(uploadsFolder);
+        }
+
+        var fileName = $"{Guid.NewGuid()}.png";
+
+        var fullPath = Path.Combine(uploadsFolder, fileName);
+
+        await using var fileStream = File.OpenWrite(fullPath);
+
+        data.SaveTo(fileStream);
+
+        NewProduct.ImageUrl = $"/uploads/{fileName}";
+    }
+
+}

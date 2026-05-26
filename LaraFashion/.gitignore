@@ -1,0 +1,15 @@
+.vs/
+bin/
+obj/
+
+# Database
+/Data/*.db
+/Data/*.db-shm
+/Data/*.db-wal
+
+# Uploaded product images
+/wwwroot/uploads/*
+!/wwwroot/uploads/.gitkeep
+
+# Secrets
+appsettings.Development.json
