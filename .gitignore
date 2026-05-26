@@ -1,0 +1,14 @@
+.vs/
+*.slnx
+
+**/bin/
+**/obj/
+
+LaraFashion/Data/*.db
+LaraFashion/Data/*.db-shm
+LaraFashion/Data/*.db-wal
+
+LaraFashion/wwwroot/uploads/*
+!LaraFashion/wwwroot/uploads/.gitkeep
+
+**/appsettings.Development.json
