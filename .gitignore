@@ -8,6 +8,8 @@ LaraFashion/Data/*.db
 LaraFashion/Data/*.db-shm
 LaraFashion/Data/*.db-wal
 
+ssh-key.key
+
 LaraFashion/wwwroot/uploads/*
 !LaraFashion/wwwroot/uploads/.gitkeep
 
