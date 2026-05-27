@@ -15,6 +15,6 @@ jobs:
         with:
           host: 158.178.131.94
           username: ubuntu
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
             /home/ubuntu/deploy-larafashion.sh
