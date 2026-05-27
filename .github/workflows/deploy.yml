@@ -1,0 +1,20 @@
+name: Deploy LaraFashion
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Oracle Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 158.178.131.94
+          username: ubuntu
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            /home/ubuntu/deploy-larafashion.sh
