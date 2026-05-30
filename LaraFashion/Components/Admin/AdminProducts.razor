@@ -161,7 +161,7 @@ else
                         <label class="discount-check-row">
                             <input type="checkbox"
                                    checked="@SelectedDiscountIds.Contains(discount.Id)"
-                                   @onchange="((e) => ToggleDiscount(discount.Id, e))" />
+                                   @onchange="e => ToggleDiscount(discount.Id, e.Value)" />
 
                             <span>
                                 @discount.Name -
@@ -417,9 +417,9 @@ else
         NewProduct.ImageUrl = $"/uploads/{fileName}";
     }
 
-    private void ToggleDiscount(Guid discountId, ChangeEventArgs e)
+    private void ToggleDiscount(Guid discountId, object? value)
     {
-        var isChecked = e.Value is bool value && value;
+        var isChecked = value is bool b && b;
 
         if (isChecked)
         {
