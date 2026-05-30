@@ -301,7 +301,7 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
-            if (IsEditMode)
+            if (IsEditMode && NewProduct.Id != Guid.Empty)
             {
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
@@ -315,6 +315,7 @@ else
             IsAddModalOpen = false;
             IsEditMode = false;
             NewProduct = new Product();
+            SelectedDiscountIds = new();
 
             await LoadProducts();
         }
