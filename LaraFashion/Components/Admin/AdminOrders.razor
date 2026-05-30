@@ -52,7 +52,14 @@ else
                 <div class="order-info">
                     <p><strong>Customer:</strong> @order.Customer.FullName</p>
                     <p><strong>Phone:</strong> @order.Customer.PhoneNumber</p>
-                    <p><strong>Total:</strong> ₪@order.TotalPrice</p>
+                    <p>
+                        <strong>Total:</strong>
+                        ₪@(
+                        order.FinalTotal > 0
+                            ? order.FinalTotal
+                            : order.TotalPrice
+                        )
+                    </p>
                     <p><strong>Products:</strong> @order.Items.Count</p>
                 </div>
             </div>
@@ -131,7 +138,18 @@ else
                 </div>
             }
 
-            <h3>Total: ₪@selectedOrder.TotalPrice</h3>
+            <div>السعر قبل التخفيض: ₪@selectedOrder.OriginalTotal</div>
+
+            @if (selectedOrder.DiscountAmount > 0)
+            {
+                <div class="discount-summary">
+                    التخفيض: @selectedOrder.DiscountName
+                    <br />
+                    قيمة التخفيض: ₪@selectedOrder.DiscountAmount
+                </div>
+            }
+
+            <div><strong>المجموع النهائي: ₪@selectedOrder.FinalTotal</strong></div>
 
             <hr />
 

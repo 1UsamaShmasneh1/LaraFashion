@@ -40,4 +40,6 @@ public class Product
             };
         }
     }
+
+    public List<ProductDiscount> ProductDiscounts { get; set; } = new();
 }

@@ -3,6 +3,7 @@ using System;
 using LaraFashion.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LaraFashion.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530130008_AddDiscountManagement")]
+    partial class AddDiscountManagement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.16");
@@ -76,9 +79,6 @@ namespace LaraFashion.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("BundleFixedTotalPrice")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -121,21 +121,8 @@ namespace LaraFashion.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("DiscountAmount")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DiscountName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("FinalTotal")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("OrderNumber")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("OriginalTotal")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Status")

@@ -1,0 +1,282 @@
+﻿@page "/admin/discounts"
+
+@using LaraFashion.Models
+@using LaraFashion.Models.Enums
+@inject LaraFashion.Services.DiscountService DiscountService
+@inject LaraFashion.Services.AdminAuthService AdminAuthService
+@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject NavigationManager Navigation
+
+<AdminNav />
+
+<h1 class="admin-page-title">إدارة التخفيضات</h1>
+
+<button type="button"
+        class="checkout-button admin-add-product-button"
+        @onclick="OpenAddModal">
+    إضافة تخفيض
+</button>
+
+@if (IsLoading)
+{
+    <div class="empty-cart">Loading...</div>
+}
+else if (!Discounts.Any())
+{
+    <div class="empty-cart">لا توجد تخفيضات</div>
+}
+else
+{
+    <div class="admin-orders-grid">
+        @foreach (var discount in Discounts)
+        {
+            <div class="admin-order-card">
+                <div class="admin-order-number">@discount.Name</div>
+
+                <div>النوع: @GetRuleTypeText(discount.RuleType)</div>
+                <div>قيمة التخفيض: @GetDiscountValueText(discount)</div>
+
+                @if (discount.MinimumQuantity.HasValue)
+                {
+                    <div>الحد الأدنى للكمية: @discount.MinimumQuantity</div>
+                }
+
+                @if (discount.MinimumAmount.HasValue)
+                {
+                    <div>الحد الأدنى للسعر: ₪@discount.MinimumAmount</div>
+                }
+
+                <div>الحالة: @(discount.IsActive ? "فعال" : "غير فعال")</div>
+
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button type="button"
+                            class="continue-shopping-button"
+                            @onclick="(() => OpenEditModal(discount))">
+                        تعديل
+                    </button>
+
+                    <button type="button"
+                            class="remove-item-button"
+                            @onclick="(() => DeleteDiscount(discount.Id))">
+                        حذف
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (IsModalOpen)
+{
+    <div class="modal-overlay">
+        <div class="checkout-modal" @onclick:stopPropagation="true">
+
+            <h2>@(IsEditMode ? "تعديل تخفيض" : "إضافة تخفيض")</h2>
+
+            <div class="form-group">
+                <label>اسم التخفيض</label>
+                <input @bind="CurrentDiscount.Name" />
+            </div>
+
+            <div class="form-group">
+                <label>نوع شرط التخفيض</label>
+                <select class="form-select" @bind="CurrentDiscount.RuleType">
+                    <option value="@DiscountRuleType.ProductDirect">تخفيض مباشر على المنتج</option>
+                    <option value="@DiscountRuleType.QuantityBased">تخفيض بعد كمية معينة</option>
+                    <option value="@DiscountRuleType.AmountBased">تخفيض بعد سعر معين</option>
+                    <option value="@DiscountRuleType.BundleFixedPrice">مجموعة منتجات بسعر ثابت</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>نوع قيمة التخفيض</label>
+                <select class="form-select" @bind="CurrentDiscount.ValueType">
+                    <option value="@DiscountValueType.Percent">نسبة مئوية</option>
+                    <option value="@DiscountValueType.FixedAmount">مبلغ ثابت</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>قيمة التخفيض</label>
+                <input type="number" @bind="CurrentDiscount.Value" />
+            </div>
+
+            @if (CurrentDiscount.RuleType == DiscountRuleType.QuantityBased)
+            {
+                <div class="form-group">
+                    <label>الحد الأدنى للكمية</label>
+                    <input type="number" @bind="CurrentDiscount.MinimumQuantity" />
+                </div>
+            }
+
+            @if (CurrentDiscount.RuleType == DiscountRuleType.AmountBased)
+            {
+                <div class="form-group">
+                    <label>الحد الأدنى للسعر</label>
+                    <input type="number" @bind="CurrentDiscount.MinimumAmount" />
+                </div>
+            }
+
+            @if (CurrentDiscount.RuleType == DiscountRuleType.BundleFixedPrice)
+            {
+                <div class="form-group">
+                    <label>عدد القطع المطلوبة</label>
+                    <input type="number" @bind="CurrentDiscount.MinimumQuantity" />
+                </div>
+
+                <div class="form-group">
+                    <label>السعر النهائي للمجموعة</label>
+                    <input type="number" @bind="CurrentDiscount.BundleFixedTotalPrice" />
+                </div>
+            }
+
+            <label class="confirmation-check">
+                <input type="checkbox" @bind="CurrentDiscount.IsActive" />
+                التخفيض فعال
+            </label>
+
+            <div class="checkout-buttons">
+                <button type="button"
+                        class="continue-shopping-button"
+                        @onclick="CloseModal">
+                    إلغاء
+                </button>
+
+                <button type="button"
+                        class="checkout-button"
+                        @onclick="SaveDiscount">
+                    @(IsEditMode ? "حفظ التعديل" : "حفظ التخفيض")
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    private List<Discount> Discounts = new();
+    private Discount CurrentDiscount = new();
+
+    private bool IsLoading = true;
+    private bool IsModalOpen;
+    private bool IsEditMode;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var token = await BrowserStorageService.GetItemAsync("admin_token");
+
+        if (string.IsNullOrWhiteSpace(token) ||
+            !AdminAuthService.IsTokenValid(token))
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        await LoadDiscounts();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadDiscounts()
+    {
+        Discounts = await DiscountService.GetAllAsync();
+        IsLoading = false;
+    }
+
+    private void OpenAddModal()
+    {
+        IsEditMode = false;
+
+        CurrentDiscount = new Discount
+        {
+            IsActive = true,
+            RuleType = DiscountRuleType.ProductDirect,
+            ValueType = DiscountValueType.Percent
+        };
+
+        IsModalOpen = true;
+    }
+
+    private void OpenEditModal(Discount discount)
+    {
+        IsEditMode = true;
+
+        CurrentDiscount = new Discount
+        {
+            Id = discount.Id,
+            Name = discount.Name,
+            RuleType = discount.RuleType,
+            ValueType = discount.ValueType,
+            Value = discount.Value,
+            MinimumQuantity = discount.MinimumQuantity,
+            MinimumAmount = discount.MinimumAmount,
+            IsActive = discount.IsActive,
+            CreatedAt = discount.CreatedAt
+        };
+
+        IsModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        IsModalOpen = false;
+        IsEditMode = false;
+        CurrentDiscount = new Discount();
+    }
+
+    private async Task SaveDiscount()
+    {
+        if (string.IsNullOrWhiteSpace(CurrentDiscount.Name))
+            return;
+
+        if (CurrentDiscount.RuleType != DiscountRuleType.QuantityBased)
+            CurrentDiscount.MinimumQuantity = null;
+
+        if (CurrentDiscount.RuleType != DiscountRuleType.AmountBased)
+            CurrentDiscount.MinimumAmount = null;
+
+        if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+            CurrentDiscount.BundleFixedTotalPrice = null;
+
+        if (IsEditMode)
+        {
+            await DiscountService.UpdateAsync(CurrentDiscount);
+        }
+        else
+        {
+            await DiscountService.AddAsync(CurrentDiscount);
+        }
+
+
+        CloseModal();
+        await LoadDiscounts();
+    }
+
+    private async Task DeleteDiscount(Guid id)
+    {
+        await DiscountService.DeleteAsync(id);
+        await LoadDiscounts();
+    }
+
+    private string GetRuleTypeText(DiscountRuleType type)
+    {
+        return type switch
+        {
+            DiscountRuleType.ProductDirect => "مباشر على المنتج",
+            DiscountRuleType.QuantityBased => "حسب الكمية",
+            DiscountRuleType.AmountBased => "حسب السعر",
+            DiscountRuleType.BundleFixedPrice => "مجموعة بسعر ثابت",
+            _ => type.ToString()
+        };
+    }
+
+    private string GetDiscountValueText(Discount discount)
+    {
+        return discount.ValueType == DiscountValueType.Percent
+            ? $"{discount.Value}%"
+            : $"₪{discount.Value}";
+    }
+}

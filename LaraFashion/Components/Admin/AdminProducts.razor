@@ -8,6 +8,7 @@
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.AdminAuthService AdminAuthService
 @inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject LaraFashion.Services.DiscountService DiscountService
 @inject NavigationManager Navigation
 
 <AdminNav />
@@ -144,6 +145,33 @@ else
                 <InputFile OnChange="OnImageSelected" />
             </div>
 
+            <h3>التخفيضات المتاحة</h3>
+
+            @if (!AvailableDiscounts.Any())
+            {
+                <div class="delivery-price-note">
+                    لا توجد تخفيضات فعالة حالياً
+                </div>
+            }
+            else
+            {
+                <div class="discount-select-list">
+                    @foreach (var discount in AvailableDiscounts)
+                    {
+                        <label class="discount-check-row">
+                            <input type="checkbox"
+                                   checked="@SelectedDiscountIds.Contains(discount.Id)"
+                                   @onchange="((e) => ToggleDiscount(discount.Id, e))" />
+
+                            <span>
+                                @discount.Name -
+                                @GetDiscountSummary(discount)
+                            </span>
+                        </label>
+                    }
+                </div>
+            }
+
             <h3>Sizes</h3>
 
             @foreach (var size in NewProduct.Sizes)
@@ -204,6 +232,10 @@ else
 
     private Product NewProduct = new();
 
+    private List<Discount> AvailableDiscounts = new();
+
+    private List<Guid> SelectedDiscountIds = new();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -227,6 +259,7 @@ else
     private async Task LoadProducts()
     {
         Products = await ProductService.GetAllProductsAsync();
+        AvailableDiscounts = await DiscountService.GetActiveAsync();
 
         IsLoading = false;
     }
@@ -234,6 +267,7 @@ else
     private void OpenAddModal()
     {
         IsEditMode = false;
+        SelectedDiscountIds = new();
 
         NewProduct = new Product
         {
@@ -276,6 +310,17 @@ else
                 await ProductService.AddProductAsync(NewProduct);
             }
 
+            if (IsEditMode)
+            {
+                await ProductService.UpdateProductWithSizesAsync(NewProduct);
+                await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
+            }
+            else
+            {
+                await ProductService.AddProductAsync(NewProduct);
+                await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
+            }
+
             IsAddModalOpen = false;
             IsEditMode = false;
             NewProduct = new Product();
@@ -296,6 +341,10 @@ else
     private void OpenEditModal(Product product)
     {
         IsEditMode = true;
+
+        SelectedDiscountIds = product.ProductDiscounts
+    .Select(x => x.DiscountId)
+    .ToList();
 
         NewProduct = new Product
         {
@@ -363,6 +412,37 @@ else
         data.SaveTo(fileStream);
 
         NewProduct.ImageUrl = $"/uploads/{fileName}";
+    }
+
+    private void ToggleDiscount(Guid discountId, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool value && value;
+
+        if (isChecked)
+        {
+            if (!SelectedDiscountIds.Contains(discountId))
+                SelectedDiscountIds.Add(discountId);
+        }
+        else
+        {
+            SelectedDiscountIds.Remove(discountId);
+        }
+    }
+
+    private string GetDiscountSummary(Discount discount)
+    {
+        var valueText = discount.ValueType == DiscountValueType.Percent
+            ? $"{discount.Value}%"
+            : $"₪{discount.Value}";
+
+        return discount.RuleType switch
+        {
+            DiscountRuleType.ProductDirect => $"تخفيض مباشر {valueText}",
+            DiscountRuleType.QuantityBased => $"بعد {discount.MinimumQuantity} قطع: {valueText}",
+            DiscountRuleType.AmountBased => $"بعد ₪{discount.MinimumAmount}: {valueText}",
+            DiscountRuleType.BundleFixedPrice => $"{discount.MinimumQuantity} قطع بسعر ₪{discount.BundleFixedTotalPrice}",
+            _ => valueText
+        };
     }
 
 }

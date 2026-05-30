@@ -23,28 +23,35 @@ public class OrderService
             .ToListAsync();
     }
 
-    public async Task<Order> CreateOrderAsync(CustomerInfo customer, List<CartItem> cartItems)
+    public async Task<Order> CreateOrderAsync(
+    CustomerInfo customer,
+    List<CartItem> cartItems,
+    CartDiscountResult discountResult)
     {
-        var now = DateTime.Now;
-
         var order = new Order
         {
             Id = Guid.NewGuid(),
-            OrderNumber = GenerateOrderNumber(),
+            OrderNumber = $"ORD-{DateTime.Now:yyyyMMddHHmmss}",
             Customer = customer,
-            Status = OrderStatus.New,
-            CreatedAt = now,
-            UpdatedAt = now,
-            Items = cartItems.Select(x => new OrderItem
+            Status = Models.Enums.OrderStatus.New,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now,
+
+            OriginalTotal = discountResult.OriginalTotal,
+            DiscountAmount = discountResult.DiscountAmount,
+            DiscountName = discountResult.DiscountName,
+            FinalTotal = discountResult.FinalTotal,
+
+            Items = cartItems.Select(item => new OrderItem
             {
                 Id = Guid.NewGuid(),
-                ProductId = x.ProductId,
-                ProductName = x.ProductName,
-                ProductSerialNumber = x.ProductSerialNumber,
-                ProductImageUrl = x.ProductImageUrl,
-                Size = x.Size,
-                Quantity = x.Quantity,
-                UnitPrice = x.UnitPrice
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                ProductSerialNumber = item.ProductSerialNumber,
+                ProductImageUrl = item.ProductImageUrl,
+                Size = item.Size,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice
             }).ToList()
         };
 

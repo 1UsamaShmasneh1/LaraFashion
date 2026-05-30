@@ -19,4 +19,12 @@ public class Order
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
     public decimal TotalPrice => Items.Sum(x => x.TotalPrice);
+
+    public decimal OriginalTotal { get; set; }
+
+    public decimal DiscountAmount { get; set; }
+
+    public string DiscountName { get; set; } = string.Empty;
+
+    public decimal FinalTotal { get; set; }
 }

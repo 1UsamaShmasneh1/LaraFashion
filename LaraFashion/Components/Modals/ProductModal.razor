@@ -1,4 +1,5 @@
 ﻿@using LaraFashion.Models
+@using LaraFashion.Models.Enums
 @inject LaraFashion.Services.CartService CartService
 
 @if (IsOpen)
@@ -36,6 +37,20 @@
                     <div class="modal-price">
                         ₪@Product.FinalPrice
                     </div>
+
+                    @if (Product.ProductDiscounts.Any(x => x.Discount.IsActive))
+                    {
+                        <div class="product-discounts-box">
+                            <div class="product-discounts-title">العروض المتاحة</div>
+
+                            @foreach (var productDiscount in Product.ProductDiscounts.Where(x => x.Discount.IsActive))
+                            {
+                                <div class="product-discount-row">
+                                    🔥 @GetDiscountText(productDiscount.Discount)
+                                </div>
+                            }
+                        </div>
+                    }
 
                     <div class="sizes-title">
                         Select Size
@@ -182,6 +197,32 @@
             Quantity);
 
         await CloseModal();
+    }
+
+    private string GetDiscountText(Discount discount)
+    {
+        return discount.RuleType switch
+        {
+            DiscountRuleType.ProductDirect =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"خصم مباشر {discount.Value}%"
+                    : $"خصم مباشر ₪{discount.Value}",
+
+            DiscountRuleType.QuantityBased =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"اشترِ {discount.MinimumQuantity} قطع أو أكثر واحصل على خصم {discount.Value}%"
+                    : $"اشترِ {discount.MinimumQuantity} قطع أو أكثر واحصل على خصم ₪{discount.Value}",
+
+            DiscountRuleType.AmountBased =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم {discount.Value}%"
+                    : $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم ₪{discount.Value}",
+
+            DiscountRuleType.BundleFixedPrice =>
+                $"{discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice}",
+
+            _ => discount.Name
+        };
     }
 
 }

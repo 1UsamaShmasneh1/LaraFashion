@@ -108,15 +108,29 @@ else
 
     <div class="cart-summary">
 
-        <div class="cart-summary-total">
+        @{
+            var discountResult = CartService.CalculateBestDiscount();
+        }
 
-            Total:
-            ₪@CartService.TotalPrice
+        <div class="cart-summary-total">
+            <div>السعر قبل التخفيض: ₪@discountResult.OriginalTotal</div>
+
+            @if (discountResult.DiscountAmount > 0)
+            {
+                <div class="discount-summary">
+                    <strong>تم تطبيق التخفيض:</strong> @discountResult.DiscountName
+                    <br />
+                    <strong>قيمة التخفيض:</strong> ₪@discountResult.DiscountAmount
+                </div>
+            }
+
+            <div>
+                <strong>المجموع النهائي:</strong> ₪@discountResult.FinalTotal
+            </div>
 
             <div class="delivery-price-note">
                 السعر لا يشمل التوصيل
             </div>
-
         </div>
 
         <div style="display:flex; gap:15px;">
@@ -201,9 +215,12 @@ else
 
     private async Task ConfirmOrder(CustomerInfo customer)
     {
+        var discountResult = CartService.CalculateBestDiscount();
+
         await OrderService.CreateOrderAsync(
             customer,
-            CartService.Items.ToList());
+            CartService.Items.ToList(),
+            discountResult);
 
         IsCheckoutOpen = false;
 

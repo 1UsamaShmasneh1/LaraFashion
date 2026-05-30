@@ -18,6 +18,8 @@ public class ProductService
         return await _db.Products
             .AsNoTracking()
             .Include(x => x.Sizes)
+            .Include(x => x.ProductDiscounts)
+                .ThenInclude(x => x.Discount)
             .Where(x => x.IsActive)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
@@ -28,6 +30,8 @@ public class ProductService
         return await _db.Products
             .AsNoTracking()
             .Include(x => x.Sizes)
+            .Include(x => x.ProductDiscounts)
+                .ThenInclude(x => x.Discount)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
@@ -130,6 +134,25 @@ public class ProductService
             .ToList();
 
         await _db.ProductSizes.AddRangeAsync(newSizes);
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateProductDiscountsAsync(Guid productId, List<Guid> discountIds)
+    {
+        var existingLinks = await _db.ProductDiscounts
+            .Where(x => x.ProductId == productId)
+            .ToListAsync();
+
+        _db.ProductDiscounts.RemoveRange(existingLinks);
+
+        var newLinks = discountIds.Select(discountId => new ProductDiscount
+        {
+            ProductId = productId,
+            DiscountId = discountId
+        });
+
+        await _db.ProductDiscounts.AddRangeAsync(newLinks);
 
         await _db.SaveChangesAsync();
     }

@@ -805,3 +805,55 @@ body {
     opacity: 0.9;
     color: white;
 }
+
+.discount-select-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f5f7fb;
+    padding: 14px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.discount-check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+}
+
+.discount-check-row input {
+    width: 18px;
+    height: 18px;
+}
+
+.product-discounts-box {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    padding: 14px;
+    margin: 16px 0;
+}
+
+.product-discounts-title {
+    font-weight: 900;
+    color: #c2410c;
+    margin-bottom: 10px;
+}
+
+.product-discount-row {
+    color: #7c2d12;
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.discount-summary {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-weight: 800;
+    margin: 12px 0;
+}
