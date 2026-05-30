@@ -236,6 +236,8 @@ else
 
     private List<Guid> SelectedDiscountIds = new();
 
+    private Guid EditingProductId = Guid.Empty;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -268,6 +270,7 @@ else
     {
         IsEditMode = false;
         SelectedDiscountIds = new();
+        EditingProductId = Guid.Empty;
 
         NewProduct = new Product
         {
@@ -301,10 +304,12 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
-            if (IsEditMode && NewProduct.Id != Guid.Empty)
+            if (IsEditMode && EditingProductId != Guid.Empty)
             {
+                NewProduct.Id = EditingProductId;
+
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
-                await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
+                await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
             }
             else
             {
@@ -314,6 +319,7 @@ else
 
             IsAddModalOpen = false;
             IsEditMode = false;
+            EditingProductId = Guid.Empty;
             NewProduct = new Product();
             SelectedDiscountIds = new();
 
@@ -333,6 +339,8 @@ else
     private void OpenEditModal(Product product)
     {
         IsEditMode = true;
+
+        EditingProductId = product.Id;
 
         SelectedDiscountIds = product.ProductDiscounts
     .Select(x => x.DiscountId)
