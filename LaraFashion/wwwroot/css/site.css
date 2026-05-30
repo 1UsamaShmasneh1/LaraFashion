@@ -734,3 +734,38 @@ body {
     margin-bottom: 35px;
     display: inline-block;
 }
+
+.admin-nav {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #ffffff;
+    padding: 14px 18px;
+    margin: 20px 0;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e8e8e8;
+}
+
+.admin-nav-link {
+    text-decoration: none;
+    background: #20a7d8;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    transition: 0.2s;
+}
+
+    .admin-nav-link:hover {
+        background: #168bb5;
+        transform: translateY(-1px);
+    }
+
+.admin-nav-home {
+    background: #222;
+}
+
+.admin-nav-home:hover {
+    background: #000;
+}
