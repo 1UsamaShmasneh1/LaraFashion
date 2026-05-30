@@ -145,9 +145,10 @@ public class ProductService
     public async Task UpdateProductDiscountsAsync(Guid productId, List<Guid> discountIds)
     {
         discountIds = discountIds
-    .Where(x => x != Guid.Empty)
-    .Distinct()
-    .ToList();
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
         var existingLinks = await _db.ProductDiscounts
             .Where(x => x.ProductId == productId)
             .ToListAsync();
@@ -161,7 +162,6 @@ public class ProductService
         });
 
         await _db.ProductDiscounts.AddRangeAsync(newLinks);
-
         await _db.SaveChangesAsync();
     }
 }

@@ -4,9 +4,9 @@ public class ProductDiscount
 {
     public Guid ProductId { get; set; }
 
-    public Product Product { get; set; } = new();
+    public Product Product { get; set; } = null!;
 
     public Guid DiscountId { get; set; }
 
-    public Discount Discount { get; set; } = new();
+    public Discount Discount { get; set; } = null!;
 }
