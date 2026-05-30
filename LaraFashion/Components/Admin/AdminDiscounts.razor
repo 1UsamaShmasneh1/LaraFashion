@@ -34,7 +34,7 @@ else
                 <div class="admin-order-number">@discount.Name</div>
 
                 <div>النوع: @GetRuleTypeText(discount.RuleType)</div>
-                <div>قيمة التخفيض: @GetDiscountValueText(discount)</div>
+                <div>التفاصيل: @GetDiscountSummary(discount)</div>
 
                 @if (discount.MinimumQuantity.HasValue)
                 {
@@ -88,18 +88,21 @@ else
                 </select>
             </div>
 
-            <div class="form-group">
-                <label>نوع قيمة التخفيض</label>
-                <select class="form-select" @bind="CurrentDiscount.ValueType">
-                    <option value="@DiscountValueType.Percent">نسبة مئوية</option>
-                    <option value="@DiscountValueType.FixedAmount">مبلغ ثابت</option>
-                </select>
-            </div>
+            @if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+            {
+                <div class="form-group">
+                    <label>نوع قيمة التخفيض</label>
+                    <select class="form-select" @bind="CurrentDiscount.ValueType">
+                        <option value="@DiscountValueType.Percent">نسبة مئوية</option>
+                        <option value="@DiscountValueType.FixedAmount">مبلغ ثابت</option>
+                    </select>
+                </div>
 
-            <div class="form-group">
-                <label>قيمة التخفيض</label>
-                <input type="number" @bind="CurrentDiscount.Value" />
-            </div>
+                <div class="form-group">
+                    <label>قيمة التخفيض</label>
+                    <input type="number" @bind="CurrentDiscount.Value" />
+                </div>
+            }
 
             @if (CurrentDiscount.RuleType == DiscountRuleType.QuantityBased)
             {
@@ -232,14 +235,21 @@ else
         if (string.IsNullOrWhiteSpace(CurrentDiscount.Name))
             return;
 
-        if (CurrentDiscount.RuleType != DiscountRuleType.QuantityBased)
+        if (CurrentDiscount.RuleType != DiscountRuleType.QuantityBased &&
+    CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+        {
             CurrentDiscount.MinimumQuantity = null;
+        }
 
         if (CurrentDiscount.RuleType != DiscountRuleType.AmountBased)
+        {
             CurrentDiscount.MinimumAmount = null;
+        }
 
         if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+        {
             CurrentDiscount.BundleFixedTotalPrice = null;
+        }
 
         if (IsEditMode)
         {
@@ -278,5 +288,25 @@ else
         return discount.ValueType == DiscountValueType.Percent
             ? $"{discount.Value}%"
             : $"₪{discount.Value}";
+    }
+
+    private string GetDiscountSummary(Discount discount)
+    {
+        return discount.RuleType switch
+        {
+            DiscountRuleType.BundleFixedPrice =>
+                $"{discount.MinimumQuantity} قطع بسعر ₪{discount.BundleFixedTotalPrice}",
+
+            DiscountRuleType.QuantityBased =>
+                $"بعد {discount.MinimumQuantity} قطع: {GetDiscountValueText(discount)}",
+
+            DiscountRuleType.AmountBased =>
+                $"بعد ₪{discount.MinimumAmount}: {GetDiscountValueText(discount)}",
+
+            DiscountRuleType.ProductDirect =>
+                $"تخفيض مباشر: {GetDiscountValueText(discount)}",
+
+            _ => GetDiscountValueText(discount)
+        };
     }
 }
