@@ -39,7 +39,10 @@ public class ProductService
     public async Task<Product?> GetProductAsync(Guid id)
     {
         return await _db.Products
+            .AsNoTracking()
             .Include(x => x.Sizes)
+            .Include(x => x.ProductDiscounts)
+                .ThenInclude(x => x.Discount)
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
@@ -49,6 +52,8 @@ public class ProductService
         product.CreatedAt = DateTime.Now;
         product.UpdatedAt = DateTime.Now;
 
+        product.ProductDiscounts = new();
+
         foreach (var size in product.Sizes)
         {
             size.Id = Guid.NewGuid();
@@ -56,7 +61,6 @@ public class ProductService
         }
 
         _db.Products.Add(product);
-
         await _db.SaveChangesAsync();
     }
 
@@ -140,6 +144,10 @@ public class ProductService
 
     public async Task UpdateProductDiscountsAsync(Guid productId, List<Guid> discountIds)
     {
+        discountIds = discountIds
+    .Where(x => x != Guid.Empty)
+    .Distinct()
+    .ToList();
         var existingLinks = await _db.ProductDiscounts
             .Where(x => x.ProductId == productId)
             .ToListAsync();
