@@ -9,6 +9,8 @@
 @inject LaraFashion.Services.BrowserStorageService BrowserStorageService
 @inject NavigationManager Navigation
 
+<AdminNav />
+
 <PageTitle>Orders</PageTitle>
 
 @if (IsCheckingAuth)
@@ -85,7 +87,18 @@ else
             <h3>Customer Info</h3>
 
             <p><strong>Name:</strong> @selectedOrder.Customer.FullName</p>
-            <p><strong>Phone:</strong> @selectedOrder.Customer.PhoneNumber</p>
+            <p>
+                <strong>Phone:</strong> @selectedOrder.Customer.PhoneNumber
+
+                @if (!string.IsNullOrWhiteSpace(GetWhatsAppLink(selectedOrder.Customer.PhoneNumber)))
+                {
+                    <a class="whatsapp-button"
+                       href="@GetWhatsAppLink(selectedOrder.Customer.PhoneNumber)"
+                       target="_blank">
+                        WhatsApp
+                    </a>
+                }
+            </p>
             <p><strong>City:</strong> @selectedOrder.Customer.City</p>
             <p><strong>Street:</strong> @selectedOrder.Customer.Street</p>
             <p><strong>House Number:</strong> @selectedOrder.Customer.HouseNumber</p>
@@ -230,5 +243,27 @@ else
         await BrowserStorageService.RemoveItemAsync("admin_token");
 
         Navigation.NavigateTo("/admin/login");
+    }
+
+    private string GetWhatsAppLink(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+            return string.Empty;
+
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+
+        if (digits.StartsWith("00"))
+            digits = digits[2..];
+
+        if (digits.StartsWith("972"))
+            return $"https://wa.me/{digits}";
+
+        if (digits.StartsWith("0") && digits.Length >= 9)
+            return $"https://wa.me/972{digits[1..]}";
+
+        if (digits.Length >= 9)
+            return $"https://wa.me/{digits}";
+
+        return string.Empty;
     }
 }
