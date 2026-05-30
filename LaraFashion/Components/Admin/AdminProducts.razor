@@ -304,12 +304,16 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
-            if (IsEditMode && EditingProductId != Guid.Empty)
+            if (IsEditMode)
             {
-                NewProduct.Id = EditingProductId;
+                if (NewProduct.Id == Guid.Empty)
+                {
+                    ErrorMessage = "خطأ: المنتج لا يحتوي على ID للتعديل.";
+                    return;
+                }
 
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
-                await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
+                await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
             }
             else
             {
@@ -319,7 +323,6 @@ else
 
             IsAddModalOpen = false;
             IsEditMode = false;
-            EditingProductId = Guid.Empty;
             NewProduct = new Product();
             SelectedDiscountIds = new();
 
