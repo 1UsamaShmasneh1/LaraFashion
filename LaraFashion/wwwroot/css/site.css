@@ -769,3 +769,39 @@ body {
 .admin-nav-home:hover {
     background: #000;
 }
+
+.admin-top-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    margin: 18px 0 28px 0;
+    flex-wrap: wrap;
+}
+
+.admin-action-btn {
+    text-decoration: none;
+    color: white;
+    padding: 13px 26px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 800;
+    display: inline-block;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.admin-products {
+    background: #6c2ff2;
+}
+
+.admin-orders {
+    background: #20a7d8;
+}
+
+.admin-store {
+    background: #16b957;
+}
+
+.admin-action-btn:hover {
+    opacity: 0.9;
+    color: white;
+}
