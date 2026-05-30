@@ -235,31 +235,34 @@ else
         if (string.IsNullOrWhiteSpace(CurrentDiscount.Name))
             return;
 
-        if (CurrentDiscount.RuleType != DiscountRuleType.QuantityBased &&
-    CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+        if (CurrentDiscount.RuleType == DiscountRuleType.BundleFixedPrice)
         {
-            CurrentDiscount.MinimumQuantity = null;
-        }
-
-        if (CurrentDiscount.RuleType != DiscountRuleType.AmountBased)
-        {
-            CurrentDiscount.MinimumAmount = null;
-        }
-
-        if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
-        {
-            CurrentDiscount.BundleFixedTotalPrice = null;
-        }
-
-        if (IsEditMode)
-        {
-            await DiscountService.UpdateAsync(CurrentDiscount);
+            if (!CurrentDiscount.MinimumQuantity.HasValue ||
+                CurrentDiscount.MinimumQuantity.Value <= 0 ||
+                !CurrentDiscount.BundleFixedTotalPrice.HasValue ||
+                CurrentDiscount.BundleFixedTotalPrice.Value <= 0)
+                return;
         }
         else
         {
-            await DiscountService.AddAsync(CurrentDiscount);
+            if (CurrentDiscount.Value <= 0)
+                return;
         }
 
+        if (CurrentDiscount.RuleType != DiscountRuleType.QuantityBased &&
+            CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+            CurrentDiscount.MinimumQuantity = null;
+
+        if (CurrentDiscount.RuleType != DiscountRuleType.AmountBased)
+            CurrentDiscount.MinimumAmount = null;
+
+        if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+            CurrentDiscount.BundleFixedTotalPrice = null;
+
+        if (IsEditMode)
+            await DiscountService.UpdateAsync(CurrentDiscount);
+        else
+            await DiscountService.AddAsync(CurrentDiscount);
 
         CloseModal();
         await LoadDiscounts();

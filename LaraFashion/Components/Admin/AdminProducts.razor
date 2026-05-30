@@ -304,15 +304,6 @@ else
             if (IsEditMode)
             {
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
-            }
-            else
-            {
-                await ProductService.AddProductAsync(NewProduct);
-            }
-
-            if (IsEditMode)
-            {
-                await ProductService.UpdateProductWithSizesAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
             }
             else
