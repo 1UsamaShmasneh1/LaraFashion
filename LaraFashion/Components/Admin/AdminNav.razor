@@ -1,5 +1,43 @@
-﻿<div class="admin-top-actions">
-    <a class="admin-action-btn admin-products" href="/admin/products">المنتجات</a>
-    <a class="admin-action-btn admin-orders" href="/admin/orders">الطلبيات</a>
-    <a class="admin-action-btn admin-store" href="/">المتجر</a>
+﻿<div class="admin-nav-bar">
+    <a class="admin-nav-btn purple" href="/admin/products">المنتجات</a>
+    <a class="admin-nav-btn blue" href="/admin/orders">الطلبيات</a>
+    <a class="admin-nav-btn green" href="/">المتجر</a>
 </div>
+
+<style>
+    .admin-nav-bar {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 14px;
+        margin: 18px 0 28px 0;
+        flex-wrap: wrap;
+    }
+
+    .admin-nav-btn {
+        text-decoration: none !important;
+        color: white !important;
+        padding: 13px 28px;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 800;
+        display: inline-block;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+
+        .admin-nav-btn.purple {
+            background: #6c2ff2;
+        }
+
+        .admin-nav-btn.blue {
+            background: #20a7d8;
+        }
+
+        .admin-nav-btn.green {
+            background: #20b957;
+        }
+
+        .admin-nav-btn:hover {
+            opacity: 0.9;
+        }
+</style>
