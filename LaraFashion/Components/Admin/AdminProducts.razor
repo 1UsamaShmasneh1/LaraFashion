@@ -238,6 +238,7 @@ else
 
     private Guid EditingProductId = Guid.Empty;
 
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -306,23 +307,32 @@ else
 
             if (IsEditMode)
             {
-                if (NewProduct.Id == Guid.Empty)
+                if (EditingProductId == Guid.Empty)
                 {
-                    ErrorMessage = "خطأ: لا يمكن تعديل المنتج لأن رقم المنتج مفقود.";
+                    ErrorMessage = "خطأ: رقم المنتج مفقود، لا يمكن التعديل.";
                     return;
                 }
 
+                NewProduct.Id = EditingProductId;
+
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
-                await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
+                await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
             }
             else
             {
+                if (NewProduct.Id != Guid.Empty)
+                {
+                    ErrorMessage = "خطأ: المنتج يبدو كمنتج تعديل وليس منتج جديد.";
+                    return;
+                }
+
                 await ProductService.AddProductAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
             }
 
             IsAddModalOpen = false;
             IsEditMode = false;
+            EditingProductId = Guid.Empty;
             NewProduct = new Product();
             SelectedDiscountIds = new();
 
