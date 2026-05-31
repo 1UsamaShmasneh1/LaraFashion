@@ -411,38 +411,40 @@ else
 
     private async Task OnImageSelected(InputFileChangeEventArgs e)
     {
-        var file = e.File;
-
-        using var stream = file.OpenReadStream(10 * 1024 * 1024);
-
-        using var memoryStream = new MemoryStream();
-
-        await stream.CopyToAsync(memoryStream);
-
-        var originalBytes = memoryStream.ToArray();
-
-        using var bitmap = SKBitmap.Decode(originalBytes);
-
-        using var image = SKImage.FromBitmap(bitmap);
-
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-
-        var uploadsFolder = "/var/www/larafashion/uploads";
-
-        if (!Directory.Exists(uploadsFolder))
+        try
         {
+            var file = e.File;
+
+            var uploadsFolder = "/var/www/larafashion/uploads";
             Directory.CreateDirectory(uploadsFolder);
+
+            var fileName = $"{Guid.NewGuid()}.png";
+            var fullPath = Path.Combine(uploadsFolder, fileName);
+
+            await using var inputStream = file.OpenReadStream(10 * 1024 * 1024);
+            using var memoryStream = new MemoryStream();
+
+            await inputStream.CopyToAsync(memoryStream);
+
+            var originalBytes = memoryStream.ToArray();
+
+            using var bitmap = SKBitmap.Decode(originalBytes);
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+            await using var fileStream = File.OpenWrite(fullPath);
+            data.SaveTo(fileStream);
+
+            NewProduct.ImageUrl = $"/uploads/{fileName}";
+
+            Console.WriteLine($"IMAGE SAVED TO: {fullPath}");
+            Console.WriteLine($"IMAGE URL: {NewProduct.ImageUrl}");
         }
-
-        var fileName = $"{Guid.NewGuid()}.png";
-
-        var fullPath = Path.Combine(uploadsFolder, fileName);
-
-        await using var fileStream = File.OpenWrite(fullPath);
-
-        data.SaveTo(fileStream);
-
-        NewProduct.ImageUrl = $"/uploads/{fileName}";
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Image upload error: {ex.Message}";
+            Console.WriteLine(ErrorMessage);
+        }
     }
 
     private void ToggleDiscount(Guid discountId, object? value)
