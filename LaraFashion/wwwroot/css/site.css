@@ -872,133 +872,154 @@ body {
     line-height: 1.5;
 }
 
+html,
+body {
+    overflow-x: hidden;
+}
+
+.modal-overlay {
+    box-sizing: border-box;
+}
+
 @media (max-width: 600px) {
     .store-header {
-        height: auto;
-        padding: 10px;
-        gap: 8px;
-        overflow-x: auto;
+        padding: 10px 14px;
+        gap: 10px;
+        justify-content: space-between;
+        overflow: hidden;
     }
 
     .store-logo {
-        width: 38px;
-        height: 38px;
+        width: 52px;
+        height: 52px;
+        flex-shrink: 0;
     }
 
     .store-title {
-        font-size: 24px;
-        white-space: nowrap;
+        font-size: 28px;
+        flex: 1;
+        min-width: 0;
     }
 
     .cart-button,
     .whatsapp-button {
         padding: 9px 12px;
         font-size: 14px;
-        border-radius: 10px;
-        white-space: nowrap;
+        border-radius: 12px;
+        flex-shrink: 0;
     }
 
     .main-content {
-        padding: 14px;
-    }
-
-    .home-title,
-    .cart-page-title,
-    .admin-page-title {
-        font-size: 30px;
-        margin-bottom: 18px;
-    }
-
-    .products-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .product-image-container {
-        height: 190px;
-    }
-
-    .product-content {
         padding: 12px;
     }
 
+    .home-title {
+        font-size: 30px;
+        margin: 20px 0 18px;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .product-card {
+        border-radius: 14px;
+    }
+
+    .product-image-container {
+        height: 120px;
+    }
+
+    .product-content {
+        padding: 8px;
+    }
+
     .product-name {
-        font-size: 18px;
+        font-size: 15px;
     }
 
     .final-price {
-        font-size: 22px;
+        font-size: 18px;
+    }
+
+    .product-card-offers {
+        font-size: 10px;
+        padding: 6px;
+        line-height: 1.35;
     }
 
     .view-product-button {
-        padding: 10px;
-        font-size: 14px;
+        padding: 8px;
+        font-size: 12px;
+        border-radius: 10px;
     }
 
-    .product-modal {
-        padding: 18px;
-        max-height: 90vh;
+    .modal-overlay {
+        padding: 14px;
+        align-items: center;
+    }
+
+    .product-modal,
+    .checkout-modal {
+        width: 92vw;
+        max-width: 92vw;
+        max-height: 82vh;
+        padding: 16px;
+        border-radius: 18px;
         overflow-y: auto;
     }
 
-    .modal-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
+    .modal-product-image {
+        height: 190px;
+        border-radius: 14px;
     }
 
-    .modal-product-image {
-        height: 260px;
+    .modal-product-name {
+        font-size: 24px;
     }
 
     .modal-price,
     .modal-total {
-        font-size: 26px;
-    }
-
-    .cart-item-card {
-        padding: 12px;
-        gap: 12px;
-        align-items: flex-start;
-    }
-
-    .cart-item-image {
-        width: 90px;
-        height: 90px;
-    }
-
-    .cart-item-name {
-        font-size: 18px;
-    }
-
-    .cart-item-price,
-    .cart-total-price {
-        font-size: 20px;
-    }
-
-    .cart-item-actions {
-        gap: 8px;
-    }
-
-    .quantity-button {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
-    }
-
-    .cart-summary {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 16px;
-        padding: 16px;
-    }
-
-    .cart-summary-total {
         font-size: 24px;
     }
 
-    .checkout-button,
-    .continue-shopping-button {
-        padding: 12px 18px;
+    .offers-box {
+        padding: 12px;
         font-size: 15px;
+        line-height: 1.5;
+    }
+
+    .modal-actions,
+    .checkout-buttons {
+        gap: 10px;
+    }
+
+        .modal-actions button,
+        .checkout-buttons button {
+            padding: 11px 12px;
+            font-size: 15px;
+            border-radius: 13px;
+        }
+
+    .checkout-modal h2 {
+        font-size: 28px;
+    }
+
+    .form-group label {
+        font-size: 16px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        height: 44px;
+        font-size: 15px;
+        padding: 8px 12px;
+    }
+
+    .confirmation-box {
+        padding: 14px;
+        font-size: 15px;
+        line-height: 1.6;
     }
 }
