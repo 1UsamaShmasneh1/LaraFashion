@@ -1,5 +1,6 @@
 ﻿@using LaraFashion.Components.Modals
 @using LaraFashion.Models
+@using LaraFashion.Models.Enums
 
 @page "/cart"
 
@@ -57,6 +58,16 @@ else
                     <div class="cart-item-price">
                         ₪@item.UnitPrice
                     </div>
+
+                    @if (item.ProductDiscounts.Any(x => x.Discount.IsActive))
+                    {
+                        <div class="cart-item-offers">
+                            @foreach (var pd in item.ProductDiscounts.Where(x => x.Discount.IsActive))
+                            {
+                                <div>@GetDiscountText(pd.Discount)</div>
+                            }
+                        </div>
+                    }
 
                 </div>
 
@@ -251,6 +262,32 @@ else
         IsOrderSuccess = false;
 
         Navigation.NavigateTo("/");
+    }
+
+    private string GetDiscountText(Discount discount)
+    {
+        return discount.RuleType switch
+        {
+            DiscountRuleType.ProductDirect =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"خصم مباشر {discount.Value}%"
+                    : $"خصم مباشر ₪{discount.Value}",
+
+            DiscountRuleType.QuantityBased =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"اشترِ {discount.MinimumQuantity} قطع أو أكثر واحصل على خصم {discount.Value}%"
+                    : $"اشترِ {discount.MinimumQuantity} قطع أو أكثر واحصل على خصم ₪{discount.Value}",
+
+            DiscountRuleType.AmountBased =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم {discount.Value}%"
+                    : $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم ₪{discount.Value}",
+
+            DiscountRuleType.BundleFixedPrice =>
+    $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
+
+            _ => discount.Name
+        };
     }
 
 }

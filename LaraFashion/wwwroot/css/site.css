@@ -857,3 +857,148 @@ body {
     font-weight: 800;
     margin: 12px 0;
 }
+
+
+
+
+.product-card-offers,
+.cart-item-offers {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #8a4b00;
+    background: #fff7e8;
+    border-radius: 10px;
+    padding: 8px;
+    line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+    .store-header {
+        height: auto;
+        padding: 10px;
+        gap: 8px;
+        overflow-x: auto;
+    }
+
+    .store-logo {
+        width: 38px;
+        height: 38px;
+    }
+
+    .store-title {
+        font-size: 24px;
+        white-space: nowrap;
+    }
+
+    .cart-button,
+    .whatsapp-button {
+        padding: 9px 12px;
+        font-size: 14px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+
+    .main-content {
+        padding: 14px;
+    }
+
+    .home-title,
+    .cart-page-title,
+    .admin-page-title {
+        font-size: 30px;
+        margin-bottom: 18px;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .product-image-container {
+        height: 190px;
+    }
+
+    .product-content {
+        padding: 12px;
+    }
+
+    .product-name {
+        font-size: 18px;
+    }
+
+    .final-price {
+        font-size: 22px;
+    }
+
+    .view-product-button {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .product-modal {
+        padding: 18px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .modal-product-image {
+        height: 260px;
+    }
+
+    .modal-price,
+    .modal-total {
+        font-size: 26px;
+    }
+
+    .cart-item-card {
+        padding: 12px;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .cart-item-image {
+        width: 90px;
+        height: 90px;
+    }
+
+    .cart-item-name {
+        font-size: 18px;
+    }
+
+    .cart-item-price,
+    .cart-total-price {
+        font-size: 20px;
+    }
+
+    .cart-item-actions {
+        gap: 8px;
+    }
+
+    .quantity-button {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .cart-summary {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .cart-summary-total {
+        font-size: 24px;
+    }
+
+    .checkout-button,
+    .continue-shopping-button {
+        padding: 12px 18px;
+        font-size: 15px;
+    }
+}

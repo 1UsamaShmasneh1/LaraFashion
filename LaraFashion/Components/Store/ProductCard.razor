@@ -1,4 +1,5 @@
 ﻿@using LaraFashion.Models
+@using LaraFashion.Models.Enums
 
 <div class="product-card">
 
@@ -35,10 +36,6 @@
             @Product.Name
         </div>
 
-        <div class="product-serial">
-            SN: @Product.SerialNumber
-        </div>
-
         <div class="product-price-container">
 
             @if (Product.DiscountType != LaraFashion.Models.Enums.DiscountType.None)
@@ -54,6 +51,16 @@
 
         </div>
 
+        @if (Product.ProductDiscounts.Any(x => x.Discount.IsActive))
+        {
+            <div class="product-card-offers">
+                @foreach (var pd in Product.ProductDiscounts.Where(x => x.Discount.IsActive))
+                {
+                    <div>@GetDiscountText(pd.Discount)</div>
+                }
+            </div>
+        }
+
         <button class="view-product-button">
 
             View Product
@@ -68,5 +75,31 @@
 
     [Parameter]
     public Product Product { get; set; } = new();
+
+    private string GetDiscountText(Discount discount)
+    {
+        return discount.RuleType switch
+        {
+            DiscountRuleType.ProductDirect =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"خصم مباشر {discount.Value}%"
+                    : $"خصم مباشر ₪{discount.Value}",
+
+            DiscountRuleType.QuantityBased =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"اشترِ {discount.MinimumQuantity} قطع أو أكثر واحصل على خصم {discount.Value}%"
+                    : $"اشترِ {discount.MinimumQuantity} قطع أو أكثر واحصل على خصم ₪{discount.Value}",
+
+            DiscountRuleType.AmountBased =>
+                discount.ValueType == DiscountValueType.Percent
+                    ? $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم {discount.Value}%"
+                    : $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم ₪{discount.Value}",
+
+            DiscountRuleType.BundleFixedPrice =>
+    $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
+
+            _ => discount.Name
+        };
+    }
 
 }
