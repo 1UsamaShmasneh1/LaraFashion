@@ -120,7 +120,10 @@ public class ProductService
         existingProduct.OriginalPrice = product.OriginalPrice;
         existingProduct.DiscountType = product.DiscountType;
         existingProduct.DiscountValue = product.DiscountValue;
-        existingProduct.ImageUrl = product.ImageUrl;
+        if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+        {
+            existingProduct.ImageUrl = product.ImageUrl;
+        }
         existingProduct.IsActive = product.IsActive;
         existingProduct.UpdatedAt = DateTime.Now;
 

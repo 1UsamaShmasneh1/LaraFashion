@@ -335,6 +335,8 @@ else
 
                 NewProduct.Id = EditingProductId;
 
+                Console.WriteLine($"SAVE IMAGE URL: {NewProduct.ImageUrl}");
+
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
             }
