@@ -328,9 +328,11 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+            var savedImageUrl = await SaveSelectedImageAsync();
+
+            if (!string.IsNullOrWhiteSpace(savedImageUrl))
             {
-                NewProduct.ImageUrl = SelectedImageUrl;
+                NewProduct.ImageUrl = savedImageUrl;
             }
 
             if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
@@ -360,6 +362,7 @@ else
             IsAddModalOpen = false;
             IsEditMode = false;
             EditingProductId = Guid.Empty;
+            SelectedImageFile = null;
             SelectedImageUrl = null;
             NewProduct = new Product();
             SelectedDiscountIds = new();
@@ -419,46 +422,35 @@ else
         await LoadProducts();
     }
 
-    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    private IBrowserFile? SelectedImageFile;
+
+    private Task OnImageSelected(InputFileChangeEventArgs e)
     {
-        try
-        {
-            Console.WriteLine("ON IMAGE SELECTED STARTED");
+        SelectedImageFile = e.File;
+        return Task.CompletedTask;
+    }
 
-            var file = e.File;
+    private async Task<string?> SaveSelectedImageAsync()
+    {
+        if (SelectedImageFile is null)
+            return null;
 
-            var uploadsFolder = "/var/www/larafashion/uploads";
-            Directory.CreateDirectory(uploadsFolder);
+        var uploadsFolder = "/var/www/larafashion/uploads";
+        Directory.CreateDirectory(uploadsFolder);
 
-            var extension = Path.GetExtension(file.Name);
-            if (string.IsNullOrWhiteSpace(extension))
-                extension = ".jpg";
+        var extension = Path.GetExtension(SelectedImageFile.Name);
+        if (string.IsNullOrWhiteSpace(extension))
+            extension = ".jpg";
 
-            var fileName = $"{Guid.NewGuid()}{extension}";
-            var fullPath = Path.Combine(uploadsFolder, fileName);
+        var fileName = $"{Guid.NewGuid()}{extension}";
+        var fullPath = Path.Combine(uploadsFolder, fileName);
 
-            await using var inputStream = file.OpenReadStream(10 * 1024 * 1024);
-            await using var fileStream = File.Create(fullPath);
+        await using var inputStream = SelectedImageFile.OpenReadStream(10 * 1024 * 1024);
+        await using var fileStream = File.Create(fullPath);
 
-            await inputStream.CopyToAsync(fileStream);
+        await inputStream.CopyToAsync(fileStream);
 
-            SelectedImageUrl = $"/uploads/{fileName}";
-            NewProduct.ImageUrl = SelectedImageUrl;
-
-            if (IsEditMode && EditingProductId != Guid.Empty)
-            {
-                await ProductService.UpdateProductImageAsync(EditingProductId, SelectedImageUrl);
-                await LoadProducts();
-            }
-
-            Console.WriteLine($"IMAGE SAVED TO: {fullPath}");
-            Console.WriteLine($"IMAGE URL: {NewProduct.ImageUrl}");
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Image upload error: {ex.Message}";
-            Console.WriteLine(ex.ToString());
-        }
+        return $"/uploads/{fileName}";
     }
 
     private void ToggleDiscount(Guid discountId, object? value)
