@@ -258,6 +258,8 @@ else
 
     private Guid EditingProductId = Guid.Empty;
 
+    private string? SelectedImageUrl;
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -292,6 +294,7 @@ else
         IsEditMode = false;
         SelectedDiscountIds = new();
         EditingProductId = Guid.Empty;
+        SelectedImageUrl = null;
 
         NewProduct = new Product
         {
@@ -335,6 +338,11 @@ else
 
                 NewProduct.Id = EditingProductId;
 
+                if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+                {
+                    NewProduct.ImageUrl = SelectedImageUrl;
+                }
+
                 Console.WriteLine($"SAVE IMAGE URL: {NewProduct.ImageUrl}");
 
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
@@ -376,6 +384,8 @@ else
         IsEditMode = true;
 
         EditingProductId = product.Id;
+
+        SelectedImageUrl = product.ImageUrl;
 
         SelectedDiscountIds = product.ProductDiscounts
     .Select(x => x.DiscountId)
@@ -434,7 +444,8 @@ else
 
             await inputStream.CopyToAsync(fileStream);
 
-            NewProduct.ImageUrl = $"/uploads/{fileName}";
+            SelectedImageUrl = $"/uploads/{fileName}";
+            NewProduct.ImageUrl = SelectedImageUrl;
 
             Console.WriteLine($"IMAGE SAVED TO: {fullPath}");
             Console.WriteLine($"IMAGE URL: {NewProduct.ImageUrl}");
