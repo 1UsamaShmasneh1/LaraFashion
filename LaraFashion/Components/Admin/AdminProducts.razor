@@ -427,9 +427,7 @@ else
 
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
 
-        var uploadsFolder = Path.Combine(
-            WebHostEnvironment.WebRootPath,
-            "uploads");
+        var uploadsFolder = "/var/www/larafashion/uploads";
 
         if (!Directory.Exists(uploadsFolder))
         {
