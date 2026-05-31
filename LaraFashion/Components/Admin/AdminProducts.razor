@@ -332,10 +332,10 @@ else
 
             if (!string.IsNullOrWhiteSpace(savedImageUrl))
             {
+                SelectedImageUrl = savedImageUrl;
                 NewProduct.ImageUrl = savedImageUrl;
             }
-
-            if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+            else if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
             {
                 NewProduct.ImageUrl = SelectedImageUrl;
             }
@@ -438,14 +438,15 @@ else
         var uploadsFolder = "/var/www/larafashion/uploads";
         Directory.CreateDirectory(uploadsFolder);
 
-        var extension = Path.GetExtension(SelectedImageFile.Name);
-        if (string.IsNullOrWhiteSpace(extension))
-            extension = ".jpg";
+        var resizedFile = await SelectedImageFile.RequestImageFileAsync(
+            "image/jpeg",
+            900,
+            900);
 
-        var fileName = $"{Guid.NewGuid()}{extension}";
+        var fileName = $"{Guid.NewGuid()}.jpg";
         var fullPath = Path.Combine(uploadsFolder, fileName);
 
-        await using var inputStream = SelectedImageFile.OpenReadStream(10 * 1024 * 1024);
+        await using var inputStream = resizedFile.OpenReadStream(3 * 1024 * 1024);
         await using var fileStream = File.Create(fullPath);
 
         await inputStream.CopyToAsync(fileStream);
