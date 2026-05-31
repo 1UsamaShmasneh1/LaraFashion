@@ -167,4 +167,17 @@ public class ProductService
         await _db.ProductDiscounts.AddRangeAsync(newLinks);
         await _db.SaveChangesAsync();
     }
+
+    public async Task UpdateProductImageAsync(Guid productId, string imageUrl)
+    {
+        var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
+
+        if (product is null)
+            return;
+
+        product.ImageUrl = imageUrl;
+        product.UpdatedAt = DateTime.Now;
+
+        await _db.SaveChangesAsync();
+    }
 }

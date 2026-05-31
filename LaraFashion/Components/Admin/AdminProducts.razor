@@ -333,6 +333,11 @@ else
                 NewProduct.ImageUrl = SelectedImageUrl;
             }
 
+            if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+            {
+                NewProduct.ImageUrl = SelectedImageUrl;
+            }
+
             if (IsEditMode)
             {
                 if (EditingProductId == Guid.Empty)
@@ -439,6 +444,11 @@ else
 
             SelectedImageUrl = $"/uploads/{fileName}";
             NewProduct.ImageUrl = SelectedImageUrl;
+
+            if (IsEditMode && EditingProductId != Guid.Empty)
+            {
+                await ProductService.UpdateProductImageAsync(EditingProductId, SelectedImageUrl);
+            }
 
             Console.WriteLine($"IMAGE SAVED TO: {fullPath}");
             Console.WriteLine($"IMAGE URL: {NewProduct.ImageUrl}");
