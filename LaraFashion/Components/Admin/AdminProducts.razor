@@ -328,6 +328,11 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
+            if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+            {
+                NewProduct.ImageUrl = SelectedImageUrl;
+            }
+
             if (IsEditMode)
             {
                 if (EditingProductId == Guid.Empty)
@@ -338,24 +343,11 @@ else
 
                 NewProduct.Id = EditingProductId;
 
-                if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
-                {
-                    NewProduct.ImageUrl = SelectedImageUrl;
-                }
-
-                Console.WriteLine($"SAVE IMAGE URL: {NewProduct.ImageUrl}");
-
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
             }
             else
             {
-                if (NewProduct.Id != Guid.Empty)
-                {
-                    ErrorMessage = "خطأ: المنتج يبدو كمنتج تعديل وليس منتج جديد.";
-                    return;
-                }
-
                 await ProductService.AddProductAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
             }
@@ -363,6 +355,7 @@ else
             IsAddModalOpen = false;
             IsEditMode = false;
             EditingProductId = Guid.Empty;
+            SelectedImageUrl = null;
             NewProduct = new Product();
             SelectedDiscountIds = new();
 
