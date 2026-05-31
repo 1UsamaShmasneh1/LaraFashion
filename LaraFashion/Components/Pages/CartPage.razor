@@ -140,6 +140,13 @@ else
                 Continue Shopping
             </button>
 
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <div class="error-message">
+                    @ErrorMessage
+                </div>
+            }
+
             <button class="checkout-button"
                     @onclick="OpenCheckout">
                 Send Order
@@ -181,6 +188,7 @@ else
 @code {
     private bool IsOrderSuccess;
     private bool IsCheckoutOpen;
+    private string ErrorMessage = string.Empty;
 
     private void Remove(LaraFashion.Models.CartItem item)
     {
@@ -215,18 +223,27 @@ else
 
     private async Task ConfirmOrder(CustomerInfo customer)
     {
-        var discountResult = CartService.CalculateBestDiscount();
+        try
+        {
+            
+            var discountResult = CartService.CalculateBestDiscount();
 
-        await OrderService.CreateOrderAsync(
-            customer,
-            CartService.Items.ToList(),
-            discountResult);
+            await OrderService.CreateOrderAsync(
+                customer,
+                CartService.Items.ToList(),
+                discountResult);
 
-        IsCheckoutOpen = false;
+            IsCheckoutOpen = false;
 
-        CartService.Clear();
+            CartService.Clear();
 
-        IsOrderSuccess = true;
+            IsOrderSuccess = true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            ErrorMessage = ex.Message;
+            return;
+        }
     }
 
     private void CloseSuccess()

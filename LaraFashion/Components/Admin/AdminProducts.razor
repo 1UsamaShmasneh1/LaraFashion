@@ -44,8 +44,16 @@ else
 
                 <div class="product-image-container">
 
-                    <img src="@product.ImageUrl"
-                         class="product-image" />
+                    @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                    {
+                        <img src="@product.ImageUrl" class="product-image" />
+                    }
+                    else
+                    {
+                        <div class="product-image-placeholder">
+                            No Image
+                        </div>
+                    }
 
                 </div>
 
@@ -62,6 +70,18 @@ else
                     <div class="final-price">
                         ₪@product.FinalPrice
                     </div>
+
+                    @if (product.ProductDiscounts.Any(x => x.Discount.IsActive))
+                    {
+                        <div class="product-card-discounts">
+                            @foreach (var pd in product.ProductDiscounts.Where(x => x.Discount.IsActive))
+                            {
+                                <div class="product-card-discount">
+                                    @GetDiscountSummary(pd.Discount)
+                                </div>
+                            }
+                        </div>
+                    }
 
                     <div style="display:flex; gap:10px; margin-top:15px;">
                         <button class="continue-shopping-button"

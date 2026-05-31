@@ -28,6 +28,20 @@ public class OrderService
     List<CartItem> cartItems,
     CartDiscountResult discountResult)
     {
+        foreach (var item in cartItems)
+        {
+            var size = await _db.ProductSizes
+                .FirstOrDefaultAsync(x =>
+                    x.ProductId == item.ProductId &&
+                    x.SizeName == item.Size);
+
+            if (size is null || size.Quantity < item.Quantity)
+            {
+                throw new InvalidOperationException(
+                    $"الكمية غير متوفرة للمنتج {item.ProductName}، المقاس {item.Size}.");
+            }
+        }
+
         var order = new Order
         {
             Id = Guid.NewGuid(),
@@ -41,6 +55,8 @@ public class OrderService
             DiscountAmount = discountResult.DiscountAmount,
             DiscountName = discountResult.DiscountName,
             FinalTotal = discountResult.FinalTotal,
+
+
 
             Items = cartItems.Select(item => new OrderItem
             {
@@ -56,6 +72,17 @@ public class OrderService
         };
 
         _db.Orders.Add(order);
+
+        foreach (var item in cartItems)
+        {
+            var size = await _db.ProductSizes
+                .FirstAsync(x =>
+                    x.ProductId == item.ProductId &&
+                    x.SizeName == item.Size);
+
+            size.Quantity -= item.Quantity;
+        }
+
         await _db.SaveChangesAsync();
 
         return order;

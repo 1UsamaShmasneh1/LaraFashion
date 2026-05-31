@@ -219,7 +219,7 @@
                     : $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم ₪{discount.Value}",
 
             DiscountRuleType.BundleFixedPrice =>
-                $"{discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice}",
+    $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
 
             _ => discount.Name
         };
