@@ -12,8 +12,15 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<AdminAuthService>();
+
+var dbFolder = "/var/www/larafashion/data";
+Directory.CreateDirectory(dbFolder);
+
+var dbPath = Path.Combine(dbFolder, "larafashion.db");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=Data/larafashion.db"));
+    options.UseSqlite($"Data Source={dbPath}"));
+
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<BrowserStorageService>();
 builder.Services.AddScoped<PasswordHasherService>();
