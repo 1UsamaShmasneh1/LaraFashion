@@ -448,6 +448,7 @@ else
             if (IsEditMode && EditingProductId != Guid.Empty)
             {
                 await ProductService.UpdateProductImageAsync(EditingProductId, SelectedImageUrl);
+                await LoadProducts();
             }
 
             Console.WriteLine($"IMAGE SAVED TO: {fullPath}");
