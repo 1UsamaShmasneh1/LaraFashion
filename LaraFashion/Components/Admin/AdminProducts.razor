@@ -411,30 +411,26 @@ else
 
     private async Task OnImageSelected(InputFileChangeEventArgs e)
     {
-        Console.WriteLine("ON IMAGE SELECTED STARTED");
         try
         {
+            Console.WriteLine("ON IMAGE SELECTED STARTED");
+
             var file = e.File;
 
             var uploadsFolder = "/var/www/larafashion/uploads";
             Directory.CreateDirectory(uploadsFolder);
 
-            var fileName = $"{Guid.NewGuid()}.png";
+            var extension = Path.GetExtension(file.Name);
+            if (string.IsNullOrWhiteSpace(extension))
+                extension = ".jpg";
+
+            var fileName = $"{Guid.NewGuid()}{extension}";
             var fullPath = Path.Combine(uploadsFolder, fileName);
 
             await using var inputStream = file.OpenReadStream(10 * 1024 * 1024);
-            using var memoryStream = new MemoryStream();
+            await using var fileStream = File.Create(fullPath);
 
-            await inputStream.CopyToAsync(memoryStream);
-
-            var originalBytes = memoryStream.ToArray();
-
-            using var bitmap = SKBitmap.Decode(originalBytes);
-            using var image = SKImage.FromBitmap(bitmap);
-            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-
-            await using var fileStream = File.OpenWrite(fullPath);
-            data.SaveTo(fileStream);
+            await inputStream.CopyToAsync(fileStream);
 
             NewProduct.ImageUrl = $"/uploads/{fileName}";
 
@@ -444,7 +440,7 @@ else
         catch (Exception ex)
         {
             ErrorMessage = $"Image upload error: {ex.Message}";
-            Console.WriteLine(ErrorMessage);
+            Console.WriteLine(ex.ToString());
         }
     }
 
