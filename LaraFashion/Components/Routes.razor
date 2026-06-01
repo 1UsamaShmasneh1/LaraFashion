@@ -1,6 +1,21 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using LaraFashion.Components.Shared
+
+<Router AppAssembly="typeof(Program).Assembly"
+        OnNavigateAsync="OnNavigateAsync">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
+
+    <Navigating>
+        <PageLoader />
+    </Navigating>
 </Router>
+
+@code {
+    private async Task OnNavigateAsync(NavigationContext context)
+    {
+        await Task.Delay(200);
+    }
+}
