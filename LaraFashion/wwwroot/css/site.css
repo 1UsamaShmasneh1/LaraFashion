@@ -913,6 +913,19 @@ body {
     display: block;
 }
 
+.size-button.out-of-stock-size {
+    background: #e5e7eb !important;
+    border-color: #cbd5e1 !important;
+    color: #8a8a8a !important;
+    cursor: not-allowed !important;
+    opacity: 0.65;
+    text-decoration: line-through;
+}
+
+.size-button.out-of-stock-size:hover {
+    transform: none !important;
+}
+
 @keyframes spinLoader {
     from {
         transform: rotate(0deg);

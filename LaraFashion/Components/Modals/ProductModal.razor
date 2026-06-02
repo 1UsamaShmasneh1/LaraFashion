@@ -71,7 +71,10 @@
 
                             @foreach (var size in Product.Sizes)
                             {
-                                <button class="size-button @(SelectedSize == size.SizeName ? "selected-size" : "")"
+                                var isOutOfStock = size.Quantity <= 0;
+
+                                <button class="size-button @(SelectedSize == size.SizeName ? "selected-size" : "") @(isOutOfStock ? "out-of-stock-size" : "")"
+                                        disabled="@isOutOfStock"
                                         @onclick="(() => SelectSize(size.SizeName))">
 
                                     @size.SizeName
@@ -205,6 +208,9 @@
     private async Task AddToCart()
     {
         if (string.IsNullOrWhiteSpace(SelectedSize))
+            return;
+
+        if (SelectedSizeQuantity <= 0)
             return;
 
         CartService.AddToCart(
