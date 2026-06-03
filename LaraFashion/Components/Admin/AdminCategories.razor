@@ -22,7 +22,7 @@
 
 <h1 class="admin-page-title">إدارة التصنيفات</h1>
 
-<button class="checkout-button admin-add-product-button" @onclick="OpenAddModal">
+<button type="button" class="checkout-button admin-add-product-button" @onclick="OpenAddModal">
     إضافة تصنيف
 </button>
 
@@ -49,10 +49,10 @@ else
                 </div>
 
                 <div class="admin-product-actions">
-                    <button class="continue-shopping-button" @onclick="() => OpenEditModal(category)">
+                    <button type="button" class="continue-shopping-button" @onclick="() => OpenEditModal(category)">
                         تعديل
                     </button>
-                    <button class="remove-item-button" @onclick="() => DeleteCategory(category.Id)">
+                    <button type="button" class="remove-item-button" @onclick="() => DeleteCategory(category.Id)">
                         حذف
                     </button>
                 </div>
@@ -156,7 +156,13 @@ else
         {
             ErrorMessage = string.Empty;
 
-            if (IsEditMode)
+            if (string.IsNullOrWhiteSpace(CurrentCategory.Name))
+            {
+                ErrorMessage = "اسم التصنيف مطلوب.";
+                return;
+            }
+
+            if (CurrentCategory.Id != Guid.Empty)
                 await CategoryService.UpdateAsync(CurrentCategory);
             else
                 await CategoryService.AddAsync(CurrentCategory);

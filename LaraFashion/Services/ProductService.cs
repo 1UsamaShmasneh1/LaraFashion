@@ -55,6 +55,12 @@ public class ProductService
             .ToListAsync();
     }
 
+
+    public async Task<bool> ProductExistsAsync(Guid id)
+    {
+        return await _db.Products.AnyAsync(x => x.Id == id);
+    }
+
     public async Task<Product?> GetProductAsync(Guid id)
     {
         return await _db.Products

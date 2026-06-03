@@ -53,7 +53,7 @@ else
 
         @foreach (var product in Products)
         {
-            <div class="product-card">
+            <div class="product-card" @key="product.Id">
 
                 <div class="product-image-container">
 
@@ -353,6 +353,7 @@ else
 
         NewProduct = new Product
         {
+            IsActive = true,
             Sizes = new()
         };
 
@@ -363,7 +364,12 @@ else
     {
         IsAddModalOpen = false;
         IsEditMode = false;
-        NewProduct = new Product();
+        EditingProductId = Guid.Empty;
+        SelectedImageFile = null;
+        SelectedImageUrl = null;
+        SelectedDiscountIds = new();
+        SelectedCategoryIds = new();
+        NewProduct = new Product { Sizes = new() };
 
         StateHasChanged();
     }
@@ -383,6 +389,19 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
+            if (string.IsNullOrWhiteSpace(NewProduct.Name))
+            {
+                ErrorMessage = "اسم المنتج مطلوب.";
+                return;
+            }
+
+            var productId = NewProduct.Id != Guid.Empty
+                ? NewProduct.Id
+                : EditingProductId;
+
+            var isEditingExistingProduct = productId != Guid.Empty
+                && await ProductService.ProductExistsAsync(productId);
+
             var savedImageUrl = await SaveSelectedImageAsync();
 
             if (!string.IsNullOrWhiteSpace(savedImageUrl))
@@ -395,18 +414,18 @@ else
                 NewProduct.ImageUrl = SelectedImageUrl;
             }
 
-            var isEditingExistingProduct = EditingProductId != Guid.Empty;
-
             if (isEditingExistingProduct)
             {
-                NewProduct.Id = EditingProductId;
+                NewProduct.Id = productId;
 
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
-                await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
-                await ProductService.UpdateProductCategoriesAsync(EditingProductId, SelectedCategoryIds);
+                await ProductService.UpdateProductDiscountsAsync(productId, SelectedDiscountIds);
+                await ProductService.UpdateProductCategoriesAsync(productId, SelectedCategoryIds);
             }
             else
             {
+                NewProduct.Id = Guid.Empty;
+
                 await ProductService.AddProductAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
                 await ProductService.UpdateProductCategoriesAsync(NewProduct.Id, SelectedCategoryIds);
@@ -417,7 +436,7 @@ else
             EditingProductId = Guid.Empty;
             SelectedImageFile = null;
             SelectedImageUrl = null;
-            NewProduct = new Product();
+            NewProduct = new Product { Sizes = new() };
             SelectedDiscountIds = new();
             SelectedCategoryIds = new();
 
