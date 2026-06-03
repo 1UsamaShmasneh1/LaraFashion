@@ -1,13 +1,15 @@
-﻿@page "/admin/orders"
+@page "/admin/orders"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
 @using LaraFashion.Services
+@using Microsoft.JSInterop
 
 @inject OrderService OrderService
-@inject LaraFashion.Services.AdminAuthService AdminAuthService
-@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject AdminAuthService AdminAuthService
+@inject BrowserStorageService BrowserStorageService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <AdminNav />
 
@@ -15,19 +17,18 @@
 
 @if (IsCheckingAuth)
 {
-    <div class="empty-cart">
-        Checking admin access...
-    </div>
-
+    <div class="empty-cart">Checking admin access...</div>
     return;
 }
 
-<button class="logout-button"
-        @onclick="Logout">
-    Logout
-</button>
+<button class="logout-button" @onclick="Logout">Logout</button>
 
 <h2 class="mb-4">Orders</h2>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="checkout-error">@ErrorMessage</div>
+}
 
 @if (orders.Count == 0)
 {
@@ -43,23 +44,13 @@ else
             <div class="order-card" @onclick="() => OpenOrder(order.Id)">
                 <div class="order-header">
                     <h4>@order.OrderNumber</h4>
-
-                    <span class="status-badge">
-                        @GetStatusText(order.Status)
-                    </span>
+                    <span class="status-badge">@GetStatusText(order.Status)</span>
                 </div>
 
                 <div class="order-info">
                     <p><strong>Customer:</strong> @order.Customer.FullName</p>
                     <p><strong>Phone:</strong> @order.Customer.PhoneNumber</p>
-                    <p>
-                        <strong>Total:</strong>
-                        ₪@(
-                        order.FinalTotal > 0
-                            ? order.FinalTotal
-                            : order.TotalPrice
-                        )
-                    </p>
+                    <p><strong>Total:</strong> ₪@(order.FinalTotal > 0 ? order.FinalTotal : order.TotalPrice)</p>
                     <p><strong>Products:</strong> @order.Items.Count</p>
                 </div>
             </div>
@@ -71,23 +62,41 @@ else
 {
     <div class="modal-overlay">
         <div class="order-modal">
-
-            <button class="close-btn"
-                    @onclick="CloseModal">
-                ×
-            </button>
+            <button class="close-btn" @onclick="CloseModal">×</button>
 
             <h2>@selectedOrder.OrderNumber</h2>
 
-            <p>
-                <strong>Created:</strong>
-                @selectedOrder.CreatedAt.ToString("dd/MM/yyyy HH:mm")
-            </p>
+            <div class="order-status-panel">
+                <h3>حالة الطلبية</h3>
 
-            <p>
-                <strong>Last Update:</strong>
-                @selectedOrder.UpdatedAt.ToString("dd/MM/yyyy HH:mm")
-            </p>
+                <div class="order-status-buttons">
+                    @foreach (var status in Enum.GetValues<OrderStatus>())
+                    {
+                        <button class="order-status-btn @(selectedStatus == status ? "active" : "")"
+                                @onclick="() => SetStatus(status)">
+                            @GetStatusText(status)
+                        </button>
+                    }
+                </div>
+
+                <button class="send-order-btn" @onclick="SaveStatus">حفظ الحالة</button>
+
+                @if (CanDeleteSelectedOrder)
+                {
+                    <button class="delete-order-btn" @onclick="DeleteSelectedOrder">
+                        حذف الطلبية نهائياً
+                    </button>
+                }
+                else
+                {
+                    <div class="delete-order-hint">
+                        يمكن حذف الطلبية فقط إذا كانت بحالة ملغاة أو جاهز.
+                    </div>
+                }
+            </div>
+
+            <p><strong>Created:</strong> @selectedOrder.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+            <p><strong>Last Update:</strong> @selectedOrder.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</p>
 
             <hr />
 
@@ -99,9 +108,7 @@ else
 
                 @if (!string.IsNullOrWhiteSpace(GetWhatsAppLink(selectedOrder.Customer.PhoneNumber)))
                 {
-                    <a class="whatsapp-button"
-                       href="@GetWhatsAppLink(selectedOrder.Customer.PhoneNumber)"
-                       target="_blank">
+                    <a class="whatsapp-button" href="@GetWhatsAppLink(selectedOrder.Customer.PhoneNumber)" target="_blank">
                         WhatsApp
                     </a>
                 }
@@ -117,24 +124,16 @@ else
             @foreach (var item in selectedOrder.Items)
             {
                 <div class="product-row">
-
-                    <img src="@item.ProductImageUrl"
-                         class="admin-order-item-image" />
+                    <img src="@item.ProductImageUrl" class="admin-order-item-image" />
 
                     <div>
                         <h4>@item.ProductName</h4>
-
                         <p>SN: @item.ProductSerialNumber</p>
-
                         <p>Size: @item.Size</p>
-
                         <p>Quantity: @item.Quantity</p>
-
                         <p>Unit Price: ₪@item.UnitPrice</p>
-
                         <p>Total: ₪@item.TotalPrice</p>
                     </div>
-
                 </div>
             }
 
@@ -150,56 +149,30 @@ else
             }
 
             <div><strong>المجموع النهائي: ₪@selectedOrder.FinalTotal</strong></div>
-
-            <hr />
-
-            <h3>Status</h3>
-
-            <select class="form-select"
-                    @bind="selectedStatus">
-
-                @foreach (var status in Enum.GetValues<OrderStatus>())
-                {
-                    <option value="@status">
-                        @GetStatusText(status)
-                    </option>
-                }
-
-            </select>
-
-            <button class="send-order-btn mt-3"
-                    @onclick="SaveStatus">
-                Save Status
-            </button>
-
         </div>
     </div>
 }
 
 @code {
-
     private bool IsCheckingAuth = true;
     private bool HasAccess;
+    private string ErrorMessage = string.Empty;
 
     private List<Order> orders = new();
-
     private Order? selectedOrder;
-
     private OrderStatus selectedStatus;
 
-    protected override Task OnInitializedAsync()
-    {
-        return Task.CompletedTask;
-    }
+    private bool CanDeleteSelectedOrder =>
+        selectedOrder is not null &&
+        (selectedOrder.Status == OrderStatus.Cancelled || selectedOrder.Status == OrderStatus.Ready);
 
     private async Task OpenOrder(Guid id)
     {
+        ErrorMessage = string.Empty;
         selectedOrder = await OrderService.GetOrderAsync(id);
 
         if (selectedOrder is not null)
-        {
             selectedStatus = selectedOrder.Status;
-        }
     }
 
     private void CloseModal()
@@ -207,18 +180,51 @@ else
         selectedOrder = null;
     }
 
+    private void SetStatus(OrderStatus status)
+    {
+        selectedStatus = status;
+    }
+
     private async Task SaveStatus()
     {
         if (selectedOrder is null)
             return;
 
-        await OrderService.UpdateStatusAsync(
-            selectedOrder.Id,
-            selectedStatus);
+        try
+        {
+            ErrorMessage = string.Empty;
+            await OrderService.UpdateStatusAsync(selectedOrder.Id, selectedStatus);
+            orders = await OrderService.GetOrdersAsync();
+            selectedOrder = await OrderService.GetOrderAsync(selectedOrder.Id);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
 
-        orders = await OrderService.GetOrdersAsync();
+    private async Task DeleteSelectedOrder()
+    {
+        if (selectedOrder is null)
+            return;
 
-        selectedOrder = await OrderService.GetOrderAsync(selectedOrder.Id);
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف الطلبية نهائياً؟ لا يمكن التراجع عن هذه العملية.");
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            ErrorMessage = string.Empty;
+            var orderId = selectedOrder.Id;
+            await OrderService.DeleteOrderAsync(orderId);
+            selectedOrder = null;
+            orders = await OrderService.GetOrdersAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     private string GetStatusText(OrderStatus status)
@@ -241,8 +247,7 @@ else
 
         var token = await BrowserStorageService.GetItemAsync("admin_token");
 
-        if (string.IsNullOrWhiteSpace(token) ||
-            !AdminAuthService.IsTokenValid(token))
+        if (string.IsNullOrWhiteSpace(token) || !AdminAuthService.IsTokenValid(token))
         {
             Navigation.NavigateTo("/admin/login");
             return;
@@ -250,16 +255,13 @@ else
 
         HasAccess = true;
         IsCheckingAuth = false;
-
         orders = await OrderService.GetOrdersAsync();
-
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task Logout()
     {
         await BrowserStorageService.RemoveItemAsync("admin_token");
-
         Navigation.NavigateTo("/admin/login");
     }
 
