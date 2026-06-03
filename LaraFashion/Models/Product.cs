@@ -42,4 +42,6 @@ public class Product
     }
 
     public List<ProductDiscount> ProductDiscounts { get; set; } = new();
+
+    public List<ProductCategory> ProductCategories { get; set; } = new();
 }

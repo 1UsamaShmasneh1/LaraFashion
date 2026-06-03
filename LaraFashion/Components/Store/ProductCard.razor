@@ -36,6 +36,16 @@
             @Product.Name
         </div>
 
+        @if (Product.ProductCategories.Any(x => x.Category.IsActive))
+        {
+            <div class="product-category-list">
+                @foreach (var pc in Product.ProductCategories.Where(x => x.Category.IsActive))
+                {
+                    <span class="product-category-badge">@pc.Category.Name</span>
+                }
+            </div>
+        }
+
         <div class="product-price-container">
 
             @if (Product.DiscountType != LaraFashion.Models.Enums.DiscountType.None)
