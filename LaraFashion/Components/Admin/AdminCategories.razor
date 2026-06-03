@@ -162,7 +162,9 @@ else
                 return;
             }
 
-            if (CurrentCategory.Id != Guid.Empty)
+            var isEditingExistingCategory = CurrentCategory.Id != Guid.Empty;
+
+            if (isEditingExistingCategory)
                 await CategoryService.UpdateAsync(CurrentCategory);
             else
                 await CategoryService.AddAsync(CurrentCategory);

@@ -55,12 +55,6 @@ public class ProductService
             .ToListAsync();
     }
 
-
-    public async Task<bool> ProductExistsAsync(Guid id)
-    {
-        return await _db.Products.AnyAsync(x => x.Id == id);
-    }
-
     public async Task<Product?> GetProductAsync(Guid id)
     {
         return await _db.Products
@@ -75,6 +69,9 @@ public class ProductService
 
     public async Task AddProductAsync(Product product)
     {
+        if (string.IsNullOrWhiteSpace(product.Name))
+            throw new InvalidOperationException("اسم المنتج مطلوب.");
+
         product.Id = Guid.NewGuid();
         product.CreatedAt = DateTime.Now;
         product.UpdatedAt = DateTime.Now;
@@ -126,6 +123,12 @@ public class ProductService
 
     public async Task UpdateProductWithSizesAsync(Product product)
     {
+        if (product.Id == Guid.Empty)
+            throw new InvalidOperationException("لا يمكن تعديل منتج بدون رقم تعريف.");
+
+        if (string.IsNullOrWhiteSpace(product.Name))
+            throw new InvalidOperationException("اسم المنتج مطلوب.");
+
         var existingProduct = await _db.Products
             .Include(x => x.Sizes)
             .FirstOrDefaultAsync(x => x.Id == product.Id);
