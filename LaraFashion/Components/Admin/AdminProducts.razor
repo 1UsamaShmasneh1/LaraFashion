@@ -18,18 +18,18 @@
     Products
 </h1>
 
-<button class="checkout-button admin-add-product-button"
+<button type="button" class="checkout-button admin-add-product-button"
         @onclick="OpenAddModal">
     Add Product
 </button>
 
 <div class="category-filter-bar">
-    <button class="category-filter-btn @(SelectedFilterCategoryId == Guid.Empty ? "active" : "")" @onclick="() => FilterByCategory(Guid.Empty)">
+    <button type="button" class="category-filter-btn @(SelectedFilterCategoryId == Guid.Empty ? "active" : "")" @onclick="() => FilterByCategory(Guid.Empty)">
         كل التصنيفات
     </button>
     @foreach (var category in AvailableCategories)
     {
-        <button class="category-filter-btn @(SelectedFilterCategoryId == category.Id ? "active" : "")" @onclick="() => FilterByCategory(category.Id)">
+        <button type="button" class="category-filter-btn @(SelectedFilterCategoryId == category.Id ? "active" : "")" @onclick="() => FilterByCategory(category.Id)">
             @category.Name
         </button>
     }
@@ -107,12 +107,12 @@ else
                     }
 
                     <div class="admin-product-actions">
-                        <button class="continue-shopping-button"
+                        <button type="button" class="continue-shopping-button"
                                 @onclick="(() => OpenEditModal(product))">
                             Edit
                         </button>
 
-                        <button class="remove-item-button"
+                        <button type="button" class="remove-item-button"
                                 @onclick="(() => DeleteProduct(product.Id))">
                             Delete
                         </button>
@@ -395,14 +395,10 @@ else
                 NewProduct.ImageUrl = SelectedImageUrl;
             }
 
-            if (IsEditMode)
-            {
-                if (EditingProductId == Guid.Empty)
-                {
-                    ErrorMessage = "خطأ: رقم المنتج مفقود، لا يمكن التعديل.";
-                    return;
-                }
+            var isEditingExistingProduct = EditingProductId != Guid.Empty;
 
+            if (isEditingExistingProduct)
+            {
                 NewProduct.Id = EditingProductId;
 
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
@@ -440,18 +436,20 @@ else
 
     private void OpenEditModal(Product product)
     {
+        ErrorMessage = string.Empty;
         IsEditMode = true;
-
         EditingProductId = product.Id;
-
         SelectedImageUrl = product.ImageUrl;
+        SelectedImageFile = null;
 
         SelectedDiscountIds = product.ProductDiscounts
             .Select(x => x.DiscountId)
+            .Distinct()
             .ToList();
 
         SelectedCategoryIds = product.ProductCategories
             .Select(x => x.CategoryId)
+            .Distinct()
             .ToList();
 
         NewProduct = new Product
