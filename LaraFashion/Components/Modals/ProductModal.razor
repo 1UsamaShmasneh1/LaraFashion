@@ -1,12 +1,19 @@
-@using LaraFashion.Models
+﻿@using LaraFashion.Models
 @using LaraFashion.Models.Enums
 @inject LaraFashion.Services.CartService CartService
 
 @if (IsOpen)
 {
     <div class="modal-overlay">
+
         <div class="product-modal">
-            <button class="close-button" @onclick="CloseModal">X</button>
+
+            <button class="close-button"
+                    @onclick="CloseModal">
+
+                X
+
+            </button>
 
             @if (!IsContentReady)
             {
@@ -16,35 +23,31 @@
             }
 
             <div class="modal-content-wrapper @(IsContentReady ? "modal-content-visible" : "modal-content-hidden")">
+                
                 <div class="modal-grid">
+
                     <div>
-                        @if (!string.IsNullOrWhiteSpace(Product.ImageUrl))
-                        {
-                            <img src="@Product.ImageUrl"
-                                 class="modal-product-image"
-                                 @onload="MarkContentReady"
-                                 @onerror="MarkContentReady" />
-                        }
-                        else
-                        {
-                            <div class="product-image-placeholder modal-product-image">No Image</div>
-                        }
+
+                        <img src="@Product.ImageUrl"
+                             class="modal-product-image"
+                             @onload="MarkContentReady"
+                             @onerror="MarkContentReady" />
+
                     </div>
 
                     <div>
-                        <h2>@Product.Name</h2>
 
-                        @if (Product.ProductCategories.Any(x => x.Category.IsActive))
-                        {
-                            <div class="product-category-list modal-category-list">
-                                @foreach (var pc in Product.ProductCategories.Where(x => x.Category.IsActive))
-                                {
-                                    <span class="product-category-badge">@pc.Category.Name</span>
-                                }
-                            </div>
-                        }
+                        <h2>
+                            @Product.Name
+                        </h2>
 
-                        <div class="modal-price">₪@Product.FinalPrice</div>
+                        <div class="modal-serial">
+                            Serial: @Product.SerialNumber
+                        </div>
+
+                        <div class="modal-price">
+                            ₪@Product.FinalPrice
+                        </div>
 
                         @if (Product.ProductDiscounts.Any(x => x.Discount.IsActive))
                         {
@@ -60,9 +63,12 @@
                             </div>
                         }
 
-                        <div class="sizes-title">Select Size</div>
+                        <div class="sizes-title">
+                            Select Size
+                        </div>
 
                         <div class="sizes-container">
+
                             @foreach (var size in Product.Sizes)
                             {
                                 var isOutOfStock = size.Quantity <= 0;
@@ -70,40 +76,84 @@
                                 <button class="size-button @(SelectedSize == size.SizeName ? "selected-size" : "") @(isOutOfStock ? "out-of-stock-size" : "")"
                                         disabled="@isOutOfStock"
                                         @onclick="(() => SelectSize(size.SizeName))">
+
                                     @size.SizeName
+
                                 </button>
                             }
+
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(SelectedSize))
                         {
-                            <div class="available-quantity @(SelectedSizeQuantity <= 0 ? "stock-out" : "stock-available")">
-                                @(SelectedSizeQuantity <= 0 ? "Out Of Stock" : $"Available Quantity: {SelectedSizeQuantity}")
+                            <div class="available-quantity">
+
+                                Available Quantity:
+                                @SelectedSizeQuantity
+
                             </div>
 
                             <div class="quantity-container">
-                                <button class="quantity-button" @onclick="DecreaseQuantity">-</button>
-                                <span class="quantity-value">@Quantity</span>
-                                <button class="quantity-button" @onclick="IncreaseQuantity">+</button>
+
+                                <button class="quantity-button"
+                                        @onclick="DecreaseQuantity">
+
+                                    -
+
+                                </button>
+
+                                <span class="quantity-value">
+                                    @Quantity
+                                </span>
+
+                                <button class="quantity-button"
+                                        @onclick="IncreaseQuantity">
+
+                                    +
+
+                                </button>
+
                             </div>
                         }
 
-                        <div class="modal-total">Total: ₪@(Quantity * Product.FinalPrice)</div>
+                        <div class="modal-total">
+
+                            Total:
+                            ₪@(Quantity * Product.FinalPrice)
+
+                        </div>
 
                         <div class="modal-buttons">
-                            <button class="cancel-button" @onclick="CloseModal">Cancel</button>
-                            <button class="add-to-cart-button" disabled="@(string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)" @onclick="AddToCart">
-                                Add To Cart
+
+                            <button class="cancel-button"
+                                    @onclick="CloseModal">
+
+                                Cancel
+
                             </button>
+
+                            <button class="add-to-cart-button"
+                                    @onclick="AddToCart">
+
+                                Add To Cart
+
+                            </button>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
+
     </div>
 }
 
 @code {
+
     [Parameter]
     public bool IsOpen { get; set; }
 
@@ -114,28 +164,40 @@
     public EventCallback OnClose { get; set; }
 
     private string SelectedSize = string.Empty;
+
     private int Quantity = 1;
+
     private int SelectedSizeQuantity;
+
     private bool IsContentReady;
     private Guid LastProductId;
 
     private void SelectSize(string size)
     {
         SelectedSize = size;
-        SelectedSizeQuantity = Product.Sizes.FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
+
+        SelectedSizeQuantity =
+            Product.Sizes
+                .FirstOrDefault(x => x.SizeName == size)?
+                .Quantity ?? 0;
+
         Quantity = 1;
     }
 
     private void IncreaseQuantity()
     {
         if (Quantity < SelectedSizeQuantity)
+        {
             Quantity++;
+        }
     }
 
     private void DecreaseQuantity()
     {
         if (Quantity > 1)
+        {
             Quantity--;
+        }
     }
 
     private async Task CloseModal()
@@ -145,10 +207,17 @@
 
     private async Task AddToCart()
     {
-        if (string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)
+        if (string.IsNullOrWhiteSpace(SelectedSize))
             return;
 
-        CartService.AddToCart(Product, SelectedSize, Quantity);
+        if (SelectedSizeQuantity <= 0)
+            return;
+
+        CartService.AddToCart(
+            Product,
+            SelectedSize,
+            Quantity);
+
         await CloseModal();
     }
 
@@ -172,20 +241,18 @@
                     : $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم ₪{discount.Value}",
 
             DiscountRuleType.BundleFixedPrice =>
-                $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
+    $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
 
             _ => discount.Name
         };
     }
+
 
     protected override void OnParametersSet()
     {
         if (IsOpen && LastProductId != Product.Id)
         {
             LastProductId = Product.Id;
-            SelectedSize = string.Empty;
-            SelectedSizeQuantity = 0;
-            Quantity = 1;
             IsContentReady = string.IsNullOrWhiteSpace(Product.ImageUrl);
         }
 
@@ -193,9 +260,6 @@
         {
             IsContentReady = false;
             LastProductId = Guid.Empty;
-            SelectedSize = string.Empty;
-            SelectedSizeQuantity = 0;
-            Quantity = 1;
         }
     }
 
@@ -203,4 +267,5 @@
     {
         IsContentReady = true;
     }
+
 }

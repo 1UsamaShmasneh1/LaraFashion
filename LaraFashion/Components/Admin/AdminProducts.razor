@@ -9,7 +9,6 @@
 @inject LaraFashion.Services.AdminAuthService AdminAuthService
 @inject LaraFashion.Services.BrowserStorageService BrowserStorageService
 @inject LaraFashion.Services.DiscountService DiscountService
-@inject LaraFashion.Services.CategoryService CategoryService
 @inject NavigationManager Navigation
 
 <AdminNav />
@@ -22,18 +21,6 @@
         @onclick="OpenAddModal">
     Add Product
 </button>
-
-<div class="category-filter-bar">
-    <button class="category-filter-btn @(SelectedFilterCategoryId == Guid.Empty ? "active" : "")" @onclick="() => FilterByCategory(Guid.Empty)">
-        كل التصنيفات
-    </button>
-    @foreach (var category in AvailableCategories)
-    {
-        <button class="category-filter-btn @(SelectedFilterCategoryId == category.Id ? "active" : "")" @onclick="() => FilterByCategory(category.Id)">
-            @category.Name
-        </button>
-    }
-</div>
 
 @if (IsLoading)
 {
@@ -83,16 +70,6 @@ else
                     <div class="final-price">
                         ₪@product.FinalPrice
                     </div>
-
-                    @if (product.ProductCategories.Any(x => x.Category.IsActive))
-                    {
-                        <div class="product-category-list">
-                            @foreach (var pc in product.ProductCategories.Where(x => x.Category.IsActive))
-                            {
-                                <span class="product-category-badge">@pc.Category.Name</span>
-                            }
-                        </div>
-                    }
 
                     @if (product.ProductDiscounts.Any(x => x.Discount.IsActive))
                     {
@@ -188,30 +165,6 @@ else
                 <InputFile OnChange="OnImageSelected" />
             </div>
 
-            <h3>التصنيفات المتاحة</h3>
-
-            @if (!AvailableCategories.Any())
-            {
-                <div class="delivery-price-note">
-                    لا توجد تصنيفات حالياً
-                </div>
-            }
-            else
-            {
-                <div class="discount-select-list">
-                    @foreach (var category in AvailableCategories)
-                    {
-                        <label class="discount-check-row">
-                            <input type="checkbox"
-                                   checked="@SelectedCategoryIds.Contains(category.Id)"
-                                   @onchange="e => ToggleCategory(category.Id, e.Value)" />
-
-                            <span>@category.Name</span>
-                        </label>
-                    }
-                </div>
-            }
-
             <h3>التخفيضات المتاحة</h3>
 
             @if (!AvailableDiscounts.Any())
@@ -301,13 +254,7 @@ else
 
     private List<Discount> AvailableDiscounts = new();
 
-    private List<Category> AvailableCategories = new();
-
     private List<Guid> SelectedDiscountIds = new();
-
-    private List<Guid> SelectedCategoryIds = new();
-
-    private Guid SelectedFilterCategoryId = Guid.Empty;
 
     private Guid EditingProductId = Guid.Empty;
 
@@ -336,9 +283,8 @@ else
 
     private async Task LoadProducts()
     {
-        Products = await ProductService.GetAllProductsAsync(SelectedFilterCategoryId == Guid.Empty ? null : SelectedFilterCategoryId);
+        Products = await ProductService.GetAllProductsAsync();
         AvailableDiscounts = await DiscountService.GetActiveAsync();
-        AvailableCategories = await CategoryService.GetActiveAsync();
 
         IsLoading = false;
     }
@@ -347,7 +293,6 @@ else
     {
         IsEditMode = false;
         SelectedDiscountIds = new();
-        SelectedCategoryIds = new();
         EditingProductId = Guid.Empty;
         SelectedImageUrl = null;
 
@@ -407,13 +352,11 @@ else
 
                 await ProductService.UpdateProductWithSizesAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(EditingProductId, SelectedDiscountIds);
-                await ProductService.UpdateProductCategoriesAsync(EditingProductId, SelectedCategoryIds);
             }
             else
             {
                 await ProductService.AddProductAsync(NewProduct);
                 await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
-                await ProductService.UpdateProductCategoriesAsync(NewProduct.Id, SelectedCategoryIds);
             }
 
             IsAddModalOpen = false;
@@ -423,7 +366,6 @@ else
             SelectedImageUrl = null;
             NewProduct = new Product();
             SelectedDiscountIds = new();
-            SelectedCategoryIds = new();
 
             await LoadProducts();
         }
@@ -447,12 +389,8 @@ else
         SelectedImageUrl = product.ImageUrl;
 
         SelectedDiscountIds = product.ProductDiscounts
-            .Select(x => x.DiscountId)
-            .ToList();
-
-        SelectedCategoryIds = product.ProductCategories
-            .Select(x => x.CategoryId)
-            .ToList();
+    .Select(x => x.DiscountId)
+    .ToList();
 
         NewProduct = new Product
         {
@@ -529,28 +467,6 @@ else
         {
             SelectedDiscountIds.Remove(discountId);
         }
-    }
-
-
-    private void ToggleCategory(Guid categoryId, object? value)
-    {
-        var isChecked = value is bool b && b;
-
-        if (isChecked)
-        {
-            if (!SelectedCategoryIds.Contains(categoryId))
-                SelectedCategoryIds.Add(categoryId);
-        }
-        else
-        {
-            SelectedCategoryIds.Remove(categoryId);
-        }
-    }
-
-    private async Task FilterByCategory(Guid categoryId)
-    {
-        SelectedFilterCategoryId = categoryId;
-        await LoadProducts();
     }
 
     private string GetDiscountSummary(Discount discount)

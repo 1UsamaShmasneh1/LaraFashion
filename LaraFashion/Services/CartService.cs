@@ -36,11 +36,7 @@ public class CartService
                 Size = size,
                 Quantity = quantity,
                 UnitPrice = product.FinalPrice,
-                ProductDiscounts = product.ProductDiscounts,
-                CategoryNames = product.ProductCategories
-                    .Where(x => x.Category.IsActive)
-                    .Select(x => x.Category.Name)
-                    .ToList()
+                ProductDiscounts = product.ProductDiscounts
             });
         }
 

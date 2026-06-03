@@ -20,6 +20,4 @@ public class CartItem
 
     public List<ProductDiscount> ProductDiscounts { get; set; } = new();
 
-    public List<string> CategoryNames { get; set; } = new();
-
 }

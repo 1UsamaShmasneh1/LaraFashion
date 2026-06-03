@@ -27,7 +27,6 @@ builder.Services.AddScoped<PasswordHasherService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<DiscountService>();
-builder.Services.AddScoped<CategoryService>();
 
 var app = builder.Build();
 

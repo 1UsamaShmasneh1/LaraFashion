@@ -51,16 +51,6 @@ else
                         SN: @item.ProductSerialNumber
                     </div>
 
-                    @if (item.CategoryNames.Any())
-                    {
-                        <div class="product-category-list cart-category-list">
-                            @foreach (var categoryName in item.CategoryNames)
-                            {
-                                <span class="product-category-badge">@categoryName</span>
-                            }
-                        </div>
-                    }
-
                     <div class="cart-item-size">
                         Size: @item.Size
                     </div>

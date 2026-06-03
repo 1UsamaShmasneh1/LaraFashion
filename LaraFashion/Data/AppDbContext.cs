@@ -1,4 +1,4 @@
-using LaraFashion.Models;
+﻿using LaraFashion.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace LaraFashion.Data;
@@ -26,10 +26,6 @@ public class AppDbContext : DbContext
 
     public DbSet<ProductDiscount> ProductDiscounts => Set<ProductDiscount>();
 
-    public DbSet<Category> Categories => Set<Category>();
-
-    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -40,28 +36,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ProductDiscount>()
             .HasOne(x => x.Product)
             .WithMany(x => x.ProductDiscounts)
-            .HasForeignKey(x => x.ProductId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(x => x.ProductId);
 
         modelBuilder.Entity<ProductDiscount>()
             .HasOne(x => x.Discount)
             .WithMany(x => x.ProductDiscounts)
-            .HasForeignKey(x => x.DiscountId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<ProductCategory>()
-            .HasKey(x => new { x.ProductId, x.CategoryId });
-
-        modelBuilder.Entity<ProductCategory>()
-            .HasOne(x => x.Product)
-            .WithMany(x => x.ProductCategories)
-            .HasForeignKey(x => x.ProductId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<ProductCategory>()
-            .HasOne(x => x.Category)
-            .WithMany(x => x.ProductCategories)
-            .HasForeignKey(x => x.CategoryId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(x => x.DiscountId);
     }
 }
