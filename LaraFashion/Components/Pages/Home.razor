@@ -7,14 +7,14 @@
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.CategoryService CategoryService
 
-<div class="lf-filter-panel store-category-filter" dir="rtl">
-    <div class="lf-filter-text">
-        <span class="lf-filter-kicker">تصفية المنتجات</span>
-        <strong>اختر التصنيف</strong>
+<div class="lf-filter-panel store-category-filter" dir="rtl" style="display:inline-flex;align-items:center;gap:14px;padding:14px 18px;border-radius:22px;background:rgba(255,255,255,.92);box-shadow:0 10px 28px rgba(15,23,42,.10);border:1px solid rgba(226,232,240,.95);margin:18px 0 24px;max-width:100%;">
+    <div class="lf-filter-text" style="display:flex;flex-direction:column;gap:3px;min-width:120px;text-align:right;color:#64748b;font-weight:800;">
+        <span class="lf-filter-kicker" style="font-size:12px;line-height:1;color:#94a3b8;font-weight:900;">تصفية المنتجات</span>
+        <strong style="font-size:16px;line-height:1.2;color:#334155;font-weight:950;">اختر التصنيف</strong>
     </div>
 
-    <div class="lf-select-wrap">
-        <select class="lf-modern-select"
+    <div class="lf-select-wrap" style="position:relative;min-width:190px;">
+        <select class="lf-modern-select" style="width:100%;height:54px;border:0;border-radius:18px;padding:0 46px 0 18px;color:white;background:linear-gradient(135deg,#38bdf8,#7c3aed);font-size:16px;font-weight:950;box-shadow:0 12px 24px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.25);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;text-align:center;"
                 value="@SelectedCategoryId.ToString()"
                 @onchange="OnStoreCategoryChanged">
             <option value="@Guid.Empty.ToString()">كل المنتجات</option>
