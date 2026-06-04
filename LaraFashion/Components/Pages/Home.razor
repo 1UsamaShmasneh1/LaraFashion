@@ -7,18 +7,23 @@
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.CategoryService CategoryService
 
-<div class="category-select-bar store-category-filter">
-    <label class="category-select-label">التصنيف</label>
+<div class="lf-filter-panel store-category-filter" dir="rtl">
+    <div class="lf-filter-text">
+        <span class="lf-filter-kicker">تصفية المنتجات</span>
+        <strong>اختر التصنيف</strong>
+    </div>
 
-    <select class="category-filter-select"
-            value="@SelectedCategoryId.ToString()"
-            @onchange="OnStoreCategoryChanged">
-        <option value="@Guid.Empty.ToString()">كل المنتجات</option>
-        @foreach (var category in Categories)
-        {
-            <option value="@category.Id.ToString()">@category.Name</option>
-        }
-    </select>
+    <div class="lf-select-wrap">
+        <select class="lf-modern-select"
+                value="@SelectedCategoryId.ToString()"
+                @onchange="OnStoreCategoryChanged">
+            <option value="@Guid.Empty.ToString()">كل المنتجات</option>
+            @foreach (var category in Categories)
+            {
+                <option value="@category.Id.ToString()">@category.Name</option>
+            }
+        </select>
+    </div>
 </div>
 
 @if (IsLoading)

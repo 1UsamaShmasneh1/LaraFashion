@@ -66,42 +66,44 @@ else
 
             <h2>@selectedOrder.OrderNumber</h2>
 
-            <div class="order-status-panel beautiful-status-panel">
-                <div class="order-status-panel-header">
-                    <div>
-                        <span class="order-status-kicker">حالة الطلبية</span>
-                        <h3>@GetStatusText(selectedStatus)</h3>
+            <div class="lf-order-status-card" dir="rtl">
+                <div class="lf-order-status-top">
+                    <div class="lf-order-status-title">
+                        <span>حالة الطلبية</span>
+                        <strong>@GetStatusText(selectedStatus)</strong>
                     </div>
 
-                    <span class="status-badge order-status-current @GetStatusCssClass(selectedStatus)">
+                    <span class="status-badge lf-status-pill @GetStatusCssClass(selectedStatus)">
                         @GetStatusText(selectedStatus)
                     </span>
                 </div>
 
-                <div class="order-status-control-row">
-                    <select class="order-status-select"
-                            value="@selectedStatus"
-                            @onchange="OnSelectedStatusChanged">
-                        @foreach (var status in Enum.GetValues<OrderStatus>())
-                        {
-                            <option value="@status">@GetStatusText(status)</option>
-                        }
-                    </select>
+                <div class="lf-order-status-actions">
+                    <div class="lf-select-wrap lf-status-wrap">
+                        <select class="lf-modern-select lf-status-select"
+                                value="@selectedStatus"
+                                @onchange="OnSelectedStatusChanged">
+                            @foreach (var status in Enum.GetValues<OrderStatus>())
+                            {
+                                <option value="@status">@GetStatusText(status)</option>
+                            }
+                        </select>
+                    </div>
 
-                    <button type="button" class="save-status-button" @onclick="SaveStatus">
+                    <button type="button" class="lf-save-status-btn" @onclick="SaveStatus">
                         حفظ الحالة
                     </button>
                 </div>
 
                 @if (CanDeleteSelectedOrder)
                 {
-                    <button type="button" class="delete-order-btn delete-order-modern" @onclick="DeleteSelectedOrder">
+                    <button type="button" class="delete-order-btn lf-delete-order-btn" @onclick="DeleteSelectedOrder">
                         حذف الطلبية نهائياً
                     </button>
                 }
                 else
                 {
-                    <div class="delete-order-hint">
+                    <div class="delete-order-hint lf-delete-order-hint">
                         يمكن حذف الطلبية فقط إذا كانت بحالة ملغاة أو جاهز.
                     </div>
                 }

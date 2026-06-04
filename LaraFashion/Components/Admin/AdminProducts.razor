@@ -23,18 +23,23 @@
     Add Product
 </button>
 
-<div class="category-select-bar admin-category-select-bar">
-    <label class="category-select-label">تصفية المنتجات</label>
+<div class="lf-filter-panel admin-category-select-bar" dir="rtl">
+    <div class="lf-filter-text">
+        <span class="lf-filter-kicker">إدارة المنتجات</span>
+        <strong>تصفية حسب التصنيف</strong>
+    </div>
 
-    <select class="category-filter-select"
-            value="@SelectedFilterCategoryId.ToString()"
-            @onchange="OnAdminCategoryFilterChanged">
-        <option value="@Guid.Empty.ToString()">كل التصنيفات</option>
-        @foreach (var category in AvailableCategories)
-        {
-            <option value="@category.Id.ToString()">@category.Name</option>
-        }
-    </select>
+    <div class="lf-select-wrap">
+        <select class="lf-modern-select"
+                value="@SelectedFilterCategoryId.ToString()"
+                @onchange="OnAdminCategoryFilterChanged">
+            <option value="@Guid.Empty.ToString()">كل التصنيفات</option>
+            @foreach (var category in AvailableCategories)
+            {
+                <option value="@category.Id.ToString()">@category.Name</option>
+            }
+        </select>
+    </div>
 </div>
 
 @if (IsLoading)
