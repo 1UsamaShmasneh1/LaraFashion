@@ -14,13 +14,13 @@
     </div>
 
     <div class="lf-select-wrap" style="position:relative;min-width:190px;">
-        <select class="lf-modern-select" style="width:100%;height:54px;border:0;border-radius:18px;padding:0 46px 0 18px;color:white;background:linear-gradient(135deg,#38bdf8,#7c3aed);font-size:16px;font-weight:950;box-shadow:0 12px 24px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.25);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;text-align:center;"
+        <select class="lf-modern-select" style="width:100%;height:54px;border:0;border-radius:18px;padding:0 46px 0 18px;color:#111827;background:linear-gradient(135deg,#e0f2fe,#ede9fe);font-size:16px;font-weight:950;box-shadow:0 12px 24px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.25);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;text-align:center;"
                 value="@SelectedCategoryId.ToString()"
                 @onchange="OnStoreCategoryChanged">
-            <option value="@Guid.Empty.ToString()">كل المنتجات</option>
+            <option style="color:#111827;background:white;" value="@Guid.Empty.ToString()">كل المنتجات</option>
             @foreach (var category in Categories)
             {
-                <option value="@category.Id.ToString()">@category.Name</option>
+                <option style="color:#111827;background:white;" value="@category.Id.ToString()">@category.Name</option>
             }
         </select>
     </div>
