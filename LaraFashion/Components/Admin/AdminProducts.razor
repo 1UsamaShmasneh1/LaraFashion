@@ -1,4 +1,4 @@
-@page "/admin/products"
+﻿@page "/admin/products"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
@@ -363,15 +363,8 @@ else
 
     private void CloseAddModal()
     {
-        IsAddModalOpen = false;
-        IsEditMode = false;
-        EditingProductId = Guid.Empty;
-        SelectedImageFile = null;
-        SelectedImageUrl = null;
-        SelectedDiscountIds = new();
-        SelectedCategoryIds = new();
-        NewProduct = new Product();
-
+        ErrorMessage = string.Empty;
+        ResetProductForm();
         StateHasChanged();
     }
 
@@ -408,35 +401,37 @@ else
                 return;
             }
 
-            var productIdToSave = NewProduct.Id != Guid.Empty
-                ? NewProduct.Id
-                : EditingProductId;
-
-            var isEditingExistingProduct = productIdToSave != Guid.Empty;
+            var isEditingExistingProduct = IsEditMode || EditingProductId != Guid.Empty;
 
             if (isEditingExistingProduct)
             {
-                NewProduct.Id = productIdToSave;
+                if (EditingProductId == Guid.Empty && NewProduct.Id == Guid.Empty)
+                {
+                    ErrorMessage = "تعذر تحديد المنتج المطلوب تعديله. أغلق النافذة وافتح تعديل المنتج مرة أخرى.";
+                    return;
+                }
 
-                await ProductService.UpdateProductWithSizesAsync(NewProduct);
-                await ProductService.UpdateProductDiscountsAsync(productIdToSave, SelectedDiscountIds);
-                await ProductService.UpdateProductCategoriesAsync(productIdToSave, SelectedCategoryIds);
+                var productIdToUpdate = EditingProductId != Guid.Empty
+                    ? EditingProductId
+                    : NewProduct.Id;
+
+                NewProduct.Id = productIdToUpdate;
+
+                await ProductService.UpdateProductWithRelationsAsync(
+                    NewProduct,
+                    SelectedDiscountIds,
+                    SelectedCategoryIds,
+                    mustExist: true);
             }
             else
             {
-                await ProductService.AddProductAsync(NewProduct);
-                await ProductService.UpdateProductDiscountsAsync(NewProduct.Id, SelectedDiscountIds);
-                await ProductService.UpdateProductCategoriesAsync(NewProduct.Id, SelectedCategoryIds);
+                await ProductService.AddProductWithRelationsAsync(
+                    NewProduct,
+                    SelectedDiscountIds,
+                    SelectedCategoryIds);
             }
 
-            IsAddModalOpen = false;
-            IsEditMode = false;
-            EditingProductId = Guid.Empty;
-            SelectedImageFile = null;
-            SelectedImageUrl = null;
-            NewProduct = new Product();
-            SelectedDiscountIds = new();
-            SelectedCategoryIds = new();
+            ResetProductForm();
 
             await LoadProducts();
         }
@@ -451,8 +446,26 @@ else
         }
     }
 
+    private void ResetProductForm()
+    {
+        IsAddModalOpen = false;
+        IsEditMode = false;
+        EditingProductId = Guid.Empty;
+        SelectedImageFile = null;
+        SelectedImageUrl = null;
+        NewProduct = new Product();
+        SelectedDiscountIds = new();
+        SelectedCategoryIds = new();
+    }
+
     private void OpenEditModal(Product product)
     {
+        if (product.Id == Guid.Empty)
+        {
+            ErrorMessage = "هذا المنتج غير صالح ولا يمكن تعديله.";
+            return;
+        }
+
         ErrorMessage = string.Empty;
         IsEditMode = true;
         EditingProductId = product.Id;
@@ -461,11 +474,13 @@ else
 
         SelectedDiscountIds = product.ProductDiscounts
             .Select(x => x.DiscountId)
+            .Where(x => x != Guid.Empty)
             .Distinct()
             .ToList();
 
         SelectedCategoryIds = product.ProductCategories
             .Select(x => x.CategoryId)
+            .Where(x => x != Guid.Empty)
             .Distinct()
             .ToList();
 

@@ -1,4 +1,4 @@
-using LaraFashion.Data;
+﻿using LaraFashion.Data;
 using LaraFashion.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -89,6 +89,61 @@ public class ProductService
         await _db.SaveChangesAsync();
     }
 
+    public async Task AddProductWithRelationsAsync(
+        Product product,
+        List<Guid> discountIds,
+        List<Guid> categoryIds)
+    {
+        if (string.IsNullOrWhiteSpace(product.Name))
+            throw new InvalidOperationException("اسم المنتج مطلوب.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        await AddProductAsync(product);
+        await ReplaceProductDiscountsAsync(product.Id, discountIds);
+        await ReplaceProductCategoriesAsync(product.Id, categoryIds);
+
+        await _db.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+    }
+
+    public async Task UpdateProductWithRelationsAsync(
+        Product product,
+        List<Guid> discountIds,
+        List<Guid> categoryIds,
+        bool mustExist = true)
+    {
+        if (product.Id == Guid.Empty)
+            throw new InvalidOperationException("لا يمكن تعديل منتج بدون رقم تعريف.");
+
+        if (string.IsNullOrWhiteSpace(product.Name))
+            throw new InvalidOperationException("اسم المنتج مطلوب.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        var exists = await _db.Products.AnyAsync(x => x.Id == product.Id);
+
+        if (!exists)
+        {
+            if (mustExist)
+                throw new InvalidOperationException("المنتج المطلوب تعديله غير موجود في قاعدة البيانات.");
+
+            await AddProductAsync(product);
+        }
+        else
+        {
+            await UpdateProductWithSizesAsync(product);
+        }
+
+        await ReplaceProductDiscountsAsync(product.Id, discountIds);
+        await ReplaceProductCategoriesAsync(product.Id, categoryIds);
+
+        await _db.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+    }
+
     public async Task UpdateProductAsync(Product product)
     {
         product.UpdatedAt = DateTime.Now;
@@ -176,6 +231,21 @@ public class ProductService
 
     public async Task UpdateProductDiscountsAsync(Guid productId, List<Guid> discountIds)
     {
+        await ReplaceProductDiscountsAsync(productId, discountIds);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateProductCategoriesAsync(Guid productId, List<Guid> categoryIds)
+    {
+        await ReplaceProductCategoriesAsync(productId, categoryIds);
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task ReplaceProductDiscountsAsync(Guid productId, List<Guid> discountIds)
+    {
+        if (productId == Guid.Empty)
+            throw new InvalidOperationException("رقم المنتج غير صالح.");
+
         discountIds = discountIds
             .Where(x => x != Guid.Empty)
             .Distinct()
@@ -194,11 +264,13 @@ public class ProductService
         });
 
         await _db.ProductDiscounts.AddRangeAsync(newLinks);
-        await _db.SaveChangesAsync();
     }
 
-    public async Task UpdateProductCategoriesAsync(Guid productId, List<Guid> categoryIds)
+    private async Task ReplaceProductCategoriesAsync(Guid productId, List<Guid> categoryIds)
     {
+        if (productId == Guid.Empty)
+            throw new InvalidOperationException("رقم المنتج غير صالح.");
+
         categoryIds = categoryIds
             .Where(x => x != Guid.Empty)
             .Distinct()
@@ -217,7 +289,6 @@ public class ProductService
         });
 
         await _db.ProductCategories.AddRangeAsync(newLinks);
-        await _db.SaveChangesAsync();
     }
 
     public async Task UpdateProductImageAsync(Guid productId, string imageUrl)
