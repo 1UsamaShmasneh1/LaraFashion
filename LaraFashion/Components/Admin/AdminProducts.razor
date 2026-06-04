@@ -23,16 +23,18 @@
     Add Product
 </button>
 
-<div class="category-filter-bar">
-    <button type="button" class="category-filter-btn @(SelectedFilterCategoryId == Guid.Empty ? "active" : "")" @onclick="() => FilterByCategory(Guid.Empty)">
-        كل التصنيفات
-    </button>
-    @foreach (var category in AvailableCategories)
-    {
-        <button type="button" class="category-filter-btn @(SelectedFilterCategoryId == category.Id ? "active" : "")" @onclick="() => FilterByCategory(category.Id)">
-            @category.Name
-        </button>
-    }
+<div class="category-select-bar admin-category-select-bar">
+    <label class="category-select-label">تصفية المنتجات</label>
+
+    <select class="category-filter-select"
+            value="@SelectedFilterCategoryId.ToString()"
+            @onchange="OnAdminCategoryFilterChanged">
+        <option value="@Guid.Empty.ToString()">كل التصنيفات</option>
+        @foreach (var category in AvailableCategories)
+        {
+            <option value="@category.Id.ToString()">@category.Name</option>
+        }
+    </select>
 </div>
 
 @if (IsLoading)
@@ -577,9 +579,14 @@ else
         }
     }
 
-    private async Task FilterByCategory(Guid categoryId)
+    private async Task OnAdminCategoryFilterChanged(ChangeEventArgs e)
     {
-        SelectedFilterCategoryId = categoryId;
+        var rawValue = e.Value?.ToString();
+
+        SelectedFilterCategoryId = Guid.TryParse(rawValue, out var categoryId)
+            ? categoryId
+            : Guid.Empty;
+
         await LoadProducts();
     }
 

@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 
 @using LaraFashion.Models
 @using LaraFashion.Components.Store
@@ -7,17 +7,18 @@
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.CategoryService CategoryService
 
-<div class="category-filter-bar store-category-filter">
-    <button class="category-filter-btn @(SelectedCategoryId == Guid.Empty ? "active" : "")" @onclick="() => SelectCategory(Guid.Empty)">
-        كل المنتجات
-    </button>
+<div class="category-select-bar store-category-filter">
+    <label class="category-select-label">التصنيف</label>
 
-    @foreach (var category in Categories)
-    {
-        <button class="category-filter-btn @(SelectedCategoryId == category.Id ? "active" : "")" @onclick="() => SelectCategory(category.Id)">
-            @category.Name
-        </button>
-    }
+    <select class="category-filter-select"
+            value="@SelectedCategoryId.ToString()"
+            @onchange="OnStoreCategoryChanged">
+        <option value="@Guid.Empty.ToString()">كل المنتجات</option>
+        @foreach (var category in Categories)
+        {
+            <option value="@category.Id.ToString()">@category.Name</option>
+        }
+    </select>
 </div>
 
 @if (IsLoading)
@@ -69,9 +70,14 @@ else
         IsLoading = false;
     }
 
-    private async Task SelectCategory(Guid categoryId)
+    private async Task OnStoreCategoryChanged(ChangeEventArgs e)
     {
-        SelectedCategoryId = categoryId;
+        var rawValue = e.Value?.ToString();
+
+        SelectedCategoryId = Guid.TryParse(rawValue, out var categoryId)
+            ? categoryId
+            : Guid.Empty;
+
         await LoadProducts();
     }
 

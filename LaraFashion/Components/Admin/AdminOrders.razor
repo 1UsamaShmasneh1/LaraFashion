@@ -1,4 +1,4 @@
-@page "/admin/orders"
+﻿@page "/admin/orders"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
@@ -44,7 +44,7 @@ else
             <div class="order-card" @onclick="() => OpenOrder(order.Id)">
                 <div class="order-header">
                     <h4>@order.OrderNumber</h4>
-                    <span class="status-badge">@GetStatusText(order.Status)</span>
+                    <span class="status-badge @GetStatusCssClass(order.Status)">@GetStatusText(order.Status)</span>
                 </div>
 
                 <div class="order-info">
@@ -66,24 +66,36 @@ else
 
             <h2>@selectedOrder.OrderNumber</h2>
 
-            <div class="order-status-panel">
-                <h3>حالة الطلبية</h3>
+            <div class="order-status-panel beautiful-status-panel">
+                <div class="order-status-panel-header">
+                    <div>
+                        <span class="order-status-kicker">حالة الطلبية</span>
+                        <h3>@GetStatusText(selectedStatus)</h3>
+                    </div>
 
-                <div class="order-status-buttons">
-                    @foreach (var status in Enum.GetValues<OrderStatus>())
-                    {
-                        <button class="order-status-btn @(selectedStatus == status ? "active" : "")"
-                                @onclick="() => SetStatus(status)">
-                            @GetStatusText(status)
-                        </button>
-                    }
+                    <span class="status-badge order-status-current @GetStatusCssClass(selectedStatus)">
+                        @GetStatusText(selectedStatus)
+                    </span>
                 </div>
 
-                <button class="send-order-btn" @onclick="SaveStatus">حفظ الحالة</button>
+                <div class="order-status-control-row">
+                    <select class="order-status-select"
+                            value="@selectedStatus"
+                            @onchange="OnSelectedStatusChanged">
+                        @foreach (var status in Enum.GetValues<OrderStatus>())
+                        {
+                            <option value="@status">@GetStatusText(status)</option>
+                        }
+                    </select>
+
+                    <button type="button" class="save-status-button" @onclick="SaveStatus">
+                        حفظ الحالة
+                    </button>
+                </div>
 
                 @if (CanDeleteSelectedOrder)
                 {
-                    <button class="delete-order-btn" @onclick="DeleteSelectedOrder">
+                    <button type="button" class="delete-order-btn delete-order-modern" @onclick="DeleteSelectedOrder">
                         حذف الطلبية نهائياً
                     </button>
                 }
@@ -180,9 +192,10 @@ else
         selectedOrder = null;
     }
 
-    private void SetStatus(OrderStatus status)
+    private void OnSelectedStatusChanged(ChangeEventArgs e)
     {
-        selectedStatus = status;
+        if (Enum.TryParse<OrderStatus>(e.Value?.ToString(), out var status))
+            selectedStatus = status;
     }
 
     private async Task SaveStatus()
@@ -237,6 +250,19 @@ else
             OrderStatus.Shipped => "تم الإرسال",
             OrderStatus.Cancelled => "ملغاة",
             _ => status.ToString()
+        };
+    }
+
+    private string GetStatusCssClass(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.New => "status-new",
+            OrderStatus.Preparing => "status-preparing",
+            OrderStatus.Ready => "status-ready",
+            OrderStatus.Shipped => "status-shipped",
+            OrderStatus.Cancelled => "status-cancelled",
+            _ => string.Empty
         };
     }
 
