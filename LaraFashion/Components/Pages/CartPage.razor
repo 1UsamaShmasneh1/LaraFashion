@@ -6,6 +6,7 @@
 
 @inject LaraFashion.Services.CartService CartService
 @inject LaraFashion.Services.OrderService OrderService
+@inject LaraFashion.Services.ProductService ProductService
 
 @inject NavigationManager Navigation
 
@@ -236,8 +237,16 @@ else
         Navigation.NavigateTo("/");
     }
 
-    private void OpenCheckout()
+    private async Task OpenCheckout()
     {
+        await RefreshCartQuantitiesAsync();
+
+        if (!CartService.Items.Any())
+        {
+            ErrorMessage = "تم تحديث السلة. بعض المنتجات لم تعد متوفرة.";
+            return;
+        }
+
         IsCheckoutOpen = true;
     }
 
@@ -247,11 +256,25 @@ else
         return Task.CompletedTask;
     }
 
+    private async Task RefreshCartQuantitiesAsync()
+    {
+        var validItems = await ProductService.BuildValidCartItemsAsync(CartService.ToPersistedItems());
+        CartService.ReplaceItems(validItems);
+    }
+
     private async Task ConfirmOrder(CustomerInfo customer)
     {
         try
         {
-            
+            await RefreshCartQuantitiesAsync();
+
+            if (!CartService.Items.Any())
+            {
+                IsCheckoutOpen = false;
+                ErrorMessage = "تم تحديث السلة. المنتجات المختارة لم تعد متوفرة.";
+                return;
+            }
+
             var discountResult = CartService.CalculateBestDiscount();
 
             await OrderService.CreateOrderAsync(

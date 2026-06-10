@@ -103,6 +103,25 @@ public class CartService
         NotifyStateChanged();
     }
 
+    public List<PersistedCartItem> ToPersistedItems()
+    {
+        return Items
+            .Select(x => new PersistedCartItem
+            {
+                ProductId = x.ProductId,
+                Size = x.Size,
+                Quantity = x.Quantity
+            })
+            .ToList();
+    }
+
+    public void ReplaceItems(List<CartItem> items)
+    {
+        Items = items;
+
+        NotifyStateChanged();
+    }
+
     public void Clear()
     {
         Items.Clear();

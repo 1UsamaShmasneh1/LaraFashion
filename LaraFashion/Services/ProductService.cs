@@ -67,6 +67,52 @@ public class ProductService
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+
+    public async Task<List<CartItem>> BuildValidCartItemsAsync(IEnumerable<PersistedCartItem> persistedItems)
+    {
+        var result = new List<CartItem>();
+
+        foreach (var persistedItem in persistedItems)
+        {
+            if (persistedItem.ProductId == Guid.Empty || string.IsNullOrWhiteSpace(persistedItem.Size))
+                continue;
+
+            var product = await GetProductAsync(persistedItem.ProductId);
+
+            if (product is null || !product.IsActive)
+                continue;
+
+            var productSize = product.Sizes
+                .FirstOrDefault(x => x.SizeName == persistedItem.Size);
+
+            if (productSize is null || productSize.Quantity <= 0)
+                continue;
+
+            var quantity = Math.Min(Math.Max(persistedItem.Quantity, 1), productSize.Quantity);
+
+            result.Add(new CartItem
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                ProductSerialNumber = product.SerialNumber,
+                ProductImageUrl = product.ImageUrl,
+                Size = persistedItem.Size,
+                Quantity = quantity,
+                MaxAvailableQuantity = productSize.Quantity,
+                UnitPrice = product.FinalPrice,
+                ProductDiscounts = product.ProductDiscounts
+                    .Where(x => x.Discount.IsActive)
+                    .ToList(),
+                CategoryNames = product.ProductCategories
+                    .Where(x => x.Category.IsActive)
+                    .Select(x => x.Category.Name)
+                    .ToList()
+            });
+        }
+
+        return result;
+    }
+
     public async Task AddProductAsync(Product product)
     {
         if (string.IsNullOrWhiteSpace(product.Name))

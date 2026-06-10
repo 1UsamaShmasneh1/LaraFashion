@@ -1,0 +1,103 @@
+@using System.Text.Json
+@using LaraFashion.Models
+@inject LaraFashion.Services.CartService CartService
+@inject LaraFashion.Services.ProductService ProductService
+@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+
+@implements IDisposable
+
+@code {
+    private const string CartStorageKey = "laraFashion.cart.v1";
+    private static readonly TimeSpan CartLifeTime = TimeSpan.FromDays(1);
+
+    private bool _browserStorageReady;
+    private bool _isLoadingFromStorage;
+
+    protected override void OnInitialized()
+    {
+        CartService.OnChange += HandleCartChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _browserStorageReady = true;
+        await LoadCartFromStorageAsync();
+    }
+
+    private async Task LoadCartFromStorageAsync()
+    {
+        try
+        {
+            _isLoadingFromStorage = true;
+
+            var rawCart = await BrowserStorageService.GetItemAsync(CartStorageKey);
+
+            if (string.IsNullOrWhiteSpace(rawCart))
+                return;
+
+            var persistedCart = JsonSerializer.Deserialize<PersistedCartState>(rawCart);
+
+            if (persistedCart is null || DateTime.UtcNow - persistedCart.LastUpdatedUtc > CartLifeTime)
+            {
+                await BrowserStorageService.RemoveItemAsync(CartStorageKey);
+                CartService.ReplaceItems(new List<CartItem>());
+                return;
+            }
+
+            var validItems = await ProductService.BuildValidCartItemsAsync(persistedCart.Items);
+            CartService.ReplaceItems(validItems);
+        }
+        catch
+        {
+            await BrowserStorageService.RemoveItemAsync(CartStorageKey);
+            CartService.ReplaceItems(new List<CartItem>());
+        }
+        finally
+        {
+            _isLoadingFromStorage = false;
+        }
+
+        await SaveCartToStorageAsync();
+    }
+
+    private void HandleCartChanged()
+    {
+        if (!_browserStorageReady || _isLoadingFromStorage)
+            return;
+
+        _ = InvokeAsync(SaveCartToStorageAsync);
+    }
+
+    private async Task SaveCartToStorageAsync()
+    {
+        try
+        {
+            if (!CartService.Items.Any())
+            {
+                await BrowserStorageService.RemoveItemAsync(CartStorageKey);
+                return;
+            }
+
+            var persistedCart = new PersistedCartState
+            {
+                LastUpdatedUtc = DateTime.UtcNow,
+                Items = CartService.ToPersistedItems()
+            };
+
+            var rawCart = JsonSerializer.Serialize(persistedCart);
+            await BrowserStorageService.SetItemAsync(CartStorageKey, rawCart);
+        }
+        catch
+        {
+            // Ignore storage errors so the store remains usable even if browser storage is blocked.
+        }
+    }
+
+    public void Dispose()
+    {
+        CartService.OnChange -= HandleCartChanged;
+    }
+}
