@@ -11,7 +11,7 @@
 
 <h1 class="cart-page-title">
 
-    Shopping Cart
+    سلة المشتريات
 
 </h1>
 
@@ -20,12 +20,12 @@
     <div class="empty-cart">
 
         <div>
-            Your cart is empty
+            سلة المشتريات فارغة
         </div>
 
         <button class="continue-shopping-button"
                 @onclick="ContinueShopping">
-            Continue Shopping
+            متابعة التسوق
         </button>
 
     </div>
@@ -62,7 +62,7 @@ else
                     }
 
                     <div class="cart-item-size">
-                        Size: @item.Size
+                        المقاس: @item.Size
                     </div>
 
                     <div class="cart-item-price">
@@ -116,7 +116,7 @@ else
                     <button class="remove-item-button"
                             @onclick="(() => Remove(item))">
 
-                        Remove
+                        حذف
 
                     </button>
 
@@ -158,7 +158,7 @@ else
 
             <button class="continue-shopping-button"
                     @onclick="ContinueShopping">
-                Continue Shopping
+                متابعة التسوق
             </button>
 
             @if (!string.IsNullOrWhiteSpace(ErrorMessage))
@@ -170,7 +170,7 @@ else
 
             <button class="checkout-button"
                     @onclick="OpenCheckout">
-                Send Order
+                إرسال الطلب
             </button>
 
         </div>

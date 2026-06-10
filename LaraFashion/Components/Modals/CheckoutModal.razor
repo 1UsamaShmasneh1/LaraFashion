@@ -14,7 +14,7 @@
 
             <div class="modal-content-wrapper @(IsContentReady ? "modal-content-visible" : "modal-content-hidden")">
             
-                <h2>Confirm Order</h2>
+                <h2>تأكيد الطلب</h2>
 
                 @if (!string.IsNullOrWhiteSpace(ErrorMessage))
                 {
@@ -24,40 +24,41 @@
                 }
 
                 <div class="form-group">
-                    <label>Full Name *</label>
+                    <label>الاسم الكامل *</label>
                     <input @bind="Customer.FullName" />
                 </div>
 
                 <div class="form-group">
-                    <label>Phone Number *</label>
+                    <label>رقم الهاتف *</label>
                     <input @bind="Customer.PhoneNumber" />
                 </div>
 
                 <div class="form-group">
-                    <label>City *</label>
+                    <label>العنوان *</label>
                     <input @bind="Customer.City" />
                 </div>
 
                 <div class="form-group">
-                    <label>Street</label>
+                    <label>الشارع</label>
                     <input @bind="Customer.Street" />
                 </div>
 
                 <div class="form-group">
-                    <label>House Number</label>
+                    <label>رقم البيت</label>
                     <input @bind="Customer.HouseNumber" />
                 </div>
 
                 <div class="delivery-note-box">
-                    <strong>Confirmation</strong>
+                    <strong>موافقه</strong>
 
                     <div>
                         التوصيل متاح لجميع مناطق الضفة والداخل:
                     </div>
 
-                    <div>الضفة: ٣٠ شيقل.</div>
-                    <div>الداخل: ٥٠ شيقل.</div>
-                    <div>الداخل الشمالي والجنوبي: ٧٠ شيقل.</div>
+                    <div>الضفة: 25 شيقل.</div>
+                    <div>الداخل: 50 شيقل.</div>
+                    <div>القدس: 30 شيقل.</div>
+                    <div>التخفيضات التي تشمل التوصيل لا تلزم بدفع اجر توصيل.</div>
 
                     <label class="confirmation-check">
                         <input type="checkbox" @bind="IsDeliveryConfirmed" />
@@ -68,12 +69,12 @@
                 <div class="checkout-buttons">
                     <button class="continue-shopping-button"
                             @onclick="BackToCart">
-                        Back To Cart
+                        الرجوع للسلة
                     </button>
 
                     <button class="checkout-button"
                             @onclick="ConfirmOrder">
-                        Confirm Order
+                        ارسال الطلب
                     </button>
                 </div>
 
@@ -103,13 +104,13 @@
             string.IsNullOrWhiteSpace(Customer.PhoneNumber) ||
             string.IsNullOrWhiteSpace(Customer.City))
         {
-            ErrorMessage = "Full Name, Phone Number, and City are required.";
+            ErrorMessage = "الاسم الكامل ورقم الهاتف والعنوان يجب ملئها جميعاً.";
             return;
         }
 
         if (!IsDeliveryConfirmed)
         {
-            ErrorMessage = "You must confirm the delivery note.";
+            ErrorMessage = "يجب الموافقه على الملاحضة.";
             return;
         }
 

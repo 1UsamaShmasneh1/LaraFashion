@@ -27,7 +27,7 @@
                         }
                         else
                         {
-                            <div class="product-image-placeholder modal-product-image">No Image</div>
+                            <div class="product-image-placeholder modal-product-image">لا توجد صورة</div>
                         }
                     </div>
 
@@ -60,7 +60,7 @@
                             </div>
                         }
 
-                        <div class="sizes-title">Select Size</div>
+                        <div class="sizes-title">اختر المقاس</div>
 
                         <div class="sizes-container">
                             @foreach (var size in Product.Sizes)
@@ -78,7 +78,7 @@
                         @if (!string.IsNullOrWhiteSpace(SelectedSize))
                         {
                             <div class="available-quantity @(SelectedSizeQuantity <= 0 ? "stock-out" : "stock-available")">
-                                @(SelectedSizeQuantity <= 0 ? "Out Of Stock" : $"Available Quantity: {SelectedSizeQuantity}")
+                                @(SelectedSizeQuantity <= 0 ? "غير متوفر" : $"الكمية المتاحة: {SelectedSizeQuantity}")
                             </div>
 
                             <div class="quantity-container">
@@ -88,7 +88,7 @@
                             </div>
                         }
 
-                        <div class="modal-total">Total: ₪@(Quantity * Product.FinalPrice)</div>
+                        <div class="modal-total">المجموع: ₪@(Quantity * Product.FinalPrice)</div>
 
                         <div class="modal-buttons">
                             <button class="cancel-button" @onclick="CloseModal">Cancel</button>

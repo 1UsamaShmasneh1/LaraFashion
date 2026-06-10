@@ -21,9 +21,9 @@
     return;
 }
 
-<button class="logout-button" @onclick="Logout">Logout</button>
+<button class="logout-button" @onclick="Logout">تسجيل الخروج</button>
 
-<h2 class="mb-4">Orders</h2>
+<h2 class="mb-4">الطلبات</h2>
 
 @if (!string.IsNullOrWhiteSpace(ErrorMessage))
 {
@@ -33,7 +33,7 @@
 @if (orders.Count == 0)
 {
     <div class="empty-cart-card">
-        <p>No orders yet</p>
+        <p>لا توجد طلبات بعد</p>
     </div>
 }
 else
@@ -48,10 +48,10 @@ else
                 </div>
 
                 <div class="order-info">
-                    <p><strong>Customer:</strong> @order.Customer.FullName</p>
-                    <p><strong>Phone:</strong> @order.Customer.PhoneNumber</p>
-                    <p><strong>Total:</strong> ₪@(order.FinalTotal > 0 ? order.FinalTotal : order.TotalPrice)</p>
-                    <p><strong>Products:</strong> @order.Items.Count</p>
+                    <p><strong>الزبون:</strong> @order.Customer.FullName</p>
+                    <p><strong>الهاتف:</strong> @order.Customer.PhoneNumber</p>
+                    <p><strong>المجموع:</strong> ₪@(order.FinalTotal > 0 ? order.FinalTotal : order.TotalPrice)</p>
+                    <p><strong>المنتجات:</strong> @order.Items.Count</p>
                 </div>
             </div>
         }
@@ -109,16 +109,16 @@ else
                 }
             </div>
 
-            <p><strong>Created:</strong> @selectedOrder.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
-            <p><strong>Last Update:</strong> @selectedOrder.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+            <p><strong>تم الإنشاء:</strong> @selectedOrder.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+            <p><strong>آخر تحديث:</strong> @selectedOrder.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</p>
 
             <hr />
 
-            <h3>Customer Info</h3>
+            <h3>معلومات الزبون</h3>
 
-            <p><strong>Name:</strong> @selectedOrder.Customer.FullName</p>
+            <p><strong>الاسم:</strong> @selectedOrder.Customer.FullName</p>
             <p>
-                <strong>Phone:</strong> @selectedOrder.Customer.PhoneNumber
+                <strong>الهاتف:</strong> @selectedOrder.Customer.PhoneNumber
 
                 @if (!string.IsNullOrWhiteSpace(GetWhatsAppLink(selectedOrder.Customer.PhoneNumber)))
                 {
@@ -127,13 +127,13 @@ else
                     </a>
                 }
             </p>
-            <p><strong>City:</strong> @selectedOrder.Customer.City</p>
-            <p><strong>Street:</strong> @selectedOrder.Customer.Street</p>
-            <p><strong>House Number:</strong> @selectedOrder.Customer.HouseNumber</p>
+            <p><strong>المدينة:</strong> @selectedOrder.Customer.City</p>
+            <p><strong>الشارع:</strong> @selectedOrder.Customer.Street</p>
+            <p><strong>رقم المنزل:</strong> @selectedOrder.Customer.HouseNumber</p>
 
             <hr />
 
-            <h3>Products</h3>
+            <h3>المنتجات</h3>
 
             @foreach (var item in selectedOrder.Items)
             {
@@ -143,10 +143,10 @@ else
                     <div>
                         <h4>@item.ProductName</h4>
                         <p>SN: @item.ProductSerialNumber</p>
-                        <p>Size: @item.Size</p>
-                        <p>Quantity: @item.Quantity</p>
-                        <p>Unit Price: ₪@item.UnitPrice</p>
-                        <p>Total: ₪@item.TotalPrice</p>
+                        <p>المقاس: @item.Size</p>
+                        <p>الكمية: @item.Quantity</p>
+                        <p>سعر الوحدة: ₪@item.UnitPrice</p>
+                        <p>المجموع: ₪@item.TotalPrice</p>
                     </div>
                 </div>
             }

@@ -15,14 +15,14 @@
 <AdminNav />
 
 <h1 class="admin-page-title">
-    Products
+    المنتجات
 </h1>
 
 <div class="lf-filter-panel admin-category-select-bar" dir="rtl" style="display:inline-flex;align-items:center;gap:14px;padding:14px 18px;border-radius:22px;background:rgba(255,255,255,.92);box-shadow:0 10px 28px rgba(15,23,42,.10);border:1px solid rgba(226,232,240,.95);margin:18px 0 24px;max-width:100%;flex-wrap:wrap;">
     <button type="button" class="checkout-button admin-add-product-button"
             style="height:54px;border:0;border-radius:18px;padding:0 26px;margin:0;color:white;background:linear-gradient(135deg,#38bdf8,#7c3aed);font-size:16px;font-weight:950;box-shadow:0 12px 24px rgba(124,58,237,.22);white-space:nowrap;"
             @onclick="OpenAddModal">
-        Add Product
+        اضافة منتج
     </button>
     <div class="lf-filter-text" style="display:flex;flex-direction:column;gap:3px;min-width:120px;text-align:right;color:#64748b;font-weight:800;">
         <span class="lf-filter-kicker" style="font-size:12px;line-height:1;color:#94a3b8;font-weight:900;">إدارة المنتجات</span>
@@ -51,7 +51,7 @@
 else if (!Products.Any())
 {
     <div class="empty-cart">
-        No products found
+        لا يجد منتجات للعرض
     </div>
 }
 else
@@ -71,7 +71,7 @@ else
                     else
                     {
                         <div class="product-image-placeholder">
-                            No Image
+                            لا توجد صورة
                         </div>
                     }
 
@@ -116,12 +116,12 @@ else
                     <div class="admin-product-actions">
                         <button type="button" class="continue-shopping-button"
                                 @onclick="(() => OpenEditModal(product))">
-                            Edit
+                            تعديل
                         </button>
 
                         <button type="button" class="remove-item-button"
                                 @onclick="(() => DeleteProduct(product.Id))">
-                            Delete
+                            حذف
                         </button>
                     </div>
 
@@ -149,28 +149,28 @@ else
             <h2>@(IsEditMode ? "Edit Product" : "Add Product")</h2>
 
             <div class="form-group">
-                <label>Name</label>
+                <label>الاسم</label>
                 <input @bind="NewProduct.Name" />
             </div>
 
             <div class="form-group">
-                <label>Serial Number</label>
+                <label>رقم السلسلة</label>
                 <input @bind="NewProduct.SerialNumber" />
             </div>
 
             <div class="form-group">
-                <label>Description</label>
+                <label>الوصف</label>
                 <input @bind="NewProduct.Description" />
             </div>
 
             <div class="form-group">
-                <label>Price</label>
+                <label>السعر</label>
                 <input type="number"
                        @bind="NewProduct.OriginalPrice" />
             </div>
 
             <div class="form-group">
-                <label>Discount Type</label>
+                <label>نوع التخفيض</label>
 
                 <select @bind="NewProduct.DiscountType"
                         class="form-select">
@@ -265,7 +265,7 @@ else
             <button type="button"
                     class="continue-shopping-button mb-3"
                     @onclick="AddSize">
-                Add Size
+                اضافة مقاس جديد
             </button>
 
             <div class="checkout-buttons">
@@ -273,14 +273,14 @@ else
                 <button type="button"
                         class="continue-shopping-button"
                         @onclick="CloseAddModal">
-                    Cancel
+                    الغاء
                 </button>
 
                 <button type="button"
                         class="checkout-button"
                         disabled="@IsSaving"
                         @onclick="SaveProduct">
-                    @(IsSaving ? "Saving..." : IsEditMode ? "Update Product" : "Save Product")
+                    @(IsSaving ? "حفظ..." : IsEditMode ? "تعديل المنتج" : "حفظ المنتج")
                 </button>
 
             </div>
