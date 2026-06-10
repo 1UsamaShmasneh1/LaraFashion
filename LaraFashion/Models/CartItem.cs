@@ -14,6 +14,8 @@ public class CartItem
 
     public int Quantity { get; set; }
 
+    public int MaxAvailableQuantity { get; set; }
+
     public decimal UnitPrice { get; set; }
 
     public decimal TotalPrice => UnitPrice * Quantity;

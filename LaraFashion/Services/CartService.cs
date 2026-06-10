@@ -15,15 +15,41 @@ public class CartService
     public int TotalItems =>
         Items.Sum(x => x.Quantity);
 
+    public int GetQuantity(Guid productId, string size)
+    {
+        return Items.FirstOrDefault(x =>
+            x.ProductId == productId &&
+            x.Size == size)?.Quantity ?? 0;
+    }
+
     public void AddToCart(Product product, string size, int quantity)
     {
+        var maxAvailableQuantity = product.Sizes
+            .FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
+
+        if (maxAvailableQuantity <= 0)
+            return;
+
+        quantity = Math.Clamp(quantity, 1, maxAvailableQuantity);
+
         var existingItem = Items.FirstOrDefault(x =>
             x.ProductId == product.Id &&
             x.Size == size);
 
         if (existingItem is not null)
         {
-            existingItem.Quantity += quantity;
+            existingItem.ProductName = product.Name;
+            existingItem.ProductSerialNumber = product.SerialNumber;
+            existingItem.ProductImageUrl = product.ImageUrl;
+            existingItem.UnitPrice = product.FinalPrice;
+            existingItem.MaxAvailableQuantity = maxAvailableQuantity;
+            existingItem.ProductDiscounts = product.ProductDiscounts;
+            existingItem.CategoryNames = product.ProductCategories
+                .Where(x => x.Category.IsActive)
+                .Select(x => x.Category.Name)
+                .ToList();
+
+            existingItem.Quantity = quantity;
         }
         else
         {
@@ -35,6 +61,7 @@ public class CartService
                 ProductImageUrl = product.ImageUrl,
                 Size = size,
                 Quantity = quantity,
+                MaxAvailableQuantity = maxAvailableQuantity,
                 UnitPrice = product.FinalPrice,
                 ProductDiscounts = product.ProductDiscounts,
                 CategoryNames = product.ProductCategories
@@ -56,9 +83,14 @@ public class CartService
 
     public void IncreaseQuantity(CartItem item)
     {
-        item.Quantity++;
+        if (item.MaxAvailableQuantity <= 0)
+            return;
 
-        NotifyStateChanged();
+        if (item.Quantity < item.MaxAvailableQuantity)
+        {
+            item.Quantity++;
+            NotifyStateChanged();
+        }
     }
 
     public void DecreaseQuantity(CartItem item)

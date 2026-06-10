@@ -1,4 +1,4 @@
-@using LaraFashion.Models
+﻿@using LaraFashion.Models
 @using LaraFashion.Models.Enums
 @inject LaraFashion.Services.CartService CartService
 
@@ -84,7 +84,7 @@
                             <div class="quantity-container">
                                 <button class="quantity-button" @onclick="DecreaseQuantity">-</button>
                                 <span class="quantity-value">@Quantity</span>
-                                <button class="quantity-button" @onclick="IncreaseQuantity">+</button>
+                                <button class="quantity-button" disabled="@(Quantity >= SelectedSizeQuantity)" @onclick="IncreaseQuantity">+</button>
                             </div>
                         }
 
@@ -123,7 +123,12 @@
     {
         SelectedSize = size;
         SelectedSizeQuantity = Product.Sizes.FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
-        Quantity = 1;
+
+        var quantityAlreadyInCart = CartService.GetQuantity(Product.Id, size);
+
+        Quantity = quantityAlreadyInCart > 0
+            ? Math.Min(quantityAlreadyInCart, SelectedSizeQuantity)
+            : 1;
     }
 
     private void IncreaseQuantity()
