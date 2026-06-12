@@ -1,3 +1,4 @@
+using SkiaSharp;
 using LaraFashion.Components;
 using LaraFashion.Services;
 using LaraFashion.Data;
@@ -112,13 +113,65 @@ app.MapPost("/api/admin/upload-product-image", async (
 
     Directory.CreateDirectory(targetUploadsPath);
 
-    var fileName = $"{Guid.NewGuid()}{extension.ToLowerInvariant()}";
+    var fileName = $"{Guid.NewGuid()}.png";
     var fullPath = Path.Combine(targetUploadsPath, fileName);
 
-    await using (var outputStream = File.Create(fullPath))
-    await using (var inputStream = file.OpenReadStream())
+    await using var inputStream = file.OpenReadStream();
+    using var memoryStream = new MemoryStream();
+    await inputStream.CopyToAsync(memoryStream);
+
+    var originalBytes = memoryStream.ToArray();
+
+    using var originalBitmap = SKBitmap.Decode(originalBytes);
+    if (originalBitmap == null)
     {
-        await inputStream.CopyToAsync(outputStream);
+        return Results.BadRequest(new { message = "Invalid image file." });
+    }
+
+    const int maxImageSide = 1200;
+
+    SKBitmap finalBitmap = originalBitmap;
+
+    if (originalBitmap.Width > maxImageSide || originalBitmap.Height > maxImageSide)
+    {
+        var ratio = Math.Min(
+            (double)maxImageSide / originalBitmap.Width,
+            (double)maxImageSide / originalBitmap.Height);
+
+        var targetWidth = Math.Max(1, (int)Math.Round(originalBitmap.Width * ratio));
+        var targetHeight = Math.Max(1, (int)Math.Round(originalBitmap.Height * ratio));
+
+        var resizedBitmap = originalBitmap.Resize(
+            new SKImageInfo(targetWidth, targetHeight),
+            SKFilterQuality.High);
+
+        if (resizedBitmap == null)
+        {
+            return Results.BadRequest(new { message = "Could not resize image." });
+        }
+
+        finalBitmap = resizedBitmap;
+    }
+
+    try
+    {
+        using var image = SKImage.FromBitmap(finalBitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 90);
+
+        if (data == null)
+        {
+            return Results.BadRequest(new { message = "Could not convert image to PNG." });
+        }
+
+        await using var outputStream = File.Create(fullPath);
+        data.SaveTo(outputStream);
+    }
+    finally
+    {
+        if (!ReferenceEquals(finalBitmap, originalBitmap))
+        {
+            finalBitmap.Dispose();
+        }
     }
 
     return Results.Ok(new
