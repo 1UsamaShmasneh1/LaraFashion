@@ -1,3 +1,4 @@
+using SkiaSharp;
 using LaraFashion.Components;
 using LaraFashion.Services;
 using LaraFashion.Data;
@@ -112,13 +113,61 @@ app.MapPost("/api/admin/upload-product-image", async (
 
     Directory.CreateDirectory(targetUploadsPath);
 
-    var fileName = $"{Guid.NewGuid()}{extension.ToLowerInvariant()}";
+    const int maxImageSide = 1000;
+    const int webpQuality = 82;
+
+    var fileName = $"{Guid.NewGuid()}.webp";
     var fullPath = Path.Combine(targetUploadsPath, fileName);
 
-    await using (var outputStream = File.Create(fullPath))
-    await using (var inputStream = file.OpenReadStream())
+    await using var inputStream = file.OpenReadStream();
+    using var memoryStream = new MemoryStream();
+    await inputStream.CopyToAsync(memoryStream);
+
+    using var originalBitmap = SKBitmap.Decode(memoryStream.ToArray());
+
+    if (originalBitmap is null)
     {
-        await inputStream.CopyToAsync(outputStream);
+        return Results.BadRequest(new { message = "Invalid image file." });
+    }
+
+    var originalWidth = originalBitmap.Width;
+    var originalHeight = originalBitmap.Height;
+
+    var scale = Math.Min(
+        1.0,
+        (double)maxImageSide / Math.Max(originalWidth, originalHeight));
+
+    var targetWidth = Math.Max(1, (int)Math.Round(originalWidth * scale));
+    var targetHeight = Math.Max(1, (int)Math.Round(originalHeight * scale));
+
+    using var finalBitmap = new SKBitmap(
+        new SKImageInfo(targetWidth, targetHeight, originalBitmap.ColorType, originalBitmap.AlphaType));
+
+    using (var canvas = new SKCanvas(finalBitmap))
+    using (var paint = new SKPaint
+    {
+        IsAntialias = true,
+        FilterQuality = SKFilterQuality.High
+    })
+    {
+        canvas.Clear(SKColors.Transparent);
+        canvas.DrawBitmap(
+            originalBitmap,
+            new SKRect(0, 0, targetWidth, targetHeight),
+            paint);
+    }
+
+    using var image = SKImage.FromBitmap(finalBitmap);
+    using var encodedData = image.Encode(SKEncodedImageFormat.Webp, webpQuality);
+
+    if (encodedData is null)
+    {
+        return Results.BadRequest(new { message = "Could not encode image." });
+    }
+
+    await using (var outputStream = File.Create(fullPath))
+    {
+        encodedData.SaveTo(outputStream);
     }
 
     return Results.Ok(new
