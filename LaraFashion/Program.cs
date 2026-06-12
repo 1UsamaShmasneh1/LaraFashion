@@ -60,6 +60,73 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAntiforgery();
 
+
+app.MapPost("/api/admin/upload-product-image", async (
+    HttpRequest request,
+    IWebHostEnvironment environment,
+    LaraFashion.Services.AdminAuthService adminAuthService) =>
+{
+    var token = request.Headers["X-Admin-Token"].ToString();
+    if (string.IsNullOrWhiteSpace(token) || !adminAuthService.IsTokenValid(token))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest(new { message = "Invalid upload request." });
+    }
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files["file"];
+
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest(new { message = "No image file was selected." });
+    }
+
+    if (file.Length > 10 * 1024 * 1024)
+    {
+        return Results.BadRequest(new { message = "Image is too large. Maximum size is 10 MB." });
+    }
+
+    var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp"
+    };
+
+    var extension = Path.GetExtension(file.FileName);
+    if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
+    {
+        return Results.BadRequest(new { message = "Only JPG, PNG, and WEBP images are allowed." });
+    }
+
+    var targetUploadsPath = "/var/www/larafashion/uploads";
+    if (!Directory.Exists("/var/www/larafashion"))
+    {
+        targetUploadsPath = Path.Combine(environment.WebRootPath, "uploads");
+    }
+
+    Directory.CreateDirectory(targetUploadsPath);
+
+    var fileName = $"{Guid.NewGuid()}{extension.ToLowerInvariant()}";
+    var fullPath = Path.Combine(targetUploadsPath, fileName);
+
+    await using (var outputStream = File.Create(fullPath))
+    await using (var inputStream = file.OpenReadStream(10 * 1024 * 1024))
+    {
+        await inputStream.CopyToAsync(outputStream);
+    }
+
+    return Results.Ok(new
+    {
+        imageUrl = $"/uploads/{fileName}"
+    });
+}).DisableAntiforgery();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

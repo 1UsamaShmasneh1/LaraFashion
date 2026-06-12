@@ -1,4 +1,4 @@
-﻿@page "/admin/products"
+@page "/admin/products"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
@@ -11,6 +11,7 @@
 @inject LaraFashion.Services.DiscountService DiscountService
 @inject LaraFashion.Services.CategoryService CategoryService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <AdminNav />
 
@@ -192,7 +193,24 @@ else
             <div class="form-group">
                 <label>Image</label>
 
-                <InputFile OnChange="OnImageSelected" />
+                <input id="productImageUploadInput"
+                       type="file"
+                       accept="image/*,.jpg,.jpeg,.png,.webp"
+                       onchange="laraFashionUploadProductImage(this)" />
+
+                <input id="productImageUrlInput"
+                       type="hidden"
+                       value="@SelectedImageUrl"
+                       @onchange="OnUploadedImageUrlChanged" />
+
+                <div id="productImageUploadStatus"
+                     class="delivery-price-note"
+                     style="margin-top:8px;font-weight:800;">
+                    @if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+                    {
+                        <span>الصورة جاهزة للحفظ.</span>
+                    }
+                </div>
             </div>
 
             <h3>التصنيفات المتاحة</h3>
@@ -357,7 +375,6 @@ else
         SelectedDiscountIds = new();
         SelectedCategoryIds = new();
         EditingProductId = Guid.Empty;
-        SelectedImageFile = null;
         SelectedImageUrl = null;
 
         NewProduct = new Product
@@ -390,7 +407,15 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+            var uploadedImageUrl = await JSRuntime.InvokeAsync<string>(
+                "laraFashionGetUploadedProductImageUrl");
+
+            if (!string.IsNullOrWhiteSpace(uploadedImageUrl))
+            {
+                SelectedImageUrl = uploadedImageUrl;
+                NewProduct.ImageUrl = uploadedImageUrl;
+            }
+            else if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
             {
                 NewProduct.ImageUrl = SelectedImageUrl;
             }
@@ -451,7 +476,6 @@ else
         IsAddModalOpen = false;
         IsEditMode = false;
         EditingProductId = Guid.Empty;
-        SelectedImageFile = null;
         SelectedImageUrl = null;
         NewProduct = new Product();
         SelectedDiscountIds = new();
@@ -470,7 +494,6 @@ else
         IsEditMode = true;
         EditingProductId = product.Id;
         SelectedImageUrl = product.ImageUrl;
-        SelectedImageFile = null;
 
         SelectedDiscountIds = product.ProductDiscounts
             .Select(x => x.DiscountId)
@@ -514,62 +537,15 @@ else
         await LoadProducts();
     }
 
-    private IBrowserFile? SelectedImageFile;
-
-    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    private void OnUploadedImageUrlChanged(ChangeEventArgs e)
     {
-        try
-        {
-            ErrorMessage = string.Empty;
+        var imageUrl = e.Value?.ToString();
 
-            var file = e.File;
-            if (file is null)
-                return;
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            return;
 
-            // Save the image immediately when it is selected.
-            // This avoids losing the IBrowserFile reference if the Blazor Server circuit reconnects
-            // before the admin presses Save.
-            SelectedImageFile = null;
-            var savedImageUrl = await SaveImageFileAsync(file);
-
-            SelectedImageUrl = savedImageUrl;
-            NewProduct.ImageUrl = savedImageUrl;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"تعذر حفظ الصورة: {ex.Message}";
-        }
-        finally
-        {
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task<string> SaveImageFileAsync(IBrowserFile file)
-    {
-        var uploadsFolder = "/var/www/larafashion/uploads";
-
-        if (!Directory.Exists("/var/www/larafashion"))
-        {
-            uploadsFolder = Path.Combine(WebHostEnvironment.WebRootPath, "uploads");
-        }
-
-        Directory.CreateDirectory(uploadsFolder);
-
-        var resizedFile = await file.RequestImageFileAsync(
-            "image/jpeg",
-            900,
-            900);
-
-        var fileName = $"{Guid.NewGuid()}.jpg";
-        var fullPath = Path.Combine(uploadsFolder, fileName);
-
-        await using var inputStream = resizedFile.OpenReadStream(3 * 1024 * 1024);
-        await using var fileStream = File.Create(fullPath);
-
-        await inputStream.CopyToAsync(fileStream);
-
-        return $"/uploads/{fileName}";
+        SelectedImageUrl = imageUrl;
+        NewProduct.ImageUrl = imageUrl;
     }
 
     private void ToggleDiscount(Guid discountId, object? value)
