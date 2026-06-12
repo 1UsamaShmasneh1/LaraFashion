@@ -116,7 +116,7 @@ app.MapPost("/api/admin/upload-product-image", async (
     var fullPath = Path.Combine(targetUploadsPath, fileName);
 
     await using (var outputStream = File.Create(fullPath))
-    await using (var inputStream = file.OpenReadStream(10 * 1024 * 1024))
+    await using (var inputStream = file.OpenReadStream())
     {
         await inputStream.CopyToAsync(outputStream);
     }
