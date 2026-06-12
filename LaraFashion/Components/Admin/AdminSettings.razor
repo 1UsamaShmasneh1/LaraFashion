@@ -1,0 +1,230 @@
+@page "/admin/settings"
+
+@using LaraFashion.Services
+
+@inject AdminAuthService AdminAuthService
+@inject BrowserStorageService BrowserStorageService
+@inject ImageMaintenanceService ImageMaintenanceService
+@inject NavigationManager Navigation
+
+<AdminNav />
+
+<PageTitle>Settings</PageTitle>
+
+@if (IsCheckingAuth)
+{
+    <div class="empty-cart">Checking admin access...</div>
+    return;
+}
+
+<button class="logout-button" @onclick="Logout">Logout</button>
+
+<h1 class="admin-page-title">الإعدادات</h1>
+
+<div class="settings-card" dir="rtl">
+    <h2>تنظيف وتحسين صور المتجر</h2>
+
+    <p>
+        هذا الفحص يحذف الصور غير المستخدمة من مجلد الصور، ويحوّل الصور المستخدمة غير WebP إلى WebP صغيرة مناسبة للمتجر، ثم يستبدل روابطها داخل المنتجات والطلبيات.
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="checkout-error">@ErrorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+    {
+        <div class="settings-success">@SuccessMessage</div>
+    }
+
+    <button type="button"
+            class="checkout-button settings-action-button"
+            disabled="@IsRunning"
+            @onclick="RunImageMaintenance">
+        @(IsRunning ? "جاري الفحص..." : "فحص وتنظيف الصور")
+    </button>
+
+    @if (LastResult is not null)
+    {
+        <div class="settings-result-grid">
+            <div class="settings-result-item">
+                <span>عدد الملفات</span>
+                <strong>@LastResult.TotalFiles</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>صور مستخدمة</span>
+                <strong>@LastResult.UsedImages</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>تم حذفها</span>
+                <strong>@LastResult.DeletedUnusedFiles</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>تم تحويلها</span>
+                <strong>@LastResult.ConvertedImages</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>صور مستخدمة مفقودة</span>
+                <strong>@LastResult.MissingUsedFiles</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>فشل</span>
+                <strong>@LastResult.FailedFiles</strong>
+            </div>
+        </div>
+
+        @if (LastResult.Messages.Any())
+        {
+            <div class="settings-message-list">
+                <h3>ملاحظات</h3>
+                @foreach (var message in LastResult.Messages)
+                {
+                    <div>@message</div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .settings-card {
+        background: rgba(255,255,255,.94);
+        border: 1px solid rgba(226,232,240,.95);
+        border-radius: 26px;
+        box-shadow: 0 18px 50px rgba(15,23,42,.10);
+        padding: 28px;
+        max-width: 860px;
+        margin: 24px 0;
+    }
+
+    .settings-card h2 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        font-weight: 950;
+        color: #334155;
+    }
+
+    .settings-card p {
+        color: #64748b;
+        line-height: 1.8;
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+
+    .settings-action-button {
+        min-width: 230px;
+        border: 0;
+    }
+
+    .settings-action-button:disabled {
+        opacity: .65;
+        cursor: not-allowed;
+    }
+
+    .settings-success {
+        padding: 14px 18px;
+        margin: 14px 0;
+        border-radius: 18px;
+        background: #dcfce7;
+        color: #166534;
+        font-weight: 900;
+    }
+
+    .settings-result-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+        margin-top: 24px;
+    }
+
+    .settings-result-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 16px;
+    }
+
+    .settings-result-item span {
+        display: block;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 800;
+    }
+
+    .settings-result-item strong {
+        display: block;
+        color: #0f172a;
+        font-size: 28px;
+        font-weight: 950;
+        margin-top: 6px;
+    }
+
+    .settings-message-list {
+        margin-top: 24px;
+        padding: 16px;
+        border-radius: 18px;
+        background: #fff7ed;
+        color: #7c2d12;
+        font-weight: 800;
+        line-height: 1.7;
+    }
+
+    .settings-message-list h3 {
+        margin: 0 0 10px;
+    }
+</style>
+
+@code {
+    private bool IsCheckingAuth = true;
+    private bool IsRunning;
+    private string ErrorMessage = string.Empty;
+    private string SuccessMessage = string.Empty;
+    private ImageMaintenanceResult? LastResult;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var token = await BrowserStorageService.GetItemAsync("admin_token");
+
+        if (string.IsNullOrWhiteSpace(token) || !AdminAuthService.IsTokenValid(token))
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        IsCheckingAuth = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RunImageMaintenance()
+    {
+        try
+        {
+            IsRunning = true;
+            ErrorMessage = string.Empty;
+            SuccessMessage = string.Empty;
+            LastResult = null;
+
+            LastResult = await ImageMaintenanceService.CleanAndNormalizeImagesAsync();
+            SuccessMessage = "تم فحص الصور وتنظيفها بنجاح.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsRunning = false;
+        }
+    }
+
+    private async Task Logout()
+    {
+        await BrowserStorageService.RemoveItemAsync("admin_token");
+        Navigation.NavigateTo("/admin/login");
+    }
+}

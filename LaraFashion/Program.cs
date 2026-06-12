@@ -29,6 +29,7 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<DiscountService>();
 builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<ImageMaintenanceService>();
 
 var app = builder.Build();
 
