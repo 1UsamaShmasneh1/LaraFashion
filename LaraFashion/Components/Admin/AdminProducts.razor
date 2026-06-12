@@ -390,14 +390,7 @@ else
             IsSaving = true;
             ErrorMessage = string.Empty;
 
-            var savedImageUrl = await SaveSelectedImageAsync();
-
-            if (!string.IsNullOrWhiteSpace(savedImageUrl))
-            {
-                SelectedImageUrl = savedImageUrl;
-                NewProduct.ImageUrl = savedImageUrl;
-            }
-            else if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+            if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
             {
                 NewProduct.ImageUrl = SelectedImageUrl;
             }
@@ -523,21 +516,47 @@ else
 
     private IBrowserFile? SelectedImageFile;
 
-    private Task OnImageSelected(InputFileChangeEventArgs e)
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
     {
-        SelectedImageFile = e.File;
-        return Task.CompletedTask;
+        try
+        {
+            ErrorMessage = string.Empty;
+
+            var file = e.File;
+            if (file is null)
+                return;
+
+            // Save the image immediately when it is selected.
+            // This avoids losing the IBrowserFile reference if the Blazor Server circuit reconnects
+            // before the admin presses Save.
+            SelectedImageFile = null;
+            var savedImageUrl = await SaveImageFileAsync(file);
+
+            SelectedImageUrl = savedImageUrl;
+            NewProduct.ImageUrl = savedImageUrl;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"تعذر حفظ الصورة: {ex.Message}";
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
-    private async Task<string?> SaveSelectedImageAsync()
+    private async Task<string> SaveImageFileAsync(IBrowserFile file)
     {
-        if (SelectedImageFile is null)
-            return null;
-
         var uploadsFolder = "/var/www/larafashion/uploads";
+
+        if (!Directory.Exists("/var/www/larafashion"))
+        {
+            uploadsFolder = Path.Combine(WebHostEnvironment.WebRootPath, "uploads");
+        }
+
         Directory.CreateDirectory(uploadsFolder);
 
-        var resizedFile = await SelectedImageFile.RequestImageFileAsync(
+        var resizedFile = await file.RequestImageFileAsync(
             "image/jpeg",
             900,
             900);
