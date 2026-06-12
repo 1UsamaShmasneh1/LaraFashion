@@ -1,5 +1,3 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
 using LaraFashion.Components;
 using LaraFashion.Services;
 using LaraFashion.Data;
