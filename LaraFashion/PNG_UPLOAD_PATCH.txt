@@ -1,0 +1,1 @@
+Apply SkiaSharp PNG conversion code in upload endpoint as discussed.
