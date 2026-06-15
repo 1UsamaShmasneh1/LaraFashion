@@ -1,4 +1,4 @@
-﻿* {
+* {
     box-sizing: border-box;
 }
 
@@ -2284,5 +2284,160 @@ button.lf-delete-order-btn {
     .category-filter-button {
         padding: 10px 14px;
         font-size: 14px;
+    }
+}
+
+
+/* === LaraFashion deployed-store cache-safe UI fix === */
+.store-header .store-actions,
+.store-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    min-width: 0 !important;
+}
+
+.store-actions a,
+.store-actions .cart-button,
+.store-actions button,
+a.whatsapp-button,
+a.instagram-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 120px !important;
+    min-height: 46px !important;
+    padding: 12px 20px !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    color: #fff !important;
+    text-decoration: none !important;
+    font-weight: 900 !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, .14) !important;
+    white-space: nowrap !important;
+}
+
+a.whatsapp-button {
+    background: #22c55e !important;
+}
+
+a.instagram-button {
+    background: linear-gradient(135deg, #f58529 0%, #dd2a7b 45%, #8134af 72%, #515bd4 100%) !important;
+}
+
+.products-grid > div {
+    cursor: pointer !important;
+}
+
+.product-available-sizes {
+    direction: rtl !important;
+    margin-top: 10px !important;
+    padding: 10px !important;
+    border-radius: 14px !important;
+    background: #f8fafc !important;
+    border: 1px solid rgba(226, 232, 240, .95) !important;
+}
+
+.available-sizes-label {
+    display: block !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    margin-bottom: 8px !important;
+}
+
+.available-sizes-list {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+.available-size-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 34px !important;
+    min-height: 26px !important;
+    padding: 4px 9px !important;
+    border-radius: 999px !important;
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    border: 1px solid #7dd3fc !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+}
+
+.category-button-bar.store-category-filter {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    max-width: 100% !important;
+}
+
+.category-button-bar.store-category-filter .category-filter-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: 110px !important;
+    min-height: 42px !important;
+    padding: 10px 18px !important;
+    border-radius: 14px !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #334155 !important;
+    font-weight: 900 !important;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .10) !important;
+}
+
+.category-button-bar.store-category-filter .category-filter-button.active {
+    color: #fff !important;
+    background: linear-gradient(135deg, #38bdf8, #7c3aed) !important;
+}
+
+@media (max-width: 700px) {
+    .store-header {
+        height: auto !important;
+        padding: 14px 12px !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .store-actions {
+        width: 100% !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    .store-actions a,
+    .store-actions .cart-button,
+    .store-actions button,
+    a.whatsapp-button,
+    a.instagram-button {
+        min-width: 92px !important;
+        min-height: 40px !important;
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+        border-radius: 12px !important;
+    }
+
+    .product-available-sizes {
+        padding: 8px !important;
+    }
+
+    .available-size-chip {
+        min-width: 30px !important;
+        min-height: 24px !important;
+        font-size: 11px !important;
+        padding: 4px 7px !important;
     }
 }
