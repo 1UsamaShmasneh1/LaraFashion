@@ -1,4 +1,4 @@
-@page "/admin/products"
+﻿@page "/admin/products"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
@@ -43,6 +43,60 @@
     </div>
 </div>
 
+@if (SelectedProductIds.Any())
+{
+    <div class="admin-bulk-panel" dir="rtl">
+        <div class="admin-bulk-title">
+            تم اختيار @SelectedProductIds.Count منتج
+        </div>
+
+        <div class="admin-bulk-section">
+            <strong>تعديل التصنيفات للمنتجات المختارة</strong>
+            <div class="discount-select-list bulk-check-list">
+                @foreach (var category in AvailableCategories)
+                {
+                    <label class="discount-check-row">
+                        <input type="checkbox"
+                               checked="@BulkCategoryIds.Contains(category.Id)"
+                               @onchange="e => ToggleBulkCategory(category.Id, e.Value)" />
+                        <span>@category.Name</span>
+                    </label>
+                }
+            </div>
+            <button type="button" class="checkout-button bulk-action-button" @onclick="ApplyBulkCategories">
+                حفظ التصنيفات
+            </button>
+        </div>
+
+        <div class="admin-bulk-section">
+            <strong>تعديل التخفيضات للمنتجات المختارة</strong>
+            <div class="discount-select-list bulk-check-list">
+                @foreach (var discount in AvailableDiscounts)
+                {
+                    <label class="discount-check-row">
+                        <input type="checkbox"
+                               checked="@BulkDiscountIds.Contains(discount.Id)"
+                               @onchange="e => ToggleBulkDiscount(discount.Id, e.Value)" />
+                        <span>@discount.Name - @GetDiscountSummary(discount)</span>
+                    </label>
+                }
+            </div>
+            <button type="button" class="checkout-button bulk-action-button" @onclick="ApplyBulkDiscounts">
+                حفظ التخفيضات
+            </button>
+        </div>
+
+        <div class="admin-bulk-actions">
+            <button type="button" class="continue-shopping-button" @onclick="ClearSelectedProducts">
+                إلغاء التحديد
+            </button>
+            <button type="button" class="remove-item-button" @onclick="DeleteSelectedProducts">
+                حذف المنتجات المختارة
+            </button>
+        </div>
+    </div>
+}
+
 @if (IsLoading)
 {
     <div class="empty-cart">
@@ -57,11 +111,23 @@ else if (!Products.Any())
 }
 else
 {
-    <div class="products-grid">
+    <div class="admin-selection-tools" dir="rtl">
+        <button type="button" class="continue-shopping-button" @onclick="SelectAllVisibleProducts">تحديد كل الظاهر</button>
+        <button type="button" class="continue-shopping-button" @onclick="ClearSelectedProducts">إلغاء التحديد</button>
+    </div>
+
+    <div class="products-grid admin-products-grid">
 
         @foreach (var product in Products)
         {
-            <div class="product-card">
+            <div class="product-card admin-product-card @(SelectedProductIds.Contains(product.Id) ? "selected-product-card" : string.Empty)">
+
+                <label class="admin-product-select">
+                    <input type="checkbox"
+                           checked="@SelectedProductIds.Contains(product.Id)"
+                           @onchange="e => ToggleProductSelection(product.Id, e.Value)" />
+                    <span>تحديد</span>
+                </label>
 
                 <div class="product-image-container">
 
@@ -121,7 +187,7 @@ else
                         </button>
 
                         <button type="button" class="remove-item-button"
-                                @onclick="(() => DeleteProduct(product.Id))">
+                                @onclick="(() => ConfirmDeleteProduct(product.Id))">
                             حذف
                         </button>
                     </div>
@@ -168,26 +234,6 @@ else
                 <label>السعر</label>
                 <input type="number"
                        @bind="NewProduct.OriginalPrice" />
-            </div>
-
-            <div class="form-group">
-                <label>نوع التخفيض</label>
-
-                <select @bind="NewProduct.DiscountType"
-                        class="form-select">
-
-                    <option value="@DiscountType.None">None</option>
-                    <option value="@DiscountType.Percent">Percent</option>
-                    <option value="@DiscountType.FixedPrice">Fixed Price</option>
-
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Discount Value</label>
-
-                <input type="number"
-                       @bind="NewProduct.DiscountValue" />
             </div>
 
             <div class="form-group">
@@ -332,6 +378,12 @@ else
 
     private List<Guid> SelectedCategoryIds = new();
 
+    private HashSet<Guid> SelectedProductIds = new();
+
+    private List<Guid> BulkDiscountIds = new();
+
+    private List<Guid> BulkCategoryIds = new();
+
     private Guid SelectedFilterCategoryId = Guid.Empty;
 
     private Guid EditingProductId = Guid.Empty;
@@ -406,6 +458,9 @@ else
         {
             IsSaving = true;
             ErrorMessage = string.Empty;
+
+            NewProduct.DiscountType = DiscountType.None;
+            NewProduct.DiscountValue = 0;
 
             var uploadedImageUrl = await JSRuntime.InvokeAsync<string>(
                 "laraFashionGetUploadedProductImageUrl");
@@ -514,8 +569,8 @@ else
             SerialNumber = product.SerialNumber,
             Description = product.Description,
             OriginalPrice = product.OriginalPrice,
-            DiscountType = product.DiscountType,
-            DiscountValue = product.DiscountValue,
+            DiscountType = DiscountType.None,
+            DiscountValue = 0,
             ImageUrl = product.ImageUrl,
             IsActive = product.IsActive,
             Sizes = product.Sizes.Select(x => new ProductSize
@@ -530,10 +585,102 @@ else
         IsAddModalOpen = true;
     }
 
-    private async Task DeleteProduct(Guid id)
+    private async Task ConfirmDeleteProduct(Guid id)
     {
-        await ProductService.DeleteProductAsync(id);
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف المنتج؟");
 
+        if (!confirmed)
+            return;
+
+        await ProductService.DeleteProductAsync(id);
+        SelectedProductIds.Remove(id);
+
+        await LoadProducts();
+    }
+
+    private void ToggleProductSelection(Guid productId, object? value)
+    {
+        var isChecked = value is bool b && b;
+
+        if (isChecked)
+            SelectedProductIds.Add(productId);
+        else
+            SelectedProductIds.Remove(productId);
+    }
+
+    private void SelectAllVisibleProducts()
+    {
+        foreach (var product in Products)
+            SelectedProductIds.Add(product.Id);
+    }
+
+    private void ClearSelectedProducts()
+    {
+        SelectedProductIds.Clear();
+        BulkDiscountIds.Clear();
+        BulkCategoryIds.Clear();
+    }
+
+    private void ToggleBulkDiscount(Guid discountId, object? value)
+    {
+        var isChecked = value is bool b && b;
+
+        if (isChecked)
+        {
+            if (!BulkDiscountIds.Contains(discountId))
+                BulkDiscountIds.Add(discountId);
+        }
+        else
+        {
+            BulkDiscountIds.Remove(discountId);
+        }
+    }
+
+    private void ToggleBulkCategory(Guid categoryId, object? value)
+    {
+        var isChecked = value is bool b && b;
+
+        if (isChecked)
+        {
+            if (!BulkCategoryIds.Contains(categoryId))
+                BulkCategoryIds.Add(categoryId);
+        }
+        else
+        {
+            BulkCategoryIds.Remove(categoryId);
+        }
+    }
+
+    private async Task ApplyBulkDiscounts()
+    {
+        if (!SelectedProductIds.Any())
+            return;
+
+        await ProductService.UpdateProductsDiscountsAsync(SelectedProductIds.ToList(), BulkDiscountIds);
+        await LoadProducts();
+    }
+
+    private async Task ApplyBulkCategories()
+    {
+        if (!SelectedProductIds.Any())
+            return;
+
+        await ProductService.UpdateProductsCategoriesAsync(SelectedProductIds.ToList(), BulkCategoryIds);
+        await LoadProducts();
+    }
+
+    private async Task DeleteSelectedProducts()
+    {
+        if (!SelectedProductIds.Any())
+            return;
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف {SelectedProductIds.Count} منتج؟");
+
+        if (!confirmed)
+            return;
+
+        await ProductService.DeleteProductsAsync(SelectedProductIds.ToList());
+        ClearSelectedProducts();
         await LoadProducts();
     }
 

@@ -71,11 +71,18 @@
             </div>
         }
 
-        <button class="view-product-button">
-
-            View Product
-
-        </button>
+        @if (Product.Sizes.Any(s => s.Quantity > 0))
+        {
+            <div class="product-available-sizes" dir="rtl">
+                <span class="available-sizes-label">المقاسات المتاحة:</span>
+                <div class="available-sizes-list">
+                    @foreach (var size in Product.Sizes.Where(s => s.Quantity > 0).Select(s => s.SizeName).Distinct())
+                    {
+                        <span class="available-size-chip">@size</span>
+                    }
+                </div>
+            </div>
+        }
 
     </div>
 

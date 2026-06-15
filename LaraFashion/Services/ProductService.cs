@@ -122,6 +122,8 @@ public class ProductService
         product.CreatedAt = DateTime.Now;
         product.UpdatedAt = DateTime.Now;
 
+        product.DiscountType = LaraFashion.Models.Enums.DiscountType.None;
+        product.DiscountValue = 0;
         product.ProductDiscounts = new();
         product.ProductCategories = new();
 
@@ -243,8 +245,8 @@ public class ProductService
         existingProduct.SerialNumber = product.SerialNumber;
         existingProduct.Description = product.Description;
         existingProduct.OriginalPrice = product.OriginalPrice;
-        existingProduct.DiscountType = product.DiscountType;
-        existingProduct.DiscountValue = product.DiscountValue;
+        existingProduct.DiscountType = LaraFashion.Models.Enums.DiscountType.None;
+        existingProduct.DiscountValue = 0;
         if (!string.IsNullOrWhiteSpace(product.ImageUrl))
         {
             existingProduct.ImageUrl = product.ImageUrl;
@@ -272,6 +274,74 @@ public class ProductService
         if (!string.Equals(oldImageUrl, existingProduct.ImageUrl, StringComparison.OrdinalIgnoreCase))
         {
             await DeleteImageIfUnusedAsync(oldImageUrl);
+        }
+    }
+
+
+    public async Task UpdateProductsDiscountsAsync(List<Guid> productIds, List<Guid> discountIds)
+    {
+        productIds = productIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (!productIds.Any())
+            return;
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        foreach (var productId in productIds)
+        {
+            await ReplaceProductDiscountsAsync(productId, discountIds);
+
+            var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
+            if (product is not null)
+            {
+                product.DiscountType = LaraFashion.Models.Enums.DiscountType.None;
+                product.DiscountValue = 0;
+                product.UpdatedAt = DateTime.Now;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
+
+    public async Task UpdateProductsCategoriesAsync(List<Guid> productIds, List<Guid> categoryIds)
+    {
+        productIds = productIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (!productIds.Any())
+            return;
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        foreach (var productId in productIds)
+        {
+            await ReplaceProductCategoriesAsync(productId, categoryIds);
+
+            var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
+            if (product is not null)
+                product.UpdatedAt = DateTime.Now;
+        }
+
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+    }
+
+    public async Task DeleteProductsAsync(List<Guid> productIds)
+    {
+        productIds = productIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        foreach (var productId in productIds)
+        {
+            await DeleteProductAsync(productId);
         }
     }
 
