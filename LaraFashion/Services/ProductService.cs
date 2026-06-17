@@ -1,8 +1,21 @@
-﻿using LaraFashion.Data;
+using LaraFashion.Data;
 using LaraFashion.Models;
+using LaraFashion.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace LaraFashion.Services;
+
+public class ProductCleanupResult
+{
+    public int TotalProducts { get; set; }
+    public int EligibleProducts { get; set; }
+    public int DeletedProducts { get; set; }
+    public int SkippedProducts { get; set; }
+    public int ProductsWithQuantity { get; set; }
+    public int ProductsWithOpenOrders { get; set; }
+    public int FailedProducts { get; set; }
+    public List<string> Messages { get; set; } = new();
+}
 
 public class ProductService
 {
@@ -203,6 +216,11 @@ public class ProductService
 
     public async Task DeleteProductAsync(Guid id)
     {
+        await DeleteProductInternalAsync(id, enforceDeleteConditions: true);
+    }
+
+    private async Task DeleteProductInternalAsync(Guid id, bool enforceDeleteConditions)
+    {
         var product = await _db.Products
             .Include(x => x.Sizes)
             .Include(x => x.ProductDiscounts)
@@ -211,6 +229,13 @@ public class ProductService
 
         if (product is null)
             return;
+
+        if (enforceDeleteConditions)
+        {
+            var validation = await ValidateProductCanBeDeletedAsync(product);
+            if (!validation.CanDelete)
+                throw new InvalidOperationException(validation.Reason);
+        }
 
         var imageUrl = product.ImageUrl;
 
@@ -344,6 +369,96 @@ public class ProductService
             await DeleteProductAsync(productId);
         }
     }
+
+    public async Task<ProductCleanupResult> CleanDeletableProductsAsync()
+    {
+        var result = new ProductCleanupResult();
+
+        var products = await _db.Products
+            .Include(x => x.Sizes)
+            .Include(x => x.ProductDiscounts)
+            .Include(x => x.ProductCategories)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync();
+
+        result.TotalProducts = products.Count;
+
+        foreach (var product in products)
+        {
+            try
+            {
+                var validation = await ValidateProductCanBeDeletedAsync(product);
+
+                if (!validation.AllQuantitiesFinished)
+                {
+                    result.ProductsWithQuantity++;
+                    result.SkippedProducts++;
+                    continue;
+                }
+
+                if (validation.HasOpenOrders)
+                {
+                    result.ProductsWithOpenOrders++;
+                    result.SkippedProducts++;
+                    result.Messages.Add($"لم يتم حذف المنتج {product.Name}: توجد طلبيات ليست بحالة جاهز أو ملغاة.");
+                    continue;
+                }
+
+                result.EligibleProducts++;
+                await DeleteProductInternalAsync(product.Id, enforceDeleteConditions: false);
+                result.DeletedProducts++;
+            }
+            catch (Exception ex)
+            {
+                result.FailedProducts++;
+                result.Messages.Add($"فشل حذف المنتج {product.Name}: {ex.Message}");
+            }
+        }
+
+        return result;
+    }
+
+    private async Task<ProductDeleteValidation> ValidateProductCanBeDeletedAsync(Product product)
+    {
+        var allQuantitiesFinished = !product.Sizes.Any() || product.Sizes.All(x => x.Quantity <= 0);
+
+        if (!allQuantitiesFinished)
+        {
+            return new ProductDeleteValidation(
+                CanDelete: false,
+                AllQuantitiesFinished: false,
+                HasOpenOrders: false,
+                Reason: "لا يمكن حذف المنتج قبل انتهاء جميع الكميات لجميع المقاسات.");
+        }
+
+        var hasOpenOrders = await _db.Orders
+            .Include(x => x.Items)
+            .AnyAsync(order =>
+                order.Items.Any(item => item.ProductId == product.Id) &&
+                order.Status != OrderStatus.Ready &&
+                order.Status != OrderStatus.Cancelled);
+
+        if (hasOpenOrders)
+        {
+            return new ProductDeleteValidation(
+                CanDelete: false,
+                AllQuantitiesFinished: true,
+                HasOpenOrders: true,
+                Reason: "لا يمكن حذف المنتج لأن هناك طلبيات مرتبطة به ليست بحالة جاهز أو ملغاة.");
+        }
+
+        return new ProductDeleteValidation(
+            CanDelete: true,
+            AllQuantitiesFinished: true,
+            HasOpenOrders: false,
+            Reason: string.Empty);
+    }
+
+    private readonly record struct ProductDeleteValidation(
+        bool CanDelete,
+        bool AllQuantitiesFinished,
+        bool HasOpenOrders,
+        string Reason);
 
     public async Task UpdateProductDiscountsAsync(Guid productId, List<Guid> discountIds)
     {

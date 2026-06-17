@@ -1,4 +1,4 @@
-﻿@page "/admin/products"
+@page "/admin/products"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
@@ -113,7 +113,6 @@ else
 {
     <div class="admin-selection-tools" dir="rtl">
         <button type="button" class="continue-shopping-button" @onclick="SelectAllVisibleProducts">تحديد كل الظاهر</button>
-        <button type="button" class="continue-shopping-button" @onclick="ClearSelectedProducts">إلغاء التحديد</button>
     </div>
 
     <div class="products-grid admin-products-grid">
@@ -587,15 +586,21 @@ else
 
     private async Task ConfirmDeleteProduct(Guid id)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف المنتج؟");
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف المنتج؟ سيتم الحذف فقط إذا انتهت كل الكميات وكانت الطلبيات المرتبطة جاهزة أو ملغاة.");
 
         if (!confirmed)
             return;
 
-        await ProductService.DeleteProductAsync(id);
-        SelectedProductIds.Remove(id);
-
-        await LoadProducts();
+        try
+        {
+            await ProductService.DeleteProductAsync(id);
+            SelectedProductIds.Remove(id);
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", ex.Message);
+        }
     }
 
     private void ToggleProductSelection(Guid productId, object? value)
@@ -674,14 +679,22 @@ else
         if (!SelectedProductIds.Any())
             return;
 
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف {SelectedProductIds.Count} منتج؟");
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف {SelectedProductIds.Count} منتج؟ سيتم حذف المنتجات التي انتهت كل كمياتها وكانت طلبياتها جاهزة أو ملغاة فقط.");
 
         if (!confirmed)
             return;
 
-        await ProductService.DeleteProductsAsync(SelectedProductIds.ToList());
-        ClearSelectedProducts();
-        await LoadProducts();
+        try
+        {
+            await ProductService.DeleteProductsAsync(SelectedProductIds.ToList());
+            ClearSelectedProducts();
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", ex.Message);
+            await LoadProducts();
+        }
     }
 
     private void OnUploadedImageUrlChanged(ChangeEventArgs e)

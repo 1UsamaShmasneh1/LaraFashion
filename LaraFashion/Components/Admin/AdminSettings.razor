@@ -5,6 +5,7 @@
 @inject AdminAuthService AdminAuthService
 @inject BrowserStorageService BrowserStorageService
 @inject ImageMaintenanceService ImageMaintenanceService
+@inject ProductService ProductService
 @inject NavigationManager Navigation
 
 <AdminNav />
@@ -79,6 +80,72 @@
             <div class="settings-message-list">
                 <h3>ملاحظات</h3>
                 @foreach (var message in LastResult.Messages)
+                {
+                    <div>@message</div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<div class="settings-card" dir="rtl">
+    <h2>فحص وتنظيف المنتجات</h2>
+
+    <p>
+        هذا الفحص يحذف المنتجات التي انتهت جميع كمياتها في كل المقاسات، بشرط أن تكون كل الطلبيات المرتبطة بها بحالة جاهز أو ملغاة فقط. صور المنتجات تبقى محمية ولا تُحذف إذا كانت مستخدمة داخل منتج آخر أو طلبية.
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(ProductCleanupErrorMessage))
+    {
+        <div class="checkout-error">@ProductCleanupErrorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(ProductCleanupSuccessMessage))
+    {
+        <div class="settings-success">@ProductCleanupSuccessMessage</div>
+    }
+
+    <button type="button"
+            class="checkout-button settings-action-button"
+            disabled="@IsCleaningProducts"
+            @onclick="RunProductCleanup">
+        @(IsCleaningProducts ? "جاري فحص المنتجات..." : "فحص وتنظيف المنتجات")
+    </button>
+
+    @if (ProductCleanupResult is not null)
+    {
+        <div class="settings-result-grid">
+            <div class="settings-result-item">
+                <span>عدد المنتجات</span>
+                <strong>@ProductCleanupResult.TotalProducts</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>قابلة للحذف</span>
+                <strong>@ProductCleanupResult.EligibleProducts</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>تم حذفها</span>
+                <strong>@ProductCleanupResult.DeletedProducts</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>بها كمية</span>
+                <strong>@ProductCleanupResult.ProductsWithQuantity</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>طلبيات غير منتهية</span>
+                <strong>@ProductCleanupResult.ProductsWithOpenOrders</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>فشل</span>
+                <strong>@ProductCleanupResult.FailedProducts</strong>
+            </div>
+        </div>
+
+        @if (ProductCleanupResult.Messages.Any())
+        {
+            <div class="settings-message-list">
+                <h3>ملاحظات</h3>
+                @foreach (var message in ProductCleanupResult.Messages)
                 {
                     <div>@message</div>
                 }
@@ -179,9 +246,13 @@
 @code {
     private bool IsCheckingAuth = true;
     private bool IsRunning;
+    private bool IsCleaningProducts;
     private string ErrorMessage = string.Empty;
     private string SuccessMessage = string.Empty;
+    private string ProductCleanupErrorMessage = string.Empty;
+    private string ProductCleanupSuccessMessage = string.Empty;
     private ImageMaintenanceResult? LastResult;
+    private ProductCleanupResult? ProductCleanupResult;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -219,6 +290,29 @@
         finally
         {
             IsRunning = false;
+        }
+    }
+
+
+    private async Task RunProductCleanup()
+    {
+        try
+        {
+            IsCleaningProducts = true;
+            ProductCleanupErrorMessage = string.Empty;
+            ProductCleanupSuccessMessage = string.Empty;
+            ProductCleanupResult = null;
+
+            ProductCleanupResult = await ProductService.CleanDeletableProductsAsync();
+            ProductCleanupSuccessMessage = $"تم فحص المنتجات. تم حذف {ProductCleanupResult.DeletedProducts} منتج.";
+        }
+        catch (Exception ex)
+        {
+            ProductCleanupErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsCleaningProducts = false;
         }
     }
 
