@@ -686,7 +686,7 @@ else
 
         try
         {
-            await ProductService.DeleteProductsAsync(SelectedProductIds.ToList());
+            await ProductService.DeleteProductsAsync(SelectedProductIds.ToList()); //k
             ClearSelectedProducts();
             await LoadProducts();
         }
