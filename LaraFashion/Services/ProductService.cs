@@ -1,4 +1,4 @@
-using LaraFashion.Data;
+﻿using LaraFashion.Data;
 using LaraFashion.Models;
 using LaraFashion.Models.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -112,7 +112,7 @@ public class ProductService
                 Size = persistedItem.Size,
                 Quantity = quantity,
                 MaxAvailableQuantity = productSize.Quantity,
-                UnitPrice = product.FinalPrice,
+                UnitPrice = product.StorePrice,
                 ProductDiscounts = product.ProductDiscounts
                     .Where(x => x.Discount.IsActive)
                     .ToList(),

@@ -74,10 +74,10 @@ else
                         ₪@item.UnitPrice
                     </div>
 
-                    @if (item.ProductDiscounts.Any(x => x.Discount.IsActive))
+                    @if (item.ProductDiscounts.Any(x => x.Discount.IsActive && x.Discount.RuleType != DiscountRuleType.FixedSalePrice))
                     {
                         <div class="cart-item-offers">
-                            @foreach (var pd in item.ProductDiscounts.Where(x => x.Discount.IsActive))
+                            @foreach (var pd in item.ProductDiscounts.Where(x => x.Discount.IsActive && x.Discount.RuleType != DiscountRuleType.FixedSalePrice))
                             {
                                 <div>@GetDiscountText(pd.Discount)</div>
                             }
@@ -322,7 +322,9 @@ else
                     : $"عند الشراء بقيمة ₪{discount.MinimumAmount} أو أكثر احصل على خصم ₪{discount.Value}",
 
             DiscountRuleType.BundleFixedPrice =>
-    $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
+                $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
+
+            DiscountRuleType.FixedSalePrice => string.Empty,
 
             _ => discount.Name
         };

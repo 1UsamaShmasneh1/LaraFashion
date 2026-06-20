@@ -41,7 +41,7 @@ public class CartService
             existingItem.ProductName = product.Name;
             existingItem.ProductSerialNumber = product.SerialNumber;
             existingItem.ProductImageUrl = product.ImageUrl;
-            existingItem.UnitPrice = product.FinalPrice;
+            existingItem.UnitPrice = product.StorePrice;
             existingItem.MaxAvailableQuantity = maxAvailableQuantity;
             existingItem.ProductDiscounts = product.ProductDiscounts;
             existingItem.CategoryNames = product.ProductCategories
@@ -62,7 +62,7 @@ public class CartService
                 Size = size,
                 Quantity = quantity,
                 MaxAvailableQuantity = maxAvailableQuantity,
-                UnitPrice = product.FinalPrice,
+                UnitPrice = product.StorePrice,
                 ProductDiscounts = product.ProductDiscounts,
                 CategoryNames = product.ProductCategories
                     .Where(x => x.Category.IsActive)
@@ -148,7 +148,7 @@ public class CartService
         var allDiscounts = Items
             .SelectMany(x => x.ProductDiscounts)
             .Select(x => x.Discount)
-            .Where(x => x.IsActive)
+            .Where(x => x.IsActive && x.RuleType != DiscountRuleType.FixedSalePrice)
             .DistinctBy(x => x.Id)
             .ToList();
 

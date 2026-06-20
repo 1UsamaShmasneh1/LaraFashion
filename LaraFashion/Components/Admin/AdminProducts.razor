@@ -1,4 +1,4 @@
-@page "/admin/products"
+﻿@page "/admin/products"
 
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
@@ -762,6 +762,7 @@ else
             DiscountRuleType.QuantityBased => $"بعد {discount.MinimumQuantity} قطع: {valueText}",
             DiscountRuleType.AmountBased => $"بعد ₪{discount.MinimumAmount}: {valueText}",
             DiscountRuleType.BundleFixedPrice => $"{discount.MinimumQuantity} قطع بسعر ₪{discount.BundleFixedTotalPrice}",
+            DiscountRuleType.FixedSalePrice => $"سعر ثابت ₪{discount.Value}",
             _ => valueText
         };
     }

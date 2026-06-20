@@ -85,10 +85,12 @@ else
                     <option value="@DiscountRuleType.QuantityBased">تخفيض بعد كمية معينة</option>
                     <option value="@DiscountRuleType.AmountBased">تخفيض بعد سعر معين</option>
                     <option value="@DiscountRuleType.BundleFixedPrice">مجموعة منتجات بسعر ثابت</option>
+                    <option value="@DiscountRuleType.FixedSalePrice">تخفيض لسعر ثابت</option>
                 </select>
             </div>
 
-            @if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
+            @if (CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice &&
+                 CurrentDiscount.RuleType != DiscountRuleType.FixedSalePrice)
             {
                 <div class="form-group">
                     <label>نوع قيمة التخفيض</label>
@@ -130,6 +132,14 @@ else
                 <div class="form-group">
                     <label>السعر النهائي للمجموعة</label>
                     <input type="number" @bind="CurrentDiscount.BundleFixedTotalPrice" />
+                </div>
+            }
+
+            @if (CurrentDiscount.RuleType == DiscountRuleType.FixedSalePrice)
+            {
+                <div class="form-group">
+                    <label>السعر الثابت بعد التخفيض</label>
+                    <input type="number" @bind="CurrentDiscount.Value" />
                 </div>
             }
 
@@ -250,6 +260,14 @@ else
                 return;
         }
 
+        if (CurrentDiscount.RuleType == DiscountRuleType.FixedSalePrice)
+        {
+            CurrentDiscount.ValueType = DiscountValueType.FixedAmount;
+            CurrentDiscount.MinimumQuantity = null;
+            CurrentDiscount.MinimumAmount = null;
+            CurrentDiscount.BundleFixedTotalPrice = null;
+        }
+
         if (CurrentDiscount.RuleType != DiscountRuleType.QuantityBased &&
             CurrentDiscount.RuleType != DiscountRuleType.BundleFixedPrice)
             CurrentDiscount.MinimumQuantity = null;
@@ -283,6 +301,7 @@ else
             DiscountRuleType.QuantityBased => "حسب الكمية",
             DiscountRuleType.AmountBased => "حسب السعر",
             DiscountRuleType.BundleFixedPrice => "مجموعة بسعر ثابت",
+            DiscountRuleType.FixedSalePrice => "تخفيض لسعر ثابت",
             _ => type.ToString()
         };
     }
@@ -300,6 +319,9 @@ else
         {
             DiscountRuleType.BundleFixedPrice =>
                 $"{discount.MinimumQuantity} قطع بسعر ₪{discount.BundleFixedTotalPrice}",
+
+            DiscountRuleType.FixedSalePrice =>
+                $"كل منتج بسعر ₪{discount.Value}",
 
             DiscountRuleType.QuantityBased =>
                 $"بعد {discount.MinimumQuantity} قطع: {GetDiscountValueText(discount)}",

@@ -41,6 +41,24 @@ public class Product
         }
     }
 
+
+
+    public Discount? FixedSalePriceDiscount => ProductDiscounts
+        .Where(x => x.Discount.IsActive &&
+                    x.Discount.RuleType == DiscountRuleType.FixedSalePrice &&
+                    x.Discount.Value > 0)
+        .Select(x => x.Discount)
+        .OrderBy(x => x.Value)
+        .FirstOrDefault();
+
+    public bool HasFixedSalePriceDiscount => FixedSalePriceDiscount is not null;
+
+    public decimal StorePrice => FixedSalePriceDiscount?.Value ?? FinalPrice;
+
+    public decimal StoreOriginalPrice => FinalPrice;
+
+    public bool ShouldShowOldStorePrice => HasFixedSalePriceDiscount && StoreOriginalPrice != StorePrice;
+
     public List<ProductDiscount> ProductDiscounts { get; set; } = new();
 
     public List<ProductCategory> ProductCategories { get; set; } = new();

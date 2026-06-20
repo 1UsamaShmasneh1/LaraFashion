@@ -44,14 +44,20 @@
                             </div>
                         }
 
-                        <div class="modal-price">₪@Product.FinalPrice</div>
+                        <div class="product-price-container modal-price-container">
+                            @if (Product.ShouldShowOldStorePrice)
+                            {
+                                <div class="old-price">₪@Product.StoreOriginalPrice</div>
+                            }
+                            <div class="modal-price">₪@Product.StorePrice</div>
+                        </div>
 
-                        @if (Product.ProductDiscounts.Any(x => x.Discount.IsActive))
+                        @if (Product.ProductDiscounts.Any(x => x.Discount.IsActive && x.Discount.RuleType != DiscountRuleType.FixedSalePrice))
                         {
                             <div class="product-discounts-box">
                                 <div class="product-discounts-title">العروض المتاحة</div>
 
-                                @foreach (var productDiscount in Product.ProductDiscounts.Where(x => x.Discount.IsActive))
+                                @foreach (var productDiscount in Product.ProductDiscounts.Where(x => x.Discount.IsActive && x.Discount.RuleType != DiscountRuleType.FixedSalePrice))
                                 {
                                     <div class="product-discount-row">
                                         🔥 @GetDiscountText(productDiscount.Discount)
@@ -88,7 +94,7 @@
                             </div>
                         }
 
-                        <div class="modal-total">المجموع: ₪@(Quantity * Product.FinalPrice)</div>
+                        <div class="modal-total">المجموع: ₪@(Quantity * Product.StorePrice)</div>
 
                         <div class="modal-buttons">
                             <button class="cancel-button" @onclick="CloseModal">Cancel</button>
@@ -178,6 +184,8 @@
 
             DiscountRuleType.BundleFixedPrice =>
                 $"اشترِ {discount.MinimumQuantity} قطع من هذه المجموعة بسعر ₪{discount.BundleFixedTotalPrice} — يتم حساب التخفيض في السلة",
+
+            DiscountRuleType.FixedSalePrice => string.Empty,
 
             _ => discount.Name
         };
