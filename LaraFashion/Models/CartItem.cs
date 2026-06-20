@@ -18,7 +18,11 @@ public class CartItem
 
     public decimal UnitPrice { get; set; }
 
+    public decimal OriginalUnitPrice { get; set; }
+
     public decimal TotalPrice => UnitPrice * Quantity;
+
+    public decimal OriginalTotalPrice => OriginalUnitPrice * Quantity;
 
     public List<ProductDiscount> ProductDiscounts { get; set; } = new();
 

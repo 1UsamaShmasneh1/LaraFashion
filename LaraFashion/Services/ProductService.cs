@@ -113,6 +113,7 @@ public class ProductService
                 Quantity = quantity,
                 MaxAvailableQuantity = productSize.Quantity,
                 UnitPrice = product.StorePrice,
+                OriginalUnitPrice = product.StoreOriginalPrice,
                 ProductDiscounts = product.ProductDiscounts
                     .Where(x => x.Discount.IsActive)
                     .ToList(),

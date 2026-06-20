@@ -42,6 +42,7 @@ public class CartService
             existingItem.ProductSerialNumber = product.SerialNumber;
             existingItem.ProductImageUrl = product.ImageUrl;
             existingItem.UnitPrice = product.StorePrice;
+            existingItem.OriginalUnitPrice = product.StoreOriginalPrice;
             existingItem.MaxAvailableQuantity = maxAvailableQuantity;
             existingItem.ProductDiscounts = product.ProductDiscounts;
             existingItem.CategoryNames = product.ProductCategories
@@ -63,6 +64,7 @@ public class CartService
                 Quantity = quantity,
                 MaxAvailableQuantity = maxAvailableQuantity,
                 UnitPrice = product.StorePrice,
+                OriginalUnitPrice = product.StoreOriginalPrice,
                 ProductDiscounts = product.ProductDiscounts,
                 CategoryNames = product.ProductCategories
                     .Where(x => x.Category.IsActive)
@@ -136,14 +138,13 @@ public class CartService
 
     public CartDiscountResult CalculateBestDiscount()
     {
-        var originalTotal = Items.Sum(x => x.TotalPrice);
+        var originalTotal = Items.Sum(x => x.OriginalTotalPrice);
 
-        var result = new CartDiscountResult
-        {
-            OriginalTotal = originalTotal,
-            DiscountAmount = 0,
-            DiscountName = string.Empty
-        };
+        var fixedSalePriceDiscountAmount = Items.Sum(x =>
+            Math.Max(0, x.OriginalUnitPrice - x.UnitPrice) * x.Quantity);
+
+        var bestAdditionalDiscountAmount = 0m;
+        var bestAdditionalDiscountName = string.Empty;
 
         var allDiscounts = Items
             .SelectMany(x => x.ProductDiscounts)
@@ -228,14 +229,27 @@ public class CartService
                 }
             }
 
-            if (discountAmount > result.DiscountAmount)
+            if (discountAmount > bestAdditionalDiscountAmount)
             {
-                result.DiscountAmount = discountAmount;
-                result.DiscountName = discount.Name;
+                bestAdditionalDiscountAmount = discountAmount;
+                bestAdditionalDiscountName = discount.Name;
             }
         }
 
-        return result;
+        var discountNames = new List<string>();
+
+        if (fixedSalePriceDiscountAmount > 0)
+            discountNames.Add("تخفيض السعر الثابت");
+
+        if (bestAdditionalDiscountAmount > 0 && !string.IsNullOrWhiteSpace(bestAdditionalDiscountName))
+            discountNames.Add(bestAdditionalDiscountName);
+
+        return new CartDiscountResult
+        {
+            OriginalTotal = originalTotal,
+            DiscountAmount = fixedSalePriceDiscountAmount + bestAdditionalDiscountAmount,
+            DiscountName = string.Join(" + ", discountNames)
+        };
     }
 
     private static decimal CalculateValueDiscount(Discount discount, decimal total)
