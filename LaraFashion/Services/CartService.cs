@@ -24,6 +24,9 @@ public class CartService
 
     public void AddToCart(Product product, string size, int quantity)
     {
+        if (!product.IsPublished)
+            return;
+
         var maxAvailableQuantity = product.Sizes
             .FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
 

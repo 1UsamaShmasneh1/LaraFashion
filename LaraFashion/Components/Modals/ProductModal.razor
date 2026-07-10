@@ -98,10 +98,17 @@
 
                         <div class="modal-buttons">
                             <button class="cancel-button" @onclick="CloseModal">Cancel</button>
-                            <button class="add-to-cart-button" disabled="@(string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)" @onclick="AddToCart">
-                                Add To Cart
+                            <button class="add-to-cart-button" disabled="@(IsPreviewOnly || string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)" @onclick="AddToCart">
+                                @(IsPreviewOnly ? "معاينة فقط" : "Add To Cart")
                             </button>
                         </div>
+
+                        @if (IsPreviewOnly)
+                        {
+                            <div class="delivery-price-note" dir="rtl">
+                                هذه الصفحة للمعاينة فقط ولا تضيف المنتج إلى السلة أو تنشئ طلبية.
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -119,6 +126,9 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    [Parameter]
+    public bool IsPreviewOnly { get; set; }
+
     private string SelectedSize = string.Empty;
     private int Quantity = 1;
     private int SelectedSizeQuantity;
@@ -130,7 +140,9 @@
         SelectedSize = size;
         SelectedSizeQuantity = Product.Sizes.FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
 
-        var quantityAlreadyInCart = CartService.GetQuantity(Product.Id, size);
+        var quantityAlreadyInCart = IsPreviewOnly
+            ? 0
+            : CartService.GetQuantity(Product.Id, size);
 
         Quantity = quantityAlreadyInCart > 0
             ? Math.Min(quantityAlreadyInCart, SelectedSizeQuantity)
@@ -156,7 +168,7 @@
 
     private async Task AddToCart()
     {
-        if (string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)
+        if (IsPreviewOnly || string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)
             return;
 
         CartService.AddToCart(Product, SelectedSize, Quantity);

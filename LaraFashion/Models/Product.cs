@@ -22,6 +22,8 @@ public class Product
 
     public bool IsActive { get; set; } = true;
 
+    public bool IsPublished { get; set; } = true;
+
     public List<ProductSize> Sizes { get; set; } = new();
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;

@@ -63,5 +63,11 @@ public class AppDbContext : DbContext
             .WithMany(x => x.ProductCategories)
             .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Category>()
+            .ToTable("Categories", x => x.ExcludeFromMigrations());
+
+        modelBuilder.Entity<ProductCategory>()
+            .ToTable("ProductCategories", x => x.ExcludeFromMigrations());
     }
 }

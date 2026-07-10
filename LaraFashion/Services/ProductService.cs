@@ -35,7 +35,7 @@ public class ProductService
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
-            .Where(x => x.IsActive && x.Sizes.Any(s => s.Quantity > 0));
+            .Where(x => x.IsActive && x.IsPublished && x.Sizes.Any(s => s.Quantity > 0));
 
         if (categoryId.HasValue && categoryId.Value != Guid.Empty)
         {
@@ -68,16 +68,45 @@ public class ProductService
             .ToListAsync();
     }
 
-    public async Task<Product?> GetProductAsync(Guid id)
+    public async Task<List<Product>> GetUnpublishedProductsAsync(Guid? categoryId = null)
     {
-        return await _db.Products
+        var query = _db.Products
             .AsNoTracking()
             .Include(x => x.Sizes)
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .Where(x => !x.IsPublished)
+            .AsQueryable();
+
+        if (categoryId.HasValue && categoryId.Value != Guid.Empty)
+        {
+            query = query.Where(x => x.ProductCategories.Any(pc => pc.CategoryId == categoryId.Value));
+        }
+
+        return await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<Product?> GetProductAsync(Guid id, bool includeUnpublished = false)
+    {
+        var query = _db.Products
+            .AsNoTracking()
+            .Include(x => x.Sizes)
+            .Include(x => x.ProductDiscounts)
+                .ThenInclude(x => x.Discount)
+            .Include(x => x.ProductCategories)
+                .ThenInclude(x => x.Category)
+            .AsQueryable();
+
+        if (!includeUnpublished)
+        {
+            query = query.Where(x => x.IsPublished);
+        }
+
+        return await query.FirstOrDefaultAsync(x => x.Id == id);
     }
 
 
@@ -92,7 +121,7 @@ public class ProductService
 
             var product = await GetProductAsync(persistedItem.ProductId);
 
-            if (product is null || !product.IsActive)
+            if (product is null || !product.IsActive || !product.IsPublished)
                 continue;
 
             var productSize = product.Sizes
@@ -135,6 +164,7 @@ public class ProductService
         product.Id = Guid.NewGuid();
         product.CreatedAt = DateTime.Now;
         product.UpdatedAt = DateTime.Now;
+        product.IsPublished = false;
 
         product.DiscountType = LaraFashion.Models.Enums.DiscountType.None;
         product.DiscountValue = 0;
@@ -541,6 +571,42 @@ public class ProductService
         {
             await DeleteImageIfUnusedAsync(oldImageUrl);
         }
+    }
+
+    public async Task PublishProductAsync(Guid productId)
+    {
+        if (productId == Guid.Empty)
+            return;
+
+        var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
+
+        if (product is null || product.IsPublished)
+            return;
+
+        product.IsPublished = true;
+        product.UpdatedAt = DateTime.Now;
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<int> PublishAllUnpublishedProductsAsync()
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        var products = await _db.Products
+            .Where(x => !x.IsPublished)
+            .ToListAsync();
+
+        foreach (var product in products)
+        {
+            product.IsPublished = true;
+            product.UpdatedAt = DateTime.Now;
+        }
+
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return products.Count;
     }
 
     public async Task DeleteImageIfUnusedAsync(string? imageUrl)
