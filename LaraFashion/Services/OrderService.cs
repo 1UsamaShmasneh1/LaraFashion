@@ -26,10 +26,21 @@ public class OrderService
     public async Task<Order> CreateOrderAsync(
         CustomerInfo customer,
         List<CartItem> cartItems,
-        CartDiscountResult discountResult)
+        CartDiscountResult discountResult,
+        bool allowUnpublished = false)
     {
         foreach (var item in cartItems)
         {
+            var product = await _db.Products
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == item.ProductId);
+
+            if (product is null || !product.IsActive || (!product.IsPublished && !allowUnpublished))
+            {
+                throw new InvalidOperationException(
+                    $"المنتج {item.ProductName} غير متاح لإرسال الطلب.");
+            }
+
             var size = await _db.ProductSizes
                 .FirstOrDefaultAsync(x =>
                     x.ProductId == item.ProductId &&

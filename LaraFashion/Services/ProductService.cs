@@ -110,7 +110,9 @@ public class ProductService
     }
 
 
-    public async Task<List<CartItem>> BuildValidCartItemsAsync(IEnumerable<PersistedCartItem> persistedItems)
+    public async Task<List<CartItem>> BuildValidCartItemsAsync(
+        IEnumerable<PersistedCartItem> persistedItems,
+        bool includeUnpublished = false)
     {
         var result = new List<CartItem>();
 
@@ -119,9 +121,9 @@ public class ProductService
             if (persistedItem.ProductId == Guid.Empty || string.IsNullOrWhiteSpace(persistedItem.Size))
                 continue;
 
-            var product = await GetProductAsync(persistedItem.ProductId);
+            var product = await GetProductAsync(persistedItem.ProductId, includeUnpublished);
 
-            if (product is null || !product.IsActive || !product.IsPublished)
+            if (product is null || !product.IsActive || (!product.IsPublished && !includeUnpublished))
                 continue;
 
             var productSize = product.Sizes

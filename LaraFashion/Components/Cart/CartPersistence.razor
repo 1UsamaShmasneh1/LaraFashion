@@ -3,6 +3,7 @@
 @inject LaraFashion.Services.CartService CartService
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.BrowserStorageService BrowserStorageService
+@inject LaraFashion.Services.AdminAuthService AdminAuthService
 
 @implements IDisposable
 
@@ -47,7 +48,9 @@
                 return;
             }
 
-            var validItems = await ProductService.BuildValidCartItemsAsync(persistedCart.Items);
+            var validItems = await ProductService.BuildValidCartItemsAsync(
+                persistedCart.Items,
+                await IsAdminSessionValidAsync());
             CartService.ReplaceItems(validItems);
         }
         catch
@@ -69,6 +72,12 @@
             return;
 
         _ = InvokeAsync(SaveCartToStorageAsync);
+    }
+
+    private async Task<bool> IsAdminSessionValidAsync()
+    {
+        var token = await BrowserStorageService.GetItemAsync("admin_token");
+        return !string.IsNullOrWhiteSpace(token) && AdminAuthService.IsTokenValid(token);
     }
 
     private async Task SaveCartToStorageAsync()

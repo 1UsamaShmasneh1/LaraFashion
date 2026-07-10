@@ -7,6 +7,8 @@
 @inject LaraFashion.Services.CartService CartService
 @inject LaraFashion.Services.OrderService OrderService
 @inject LaraFashion.Services.ProductService ProductService
+@inject LaraFashion.Services.AdminAuthService AdminAuthService
+@inject LaraFashion.Services.BrowserStorageService BrowserStorageService
 
 @inject NavigationManager Navigation
 
@@ -173,6 +175,7 @@ else
             }
 
             <button class="checkout-button"
+                    disabled="@IsSubmittingOrder"
                     @onclick="OpenCheckout">
                 إرسال الطلب
             </button>
@@ -213,6 +216,7 @@ else
 @code {
     private bool IsOrderSuccess;
     private bool IsCheckoutOpen;
+    private bool IsSubmittingOrder;
     private string ErrorMessage = string.Empty;
 
     private void Remove(LaraFashion.Models.CartItem item)
@@ -237,6 +241,7 @@ else
 
     private async Task OpenCheckout()
     {
+        ErrorMessage = string.Empty;
         await RefreshCartQuantitiesAsync();
 
         if (!CartService.Items.Any())
@@ -256,14 +261,29 @@ else
 
     private async Task RefreshCartQuantitiesAsync()
     {
-        var validItems = await ProductService.BuildValidCartItemsAsync(CartService.ToPersistedItems());
+        var beforeCount = CartService.Items.Count;
+        var validItems = await ProductService.BuildValidCartItemsAsync(
+            CartService.ToPersistedItems(),
+            await IsAdminSessionValidAsync());
+
         CartService.ReplaceItems(validItems);
+
+        if (beforeCount > validItems.Count)
+        {
+            ErrorMessage = "تم تحديث السلة وإزالة منتجات لم تعد متاحة لهذا المستخدم.";
+        }
     }
 
     private async Task ConfirmOrder(CustomerInfo customer)
     {
+        if (IsSubmittingOrder)
+            return;
+
         try
         {
+            IsSubmittingOrder = true;
+            ErrorMessage = string.Empty;
+
             await RefreshCartQuantitiesAsync();
 
             if (!CartService.Items.Any())
@@ -278,7 +298,8 @@ else
             await OrderService.CreateOrderAsync(
                 customer,
                 CartService.Items.ToList(),
-                discountResult);
+                discountResult,
+                await IsAdminSessionValidAsync());
 
             IsCheckoutOpen = false;
 
@@ -291,6 +312,16 @@ else
             ErrorMessage = ex.Message;
             return;
         }
+        finally
+        {
+            IsSubmittingOrder = false;
+        }
+    }
+
+    private async Task<bool> IsAdminSessionValidAsync()
+    {
+        var token = await BrowserStorageService.GetItemAsync("admin_token");
+        return !string.IsNullOrWhiteSpace(token) && AdminAuthService.IsTokenValid(token);
     }
 
     private void CloseSuccess()

@@ -22,9 +22,9 @@ public class CartService
             x.Size == size)?.Quantity ?? 0;
     }
 
-    public void AddToCart(Product product, string size, int quantity)
+    public void AddToCart(Product product, string size, int quantity, bool allowUnpublished = false)
     {
-        if (!product.IsPublished)
+        if (!product.IsPublished && !allowUnpublished)
             return;
 
         var maxAvailableQuantity = product.Sizes

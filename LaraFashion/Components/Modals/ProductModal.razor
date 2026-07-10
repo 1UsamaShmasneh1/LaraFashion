@@ -98,15 +98,15 @@
 
                         <div class="modal-buttons">
                             <button class="cancel-button" @onclick="CloseModal">Cancel</button>
-                            <button class="add-to-cart-button" disabled="@(IsPreviewOnly || string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)" @onclick="AddToCart">
-                                @(IsPreviewOnly ? "معاينة فقط" : "Add To Cart")
+                            <button class="add-to-cart-button" disabled="@(string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)" @onclick="AddToCart">
+                                @AddToCartButtonText
                             </button>
                         </div>
 
-                        @if (IsPreviewOnly)
+                        @if (ShowUnpublishedNotice)
                         {
                             <div class="delivery-price-note" dir="rtl">
-                                هذه الصفحة للمعاينة فقط ولا تضيف المنتج إلى السلة أو تنشئ طلبية.
+                                المنتج غير منشور حالياً.
                             </div>
                         }
                     </div>
@@ -127,7 +127,13 @@
     public EventCallback OnClose { get; set; }
 
     [Parameter]
-    public bool IsPreviewOnly { get; set; }
+    public bool AllowUnpublishedAdd { get; set; }
+
+    [Parameter]
+    public bool ShowUnpublishedNotice { get; set; }
+
+    [Parameter]
+    public string AddToCartButtonText { get; set; } = "Add To Cart";
 
     private string SelectedSize = string.Empty;
     private int Quantity = 1;
@@ -140,9 +146,7 @@
         SelectedSize = size;
         SelectedSizeQuantity = Product.Sizes.FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
 
-        var quantityAlreadyInCart = IsPreviewOnly
-            ? 0
-            : CartService.GetQuantity(Product.Id, size);
+        var quantityAlreadyInCart = CartService.GetQuantity(Product.Id, size);
 
         Quantity = quantityAlreadyInCart > 0
             ? Math.Min(quantityAlreadyInCart, SelectedSizeQuantity)
@@ -168,10 +172,10 @@
 
     private async Task AddToCart()
     {
-        if (IsPreviewOnly || string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)
+        if (string.IsNullOrWhiteSpace(SelectedSize) || SelectedSizeQuantity <= 0)
             return;
 
-        CartService.AddToCart(Product, SelectedSize, Quantity);
+        CartService.AddToCart(Product, SelectedSize, Quantity, AllowUnpublishedAdd);
         await CloseModal();
     }
 
