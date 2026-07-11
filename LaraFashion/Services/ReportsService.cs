@@ -10,13 +10,88 @@ public sealed record SalesHistoryQuery(string Search, OrderStatus? Status, DateT
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);
 public sealed record ReportPoint(string Label, int Orders, int Products, decimal Sales, int Visits);
 public sealed record ReportSummary(int Orders, int Products, decimal Sales, int Visits);
+public sealed record LegacyOrdersImportPreview(int Eligible, int Sandbox, int AlreadyImported);
+public sealed record LegacyOrdersImportResult(int Imported, int Sandbox, int AlreadyImported, int Failed);
 
 public class ReportsService
 {
     private readonly AppDbContext _db;
+    private readonly AdminAuthService _adminAuthService;
     private static readonly SemaphoreSlim VisitLock = new(1, 1);
+    private static readonly SemaphoreSlim LegacyImportLock = new(1, 1);
     private static readonly TimeZoneInfo JerusalemTimeZone = ResolveJerusalemTimeZone();
-    public ReportsService(AppDbContext db) => _db = db;
+    public ReportsService(AppDbContext db, AdminAuthService adminAuthService)
+    {
+        _db = db;
+        _adminAuthService = adminAuthService;
+    }
+
+    public async Task<LegacyOrdersImportPreview> GetLegacyOrdersImportPreviewAsync(string adminToken)
+    {
+        EnsureAdmin(adminToken);
+        var sandbox = await _db.Orders.AsNoTracking().CountAsync(x => x.IsSandbox);
+        var alreadyImported = await _db.Orders.AsNoTracking()
+            .CountAsync(x => !x.IsSandbox && _db.SalesHistory.Any(h => h.OriginalOrderId == x.Id));
+        var eligible = await _db.Orders.AsNoTracking()
+            .CountAsync(x => !x.IsSandbox && !_db.SalesHistory.Any(h => h.OriginalOrderId == x.Id));
+        return new(eligible, sandbox, alreadyImported);
+    }
+
+    public async Task<LegacyOrdersImportResult> ImportLegacyOrdersAsync(string adminToken)
+    {
+        EnsureAdmin(adminToken);
+        await LegacyImportLock.WaitAsync();
+        try
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            var sandbox = await _db.Orders.AsNoTracking().CountAsync(x => x.IsSandbox);
+            var alreadyImported = await _db.Orders.AsNoTracking()
+                .CountAsync(x => !x.IsSandbox && _db.SalesHistory.Any(h => h.OriginalOrderId == x.Id));
+
+            var candidates = await _db.Orders.AsNoTracking()
+                .Where(x => !x.IsSandbox && !_db.SalesHistory.Any(h => h.OriginalOrderId == x.Id))
+                .Select(x => new
+                {
+                    x.Id,
+                    x.OrderNumber,
+                    x.CreatedAt,
+                    x.UpdatedAt,
+                    x.Status,
+                    x.FinalTotal,
+                    x.OriginalTotal,
+                    x.DiscountAmount,
+                    CustomerName = x.Customer.FullName,
+                    PhoneNumber = x.Customer.PhoneNumber,
+                    Items = x.Items.Select(i => new { i.Quantity, i.UnitPrice }).ToList()
+                })
+                .ToListAsync();
+
+            var rows = candidates.Select(x => new SalesHistory
+            {
+                Id = Guid.NewGuid(),
+                OriginalOrderId = x.Id,
+                OrderNumber = x.OrderNumber,
+                CreatedAtUtc = x.CreatedAt.ToUniversalTime(),
+                CustomerName = x.CustomerName,
+                PhoneNumber = x.PhoneNumber,
+                TotalQuantity = x.Items.Sum(i => i.Quantity),
+                FinalTotal = HasStoredFinalTotal(x.FinalTotal, x.OriginalTotal, x.DiscountAmount)
+                    ? x.FinalTotal
+                    : x.Items.Sum(i => i.UnitPrice * i.Quantity),
+                LastStatus = x.Status,
+                StatusUpdatedAtUtc = x.UpdatedAt.ToUniversalTime()
+            }).ToList();
+
+            _db.SalesHistory.AddRange(rows);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return new(rows.Count, sandbox, alreadyImported, 0);
+        }
+        finally
+        {
+            LegacyImportLock.Release();
+        }
+    }
 
     public async Task<PagedResult<SalesHistory>> GetSalesHistoryAsync(SalesHistoryQuery request)
     {
@@ -79,6 +154,13 @@ public class ReportsService
         return period switch { ReportPeriod.Hourly => local.ToString("yyyy-MM-dd HH"), ReportPeriod.Daily or ReportPeriod.Weekly => local.ToString("yyyy-MM-dd"), ReportPeriod.Monthly => local.ToString("yyyy-MM"), _ => local.ToString("yyyy") };
     }
     private static string PeriodLabel(string key, ReportPeriod period) => period == ReportPeriod.Hourly ? key + ":00" : key;
+    private void EnsureAdmin(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || !_adminAuthService.IsTokenValid(token))
+            throw new UnauthorizedAccessException("انتهت صلاحية جلسة الإدارة.");
+    }
+    private static bool HasStoredFinalTotal(decimal finalTotal, decimal originalTotal, decimal discountAmount) =>
+        finalTotal != 0 || originalTotal != 0 || discountAmount != 0;
     private static TimeZoneInfo ResolveJerusalemTimeZone()
     {
         try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Jerusalem"); }

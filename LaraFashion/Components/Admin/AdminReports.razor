@@ -6,6 +6,7 @@
 @inject AdminAuthService AdminAuthService
 @inject BrowserStorageService BrowserStorageService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <AdminNav />
 <PageTitle>سجل المتجر</PageTitle>
@@ -35,6 +36,26 @@
     @if (tab == "history")
     {
         <section class="report-panel">
+            <div class="legacy-import-bar">
+                <div>
+                    <strong>الطلبيات القديمة غير المستوردة: @importPreview.Eligible</strong>
+                    <span>يتم الاستيراد من بيانات الطلب الأصلية دون تعديلها.</span>
+                </div>
+                @if (importPreview.Eligible > 0)
+                {
+                    <button class="report-action" disabled="@isImporting" @onclick="ImportLegacyOrders">
+                        @(isImporting ? "جاري الاستيراد..." : "استيراد الطلبيات القديمة")
+                    </button>
+                }
+                else
+                {
+                    <button class="report-action" disabled>تم استيراد جميع الطلبيات القديمة</button>
+                }
+            </div>
+            @if (!string.IsNullOrWhiteSpace(importMessage))
+            {
+                <div class="legacy-import-result @(importFailed ? "error" : "success")">@importMessage</div>
+            }
             <div class="report-filters">
                 <label>بحث<input @bind="search" placeholder="الاسم، الهاتف أو رقم الطلب" /></label>
                 <label>الحالة<select @bind="statusFilter"><option value="">الكل</option>@foreach (var status in Enum.GetValues<OrderStatus>()) { <option value="@status">@StatusText(status)</option> }</select></label>
@@ -79,11 +100,14 @@
 
 @code {
     private bool isCheckingAuth = true;
+    private bool isImporting, importFailed;
+    private string adminToken = "", importMessage = "";
     private string tab = "history", search = "", statusFilter = "";
     private DateTime? fromDate, toDate;
     private int currentPage = 1, pageSize = 10;
     private ReportPeriod period = ReportPeriod.Daily;
     private ReportSummary summary = new(0, 0, 0, 0);
+    private LegacyOrdersImportPreview importPreview = new(0, 0, 0);
     private PagedResult<SalesHistory> history = new([], 0, 1, 10);
     private IReadOnlyList<ReportPoint> points = [];
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(history.TotalCount / (double)pageSize));
@@ -97,9 +121,10 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        var token = await BrowserStorageService.GetItemAsync("admin_token");
-        if (string.IsNullOrWhiteSpace(token) || !AdminAuthService.IsTokenValid(token)) { Navigation.NavigateTo("/admin/login"); return; }
+        adminToken = await BrowserStorageService.GetItemAsync("admin_token") ?? "";
+        if (string.IsNullOrWhiteSpace(adminToken) || !AdminAuthService.IsTokenValid(adminToken)) { Navigation.NavigateTo("/admin/login"); return; }
         summary = await ReportsService.GetSummaryAsync();
+        importPreview = await ReportsService.GetLegacyOrdersImportPreviewAsync(adminToken);
         await LoadHistory(); isCheckingAuth = false; await InvokeAsync(StateHasChanged);
     }
     private async Task SetTab(string value) { tab = value; if (value != "history") { period = value == "visits" ? ReportPeriod.Hourly : ReportPeriod.Daily; await LoadChart(); } }
@@ -114,5 +139,40 @@
     private async Task NextPage() { currentPage++; await LoadHistory(); }
     private async Task PeriodChanged(ChangeEventArgs e) { if (Enum.TryParse<ReportPeriod>(e.Value?.ToString(), out var value)) period = value; await LoadChart(); }
     private async Task LoadChart() => points = await ReportsService.GetReportAsync(period, tab == "visits");
+    private async Task ImportLegacyOrders()
+    {
+        if (isImporting || importPreview.Eligible == 0) return;
+        var confirmed = await JS.InvokeAsync<bool>("confirm",
+            $"سيتم استيراد {importPreview.Eligible} طلبية قديمة.\n\n" +
+            "لن يتم استيراد طلبات Sandbox.\n" +
+            "لن تُحذف أو تُعدّل الطلبات الأصلية.\n" +
+            "السجلات المستوردة سابقًا لن تتكرر.\n\nهل تريد المتابعة؟");
+        if (!confirmed) return;
+
+        try
+        {
+            isImporting = true;
+            importFailed = false;
+            importMessage = "";
+            var result = await ReportsService.ImportLegacyOrdersAsync(adminToken);
+            importMessage = $"تم استيراد {result.Imported} طلبية، واستبعاد {result.Sandbox} طلبات Sandbox، " +
+                            $"وتجاوز {result.AlreadyImported} طلبية مستوردة سابقًا. عدد الطلبات الفاشلة: {result.Failed}.";
+            summary = await ReportsService.GetSummaryAsync();
+            importPreview = await ReportsService.GetLegacyOrdersImportPreviewAsync(adminToken);
+            currentPage = 1;
+            await LoadHistory();
+            points = [];
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch (Exception ex)
+        {
+            importFailed = true;
+            importMessage = $"فشل الاستيراد ولم يتم حفظ أي سجل. عدد الطلبات التي تعذر استيرادها: {importPreview.Eligible}. التفاصيل: {ex.Message}";
+        }
+        finally { isImporting = false; }
+    }
     private static string StatusText(OrderStatus status) => status switch { OrderStatus.New => "جديد", OrderStatus.Preparing => "قيد التحضير", OrderStatus.Ready => "جاهز", OrderStatus.Shipped => "تم الإرسال", OrderStatus.Cancelled => "ملغاة", _ => status.ToString() };
 }
