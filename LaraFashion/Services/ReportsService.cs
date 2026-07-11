@@ -8,7 +8,8 @@ namespace LaraFashion.Services;
 public enum ReportPeriod { Hourly, Daily, Weekly, Monthly, Yearly }
 public sealed record SalesHistoryQuery(string Search, OrderStatus? Status, DateTime? From, DateTime? To, int Page, int PageSize);
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);
-public sealed record ReportPoint(string Label, int Orders, int Products, decimal Sales, int Visits);
+public sealed record ReportPoint(string Key, string Label, string FullLabel, int Orders, int Products, decimal Sales, int Visits);
+public sealed record ReportResult(IReadOnlyList<ReportPoint> Points, int Orders, int Products, decimal Sales, int Visits);
 public sealed record ReportSummary(int Orders, int Products, decimal Sales, int Visits);
 public sealed record LegacyOrdersImportPreview(int Eligible, int Sandbox, int AlreadyImported);
 public sealed record LegacyOrdersImportResult(int Imported, int Sandbox, int AlreadyImported, int Failed);
@@ -118,16 +119,36 @@ public class ReportsService
             await sales.SumAsync(x => (decimal?)x.FinalTotal) ?? 0, await _db.StoreVisits.AsNoTracking().CountAsync());
     }
 
-    public async Task<IReadOnlyList<ReportPoint>> GetReportAsync(ReportPeriod period, bool visitsOnly = false)
+    public async Task<ReportResult> GetReportAsync(ReportPeriod period, DateTime fromLocal, DateTime toLocal, bool visitsOnly = false, CancellationToken cancellationToken = default)
     {
-        var fromUtc = DateTime.UtcNow.AddYears(-5);
-        var sales = visitsOnly ? new List<SalesHistory>() : await _db.SalesHistory.AsNoTracking().Where(x => x.LastStatus != OrderStatus.Cancelled && x.CreatedAtUtc >= fromUtc).ToListAsync();
-        var visits = await _db.StoreVisits.AsNoTracking().Where(x => x.StartedAtUtc >= fromUtc).ToListAsync();
-        var keys = sales.Select(x => PeriodKey(x.CreatedAtUtc, period)).Concat(visits.Select(x => PeriodKey(x.StartedAtUtc, period))).Distinct().OrderBy(x => x).TakeLast(36).ToList();
-        return keys.Select(key => new ReportPoint(PeriodLabel(key, period), sales.Count(x => PeriodKey(x.CreatedAtUtc, period) == key),
-            sales.Where(x => PeriodKey(x.CreatedAtUtc, period) == key).Sum(x => x.TotalQuantity), sales.Where(x => PeriodKey(x.CreatedAtUtc, period) == key).Sum(x => x.FinalTotal),
-            visits.Count(x => PeriodKey(x.StartedAtUtc, period) == key))).ToList();
+        var fromUtc = LocalToUtc(fromLocal);
+        var toUtc = LocalToUtc(toLocal);
+        var sales = visitsOnly
+            ? []
+            : await _db.SalesHistory.AsNoTracking()
+                .Where(x => x.LastStatus != OrderStatus.Cancelled && x.CreatedAtUtc >= fromUtc && x.CreatedAtUtc < toUtc)
+                .Select(x => new ReportSaleRow(x.CreatedAtUtc, x.TotalQuantity, x.FinalTotal))
+                .ToListAsync(cancellationToken);
+        var visits = await _db.StoreVisits.AsNoTracking()
+            .Where(x => x.StartedAtUtc >= fromUtc && x.StartedAtUtc < toUtc)
+            .Select(x => x.StartedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        var salesGroups = sales.GroupBy(x => PeriodKey(x.CreatedAtUtc, period)).ToDictionary(x => x.Key, x => x.ToList());
+        var visitGroups = visits.GroupBy(x => PeriodKey(x, period)).ToDictionary(x => x.Key, x => x.Count());
+        var keys = salesGroups.Keys.Concat(visitGroups.Keys).Distinct().OrderBy(x => x).ToList();
+        var points = keys.Select(key =>
+        {
+            salesGroups.TryGetValue(key, out var periodSales);
+            periodSales ??= [];
+            return new ReportPoint(key, PeriodLabel(key, period), PeriodFullLabel(key, period), periodSales.Count,
+                periodSales.Sum(x => x.TotalQuantity), periodSales.Sum(x => x.FinalTotal), visitGroups.GetValueOrDefault(key));
+        }).ToList();
+        return new(points, sales.Count, sales.Sum(x => x.TotalQuantity), sales.Sum(x => x.FinalTotal), visits.Count);
     }
+
+    public async Task<IReadOnlyList<ReportPoint>> GetReportAsync(ReportPeriod period, bool visitsOnly = false) =>
+        (await GetReportAsync(period, DateTime.Today.AddYears(-5), DateTime.Today.AddDays(1), visitsOnly)).Points;
 
     public async Task RecordVisitAsync(string visitorIdHash, CancellationToken cancellationToken)
     {
@@ -153,7 +174,32 @@ public class ReportsService
         if (period == ReportPeriod.Weekly) local = local.Date.AddDays(-(int)local.DayOfWeek);
         return period switch { ReportPeriod.Hourly => local.ToString("yyyy-MM-dd HH"), ReportPeriod.Daily or ReportPeriod.Weekly => local.ToString("yyyy-MM-dd"), ReportPeriod.Monthly => local.ToString("yyyy-MM"), _ => local.ToString("yyyy") };
     }
-    private static string PeriodLabel(string key, ReportPeriod period) => period == ReportPeriod.Hourly ? key + ":00" : key;
+    private static string PeriodLabel(string key, ReportPeriod period)
+    {
+        var culture = System.Globalization.CultureInfo.GetCultureInfo("ar");
+        return period switch
+        {
+            ReportPeriod.Hourly => DateTime.ParseExact(key, "yyyy-MM-dd HH", null).ToString("HH:mm"),
+            ReportPeriod.Daily => DateTime.ParseExact(key, "yyyy-MM-dd", null).ToString("dd/MM"),
+            ReportPeriod.Weekly => $"الأسبوع {System.Globalization.ISOWeek.GetWeekOfYear(DateTime.ParseExact(key, "yyyy-MM-dd", null))}",
+            ReportPeriod.Monthly => DateTime.ParseExact(key, "yyyy-MM", null).ToString("MMMM yyyy", culture),
+            _ => key
+        };
+    }
+    private static string PeriodFullLabel(string key, ReportPeriod period)
+    {
+        var culture = System.Globalization.CultureInfo.GetCultureInfo("ar");
+        var date = DateTime.ParseExact(key, period switch { ReportPeriod.Hourly => "yyyy-MM-dd HH", ReportPeriod.Daily or ReportPeriod.Weekly => "yyyy-MM-dd", ReportPeriod.Monthly => "yyyy-MM", _ => "yyyy" }, null);
+        return period switch
+        {
+            ReportPeriod.Hourly => date.ToString("dddd، dd MMMM yyyy - HH:00", culture),
+            ReportPeriod.Daily => date.ToString("dddd، dd MMMM yyyy", culture),
+            ReportPeriod.Weekly => $"الأسبوع {System.Globalization.ISOWeek.GetWeekOfYear(date)} - {date:yyyy}",
+            ReportPeriod.Monthly => date.ToString("MMMM yyyy", culture),
+            _ => date.ToString("yyyy")
+        };
+    }
+    private sealed record ReportSaleRow(DateTime CreatedAtUtc, int TotalQuantity, decimal FinalTotal);
     private void EnsureAdmin(string token)
     {
         if (string.IsNullOrWhiteSpace(token) || !_adminAuthService.IsTokenValid(token))

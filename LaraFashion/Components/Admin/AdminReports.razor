@@ -75,6 +75,7 @@
     }
     else
     {
+        <ReportAnalyticsChart Tab="@tab" />
         <section class="report-panel">
             <div class="chart-toolbar"><label>التجميع<select value="@period" @onchange="PeriodChanged">@if (tab == "visits") { <option value="Hourly">بالساعة</option> }<option value="Daily">يومي</option><option value="Weekly">أسبوعي</option><option value="Monthly">شهري</option><option value="Yearly">سنوي</option></select></label></div>
             @if (points.Count == 0) { <div class="report-empty">لا توجد بيانات للعرض.</div> }
@@ -127,7 +128,7 @@
         importPreview = await ReportsService.GetLegacyOrdersImportPreviewAsync(adminToken);
         await LoadHistory(); isCheckingAuth = false; await InvokeAsync(StateHasChanged);
     }
-    private async Task SetTab(string value) { tab = value; if (value != "history") { period = value == "visits" ? ReportPeriod.Hourly : ReportPeriod.Daily; await LoadChart(); } }
+    private Task SetTab(string value) { tab = value; return Task.CompletedTask; }
     private Task ShowHistory() => SetTab("history");
     private Task ShowCount() => SetTab("count");
     private Task ShowSales() => SetTab("sales");
