@@ -29,6 +29,8 @@ public class OrderService
         CartDiscountResult discountResult,
         bool allowUnpublished = false)
     {
+        var isSandboxOrder = false;
+
         foreach (var item in cartItems)
         {
             var product = await _db.Products
@@ -40,6 +42,8 @@ public class OrderService
                 throw new InvalidOperationException(
                     $"المنتج {item.ProductName} غير متاح لإرسال الطلب.");
             }
+
+            isSandboxOrder |= !product.IsPublished;
 
             var size = await _db.ProductSizes
                 .FirstOrDefaultAsync(x =>
@@ -65,6 +69,7 @@ public class OrderService
             DiscountAmount = discountResult.DiscountAmount,
             DiscountName = discountResult.DiscountName,
             FinalTotal = discountResult.FinalTotal,
+            IsSandbox = isSandboxOrder,
             Items = cartItems.Select(item => new OrderItem
             {
                 Id = Guid.NewGuid(),
@@ -79,6 +84,23 @@ public class OrderService
         };
 
         _db.Orders.Add(order);
+
+        if (!order.IsSandbox)
+        {
+            _db.SalesHistory.Add(new SalesHistory
+            {
+                Id = Guid.NewGuid(),
+                OriginalOrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                CreatedAtUtc = order.CreatedAt.ToUniversalTime(),
+                CustomerName = customer.FullName,
+                PhoneNumber = customer.PhoneNumber,
+                TotalQuantity = cartItems.Sum(x => x.Quantity),
+                FinalTotal = discountResult.FinalTotal,
+                LastStatus = order.Status,
+                StatusUpdatedAtUtc = order.UpdatedAt.ToUniversalTime()
+            });
+        }
 
         foreach (var item in cartItems)
         {
@@ -125,6 +147,17 @@ public class OrderService
 
         order.Status = status;
         order.UpdatedAt = DateTime.Now;
+
+        if (!order.IsSandbox)
+        {
+            var history = await _db.SalesHistory
+                .FirstOrDefaultAsync(x => x.OriginalOrderId == order.Id);
+            if (history is not null)
+            {
+                history.LastStatus = status;
+                history.StatusUpdatedAtUtc = order.UpdatedAt.ToUniversalTime();
+            }
+        }
 
         await _db.SaveChangesAsync();
     }

@@ -158,6 +158,9 @@ namespace LaraFashion.Migrations
                     b.Property<decimal>("FinalTotal")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsSandbox")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -217,6 +220,38 @@ namespace LaraFashion.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.SalesHistory", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("TEXT");
+                    b.Property<string>("CustomerName").IsRequired().HasColumnType("TEXT");
+                    b.Property<decimal>("FinalTotal").HasColumnType("TEXT");
+                    b.Property<int>("LastStatus").HasColumnType("INTEGER");
+                    b.Property<Guid?>("OriginalOrderId").HasColumnType("TEXT");
+                    b.Property<string>("OrderNumber").IsRequired().HasColumnType("TEXT");
+                    b.Property<string>("PhoneNumber").IsRequired().HasColumnType("TEXT");
+                    b.Property<DateTime>("StatusUpdatedAtUtc").HasColumnType("TEXT");
+                    b.Property<int>("TotalQuantity").HasColumnType("INTEGER");
+                    b.HasKey("Id");
+                    b.HasIndex("CreatedAtUtc");
+                    b.HasIndex("LastStatus");
+                    b.HasIndex("OriginalOrderId").IsUnique();
+                    b.HasIndex("PhoneNumber");
+                    b.ToTable("SalesHistory");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.StoreVisit", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("TEXT");
+                    b.Property<DateTime>("LastActivityAtUtc").HasColumnType("TEXT");
+                    b.Property<DateTime>("StartedAtUtc").HasColumnType("TEXT");
+                    b.Property<string>("VisitorIdHash").IsRequired().HasColumnType("TEXT");
+                    b.HasKey("Id");
+                    b.HasIndex("StartedAtUtc");
+                    b.HasIndex("VisitorIdHash", "LastActivityAtUtc");
+                    b.ToTable("StoreVisits");
                 });
 
             modelBuilder.Entity("LaraFashion.Models.Product", b =>

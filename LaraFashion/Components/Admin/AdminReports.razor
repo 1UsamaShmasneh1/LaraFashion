@@ -1,0 +1,118 @@
+@page "/admin/reports"
+@using LaraFashion.Models
+@using LaraFashion.Models.Enums
+@using LaraFashion.Services
+@inject ReportsService ReportsService
+@inject AdminAuthService AdminAuthService
+@inject BrowserStorageService BrowserStorageService
+@inject NavigationManager Navigation
+
+<AdminNav />
+<PageTitle>سجل المتجر</PageTitle>
+
+@if (isCheckingAuth)
+{
+    <div class="empty-cart">جاري التحقق من صلاحية الدخول...</div>
+    return;
+}
+
+<main class="store-reports" dir="rtl">
+    <h1 class="admin-page-title">سجل المتجر</h1>
+    <section class="report-summary-grid">
+        <div class="report-summary-card"><span>عدد المبيعات</span><strong>@summary.Orders</strong></div>
+        <div class="report-summary-card"><span>المنتجات المباعة</span><strong>@summary.Products</strong></div>
+        <div class="report-summary-card"><span>إجمالي المبيعات</span><strong>₪@summary.Sales.ToString("N2")</strong></div>
+        <div class="report-summary-card"><span>عدد الزائرين</span><strong>@summary.Visits</strong></div>
+    </section>
+
+    <nav class="report-tabs" aria-label="أقسام سجل المتجر">
+        <button class="@(tab == "history" ? "active" : null)" @onclick="ShowHistory">تاريخ المبيعات</button>
+        <button class="@(tab == "count" ? "active" : null)" @onclick="ShowCount">عدد المبيعات</button>
+        <button class="@(tab == "sales" ? "active" : null)" @onclick="ShowSales">إجمالي المبيعات</button>
+        <button class="@(tab == "visits" ? "active" : null)" @onclick="ShowVisits">عدد الزائرين</button>
+    </nav>
+
+    @if (tab == "history")
+    {
+        <section class="report-panel">
+            <div class="report-filters">
+                <label>بحث<input @bind="search" placeholder="الاسم، الهاتف أو رقم الطلب" /></label>
+                <label>الحالة<select @bind="statusFilter"><option value="">الكل</option>@foreach (var status in Enum.GetValues<OrderStatus>()) { <option value="@status">@StatusText(status)</option> }</select></label>
+                <label>من تاريخ<input type="date" @bind="fromDate" /></label>
+                <label>إلى تاريخ<input type="date" @bind="toDate" /></label>
+                <label>صفوف الصفحة<select @bind="pageSize"><option>10</option><option>25</option><option>50</option></select></label>
+                <button class="report-action" @onclick="ApplyFilters">بحث</button>
+                <button class="report-action secondary" @onclick="ClearFilters">مسح الفلاتر</button>
+            </div>
+            <div class="report-table-wrap">
+                <table><thead><tr><th>تاريخ فتح الطلب</th><th>اسم العميل</th><th>رقم الهاتف</th><th>إجمالي الكمية</th><th>السعر النهائي</th><th>آخر حالة</th></tr></thead>
+                <tbody>@foreach (var row in history.Items) { <tr><td>@ReportsService.ToJerusalem(row.CreatedAtUtc).ToString("yyyy/MM/dd HH:mm")</td><td>@row.CustomerName</td><td>@row.PhoneNumber</td><td>@row.TotalQuantity</td><td>₪@row.FinalTotal.ToString("N2")</td><td>@StatusText(row.LastStatus)</td></tr> }</tbody></table>
+            </div>
+            @if (history.TotalCount == 0) { <div class="report-empty">لا توجد سجلات مطابقة.</div> }
+            <div class="report-pagination"><button disabled="@(currentPage <= 1)" @onclick="PreviousPage">السابق</button><span>صفحة @currentPage من @TotalPages</span><button disabled="@(currentPage >= TotalPages)" @onclick="NextPage">التالي</button></div>
+        </section>
+    }
+    else
+    {
+        <section class="report-panel">
+            <div class="chart-toolbar"><label>التجميع<select value="@period" @onchange="PeriodChanged">@if (tab == "visits") { <option value="Hourly">بالساعة</option> }<option value="Daily">يومي</option><option value="Weekly">أسبوعي</option><option value="Monthly">شهري</option><option value="Yearly">سنوي</option></select></label></div>
+            @if (points.Count == 0) { <div class="report-empty">لا توجد بيانات للعرض.</div> }
+            else if (tab == "visits")
+            {
+                <div class="line-chart" role="img" aria-label="رسم عدد الزائرين"><svg viewBox="0 0 1000 320" preserveAspectRatio="none"><polyline points="@VisitPolyline" /><g>@for (var i = 0; i < points.Count; i++) { var x = ChartX(i); var y = ChartY(points[i].Visits, MaxVisits); <circle cx="@x" cy="@y" r="7"><title>@points[i].Label: @points[i].Visits</title></circle> }</g></svg></div>
+            }
+            else
+            {
+                <div class="bar-chart">
+                    @foreach (var point in points)
+                    {
+                        var value = tab == "sales" ? (double)point.Sales : point.Orders;
+                        var second = tab == "count" ? point.Products : 0;
+                        <div class="bar-group"><div class="bars"><span class="bar primary" style="height:@BarHeight(value)%" title="@(tab == "sales" ? $"₪{point.Sales:N2}" : $"{point.Orders} طلبات")"></span>@if (tab == "count") { <span class="bar secondary" style="height:@BarHeight(second)%" title="@point.Products منتجات"></span> }</div><small>@point.Label</small></div>
+                    }
+                </div>
+                <div class="chart-legend"><span><i class="primary"></i>@(tab == "sales" ? "إجمالي المبيعات (₪)" : "عدد الطلبيات")</span>@if (tab == "count") { <span><i class="secondary"></i>عدد المنتجات المباعة</span> }</div>
+            }
+        </section>
+    }
+</main>
+
+@code {
+    private bool isCheckingAuth = true;
+    private string tab = "history", search = "", statusFilter = "";
+    private DateTime? fromDate, toDate;
+    private int currentPage = 1, pageSize = 10;
+    private ReportPeriod period = ReportPeriod.Daily;
+    private ReportSummary summary = new(0, 0, 0, 0);
+    private PagedResult<SalesHistory> history = new([], 0, 1, 10);
+    private IReadOnlyList<ReportPoint> points = [];
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(history.TotalCount / (double)pageSize));
+    private int MaxVisits => Math.Max(1, points.Max(x => x.Visits));
+    private string VisitPolyline => string.Join(" ", points.Select((x, i) => $"{ChartX(i)},{ChartY(x.Visits, MaxVisits)}"));
+    private double MaxBar => Math.Max(1, points.Select(x => tab == "sales" ? (double)x.Sales : Math.Max(x.Orders, x.Products)).DefaultIfEmpty(1).Max());
+    private double BarHeight(double value) => Math.Max(2, value / MaxBar * 100);
+    private double ChartX(int index) => points.Count == 1 ? 500 : 30 + index * 940d / (points.Count - 1);
+    private static double ChartY(double value, double max) => 290 - value / max * 250;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var token = await BrowserStorageService.GetItemAsync("admin_token");
+        if (string.IsNullOrWhiteSpace(token) || !AdminAuthService.IsTokenValid(token)) { Navigation.NavigateTo("/admin/login"); return; }
+        summary = await ReportsService.GetSummaryAsync();
+        await LoadHistory(); isCheckingAuth = false; await InvokeAsync(StateHasChanged);
+    }
+    private async Task SetTab(string value) { tab = value; if (value != "history") { period = value == "visits" ? ReportPeriod.Hourly : ReportPeriod.Daily; await LoadChart(); } }
+    private Task ShowHistory() => SetTab("history");
+    private Task ShowCount() => SetTab("count");
+    private Task ShowSales() => SetTab("sales");
+    private Task ShowVisits() => SetTab("visits");
+    private async Task LoadHistory() { OrderStatus? status = Enum.TryParse<OrderStatus>(statusFilter, out var parsed) ? parsed : null; history = await ReportsService.GetSalesHistoryAsync(new(search, status, fromDate, toDate, currentPage, pageSize)); }
+    private async Task ApplyFilters() { currentPage = 1; await LoadHistory(); }
+    private async Task ClearFilters() { search = statusFilter = ""; fromDate = toDate = null; currentPage = 1; await LoadHistory(); }
+    private async Task PreviousPage() { currentPage--; await LoadHistory(); }
+    private async Task NextPage() { currentPage++; await LoadHistory(); }
+    private async Task PeriodChanged(ChangeEventArgs e) { if (Enum.TryParse<ReportPeriod>(e.Value?.ToString(), out var value)) period = value; await LoadChart(); }
+    private async Task LoadChart() => points = await ReportsService.GetReportAsync(period, tab == "visits");
+    private static string StatusText(OrderStatus status) => status switch { OrderStatus.New => "جديد", OrderStatus.Preparing => "قيد التحضير", OrderStatus.Ready => "جاهز", OrderStatus.Shipped => "تم الإرسال", OrderStatus.Cancelled => "ملغاة", _ => status.ToString() };
+}

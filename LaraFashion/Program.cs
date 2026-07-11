@@ -4,6 +4,8 @@ using LaraFashion.Services;
 using LaraFashion.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using System.Security.Cryptography;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<AdminAuthService>();
+builder.Services.AddScoped<ReportsService>();
 
 var dbFolder = "/var/www/larafashion/data";
 Directory.CreateDirectory(dbFolder);
@@ -61,6 +64,31 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseAntiforgery();
+
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
+app.MapPost("/api/store/visit", async (HttpContext context, ReportsService reports, CancellationToken cancellationToken) =>
+{
+    var userAgent = context.Request.Headers.UserAgent.ToString();
+    var botMarkers = new[] { "bot", "crawler", "spider", "slurp", "bingpreview", "facebookexternalhit" };
+    if (botMarkers.Any(x => userAgent.Contains(x, StringComparison.OrdinalIgnoreCase))) return Results.NoContent();
+
+    const string cookieName = "lf_visitor";
+    var visitorId = context.Request.Cookies[cookieName];
+    if (string.IsNullOrWhiteSpace(visitorId) || !Guid.TryParse(visitorId, out _))
+    {
+        visitorId = Guid.NewGuid().ToString("N");
+        context.Response.Cookies.Append(cookieName, visitorId, new CookieOptions
+        {
+            HttpOnly = true, Secure = context.Request.IsHttps, SameSite = SameSiteMode.Lax,
+            IsEssential = true, MaxAge = TimeSpan.FromDays(365)
+        });
+    }
+    var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(visitorId)));
+    try { await reports.RecordVisitAsync(hash, cancellationToken); }
+    catch (Exception ex) { context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("StoreVisits").LogWarning(ex, "Could not record store visit."); }
+    return Results.NoContent();
+}).DisableAntiforgery();
 
 
 app.MapPost("/api/admin/upload-product-image", async (

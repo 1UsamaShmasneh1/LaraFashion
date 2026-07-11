@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: larafashion-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,9 +16,24 @@ jobs:
     steps:
       - name: Deploy to Oracle Server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_COMMIT: ${{ github.sha }}
         with:
           host: 158.178.131.94
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
+          envs: DEPLOY_COMMIT
           script: |
-            /home/ubuntu/deploy-larafashion.sh
+            set -Eeuo pipefail
+            test -n "$DEPLOY_COMMIT"
+            exec 9>/tmp/larafashion-production-deploy.lock
+            flock -w 900 9
+
+            REPOSITORY=/var/www/larafashion/LaraFashion
+            cd "$REPOSITORY"
+            git fetch --prune origin main
+            git cat-file -e "${DEPLOY_COMMIT}^{commit}"
+            git reset --hard "$DEPLOY_COMMIT"
+
+            export LARAFASHION_DEPLOY_LOCK_HELD=1
+            bash deploy/deploy-production.sh "$DEPLOY_COMMIT"

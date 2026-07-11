@@ -27,4 +27,6 @@ public class Order
     public string DiscountName { get; set; } = string.Empty;
 
     public decimal FinalTotal { get; set; }
+
+    public bool IsSandbox { get; set; }
 }

@@ -6,6 +6,7 @@
 
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.CategoryService CategoryService
+@inject IJSRuntime JS
 
 <div class="category-button-bar store-category-filter" dir="rtl">
     <button type="button"
@@ -64,6 +65,11 @@ else
     {
         Categories = await CategoryService.GetActiveAsync();
         await LoadProducts();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await JS.InvokeVoidAsync("storeVisits.record");
     }
 
     private async Task LoadProducts()

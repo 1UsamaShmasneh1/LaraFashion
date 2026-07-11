@@ -30,6 +30,10 @@ public class AppDbContext : DbContext
 
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
 
+    public DbSet<SalesHistory> SalesHistory => Set<SalesHistory>();
+
+    public DbSet<StoreVisit> StoreVisits => Set<StoreVisit>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -69,5 +73,19 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ProductCategory>()
             .ToTable("ProductCategories", x => x.ExcludeFromMigrations());
+
+        modelBuilder.Entity<SalesHistory>(entity =>
+        {
+            entity.HasIndex(x => x.OriginalOrderId).IsUnique();
+            entity.HasIndex(x => x.CreatedAtUtc);
+            entity.HasIndex(x => x.LastStatus);
+            entity.HasIndex(x => x.PhoneNumber);
+        });
+
+        modelBuilder.Entity<StoreVisit>(entity =>
+        {
+            entity.HasIndex(x => x.StartedAtUtc);
+            entity.HasIndex(x => new { x.VisitorIdHash, x.LastActivityAtUtc });
+        });
     }
 }
