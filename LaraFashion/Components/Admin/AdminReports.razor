@@ -76,26 +76,6 @@
     else
     {
         <ReportAnalyticsChart Tab="@tab" />
-        <section class="report-panel">
-            <div class="chart-toolbar"><label>التجميع<select value="@period" @onchange="PeriodChanged">@if (tab == "visits") { <option value="Hourly">بالساعة</option> }<option value="Daily">يومي</option><option value="Weekly">أسبوعي</option><option value="Monthly">شهري</option><option value="Yearly">سنوي</option></select></label></div>
-            @if (points.Count == 0) { <div class="report-empty">لا توجد بيانات للعرض.</div> }
-            else if (tab == "visits")
-            {
-                <div class="line-chart" role="img" aria-label="رسم عدد الزائرين"><svg viewBox="0 0 1000 320" preserveAspectRatio="none"><polyline points="@VisitPolyline" /><g>@for (var i = 0; i < points.Count; i++) { var x = ChartX(i); var y = ChartY(points[i].Visits, MaxVisits); <circle cx="@x" cy="@y" r="7"><title>@points[i].Label: @points[i].Visits</title></circle> }</g></svg></div>
-            }
-            else
-            {
-                <div class="bar-chart">
-                    @foreach (var point in points)
-                    {
-                        var value = tab == "sales" ? (double)point.Sales : point.Orders;
-                        var second = tab == "count" ? point.Products : 0;
-                        <div class="bar-group"><div class="bars"><span class="bar primary" style="height:@BarHeight(value)%" title="@(tab == "sales" ? $"₪{point.Sales:N2}" : $"{point.Orders} طلبات")"></span>@if (tab == "count") { <span class="bar secondary" style="height:@BarHeight(second)%" title="@point.Products منتجات"></span> }</div><small>@point.Label</small></div>
-                    }
-                </div>
-                <div class="chart-legend"><span><i class="primary"></i>@(tab == "sales" ? "إجمالي المبيعات (₪)" : "عدد الطلبيات")</span>@if (tab == "count") { <span><i class="secondary"></i>عدد المنتجات المباعة</span> }</div>
-            }
-        </section>
     }
 </main>
 
@@ -106,18 +86,10 @@
     private string tab = "history", search = "", statusFilter = "";
     private DateTime? fromDate, toDate;
     private int currentPage = 1, pageSize = 10;
-    private ReportPeriod period = ReportPeriod.Daily;
     private ReportSummary summary = new(0, 0, 0, 0);
     private LegacyOrdersImportPreview importPreview = new(0, 0, 0);
     private PagedResult<SalesHistory> history = new([], 0, 1, 10);
-    private IReadOnlyList<ReportPoint> points = [];
     private int TotalPages => Math.Max(1, (int)Math.Ceiling(history.TotalCount / (double)pageSize));
-    private int MaxVisits => Math.Max(1, points.Max(x => x.Visits));
-    private string VisitPolyline => string.Join(" ", points.Select((x, i) => $"{ChartX(i)},{ChartY(x.Visits, MaxVisits)}"));
-    private double MaxBar => Math.Max(1, points.Select(x => tab == "sales" ? (double)x.Sales : Math.Max(x.Orders, x.Products)).DefaultIfEmpty(1).Max());
-    private double BarHeight(double value) => Math.Max(2, value / MaxBar * 100);
-    private double ChartX(int index) => points.Count == 1 ? 500 : 30 + index * 940d / (points.Count - 1);
-    private static double ChartY(double value, double max) => 290 - value / max * 250;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -138,8 +110,6 @@
     private async Task ClearFilters() { search = statusFilter = ""; fromDate = toDate = null; currentPage = 1; await LoadHistory(); }
     private async Task PreviousPage() { currentPage--; await LoadHistory(); }
     private async Task NextPage() { currentPage++; await LoadHistory(); }
-    private async Task PeriodChanged(ChangeEventArgs e) { if (Enum.TryParse<ReportPeriod>(e.Value?.ToString(), out var value)) period = value; await LoadChart(); }
-    private async Task LoadChart() => points = await ReportsService.GetReportAsync(period, tab == "visits");
     private async Task ImportLegacyOrders()
     {
         if (isImporting || importPreview.Eligible == 0) return;
@@ -162,7 +132,6 @@
             importPreview = await ReportsService.GetLegacyOrdersImportPreviewAsync(adminToken);
             currentPage = 1;
             await LoadHistory();
-            points = [];
         }
         catch (UnauthorizedAccessException)
         {

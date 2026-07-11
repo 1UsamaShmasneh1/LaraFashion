@@ -38,6 +38,5 @@
 .store-reports .line-chart svg { width:100%;min-width:650px;height:320px;overflow:visible; }
 .store-reports .line-chart polyline { fill:none;stroke:#14b8a6;stroke-width:7;vector-effect:non-scaling-stroke; }
 .store-reports .line-chart circle { fill:#fff;stroke:#0f766e;stroke-width:4;vector-effect:non-scaling-stroke; }
-.store-reports .analytics-card + .report-panel { display:none; }
 @media (max-width:850px) { .store-reports .report-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.store-reports .report-panel { padding:12px; }.store-reports .report-filters label { width:100%; }.store-reports .report-filters input,.store-reports .report-filters select { width:100%; } }
 @media (max-width:480px) { .store-reports .report-summary-grid { grid-template-columns:1fr; } }

@@ -21,24 +21,41 @@
         <div class="modern-chart-area">
             @if (loading) { <div class="chart-loading"><i></i>جارٍ تحديث البيانات...</div> }
             else if (result.Points.Count == 0) { <div class="report-empty">لا توجد بيانات ضمن الفترة المحددة</div> }
-            else if (Tab == "visits")
-            {
-                <svg class="analytics-svg" viewBox="0 0 1000 360" role="img" aria-label="رسم عدد الزائرين">
-                    @foreach (var tick in Ticks(MaxValue)) { <line x1="58" x2="982" y1="@tick.Y" y2="@tick.Y"><title>@Compact(tick.Value)</title></line> }
-                    <polygon points="@AreaPoints" class="visit-fill" /><polyline points="@LinePoints" class="visit-line" />
-                    @for (var i = 0; i < result.Points.Count; i++) { <circle cx="@X(i)" cy="@Y(result.Points[i].Visits)" r="5"><title>@result.Points[i].FullLabel — @result.Points[i].Visits.ToString("N0") زيارة</title></circle> }
-                </svg>
-                <div class="line-axis-labels">@foreach (var item in Labels) { <span>@item.Point.Label</span> }</div>
-            }
             else
             {
-                <div class="modern-bars">
-                    @foreach (var point in result.Points)
+                <div class="chart-scroll-container" @onclick="ClearVisitTooltip">
+                    <div class="chart-inner" style="width:@ChartWidthPx">
+                    @if (Tab == "visits")
                     {
-                        var first = Tab == "sales" ? (double)point.Sales : point.Orders;
-                        var second = Tab == "count" ? point.Products : 0;
-                        <div class="modern-bar-group"><div class="modern-bar-stack"><span class="value-label">@(first > 0 ? ValueLabel(first) : "")</span><span class="modern-bar primary" style="height:@Height(first)%"><span class="chart-tooltip">@point.FullLabel<br />@(Tab == "sales" ? $"إجمالي المبيعات: ₪{point.Sales:N2}" : $"الطلبيات: {point.Orders:N0}")<br />@(Tab == "count" ? $"المنتجات المباعة: {point.Products:N0}" : "")</span></span>@if (Tab == "count") { <span class="value-label">@(second > 0 ? Compact(second) : "")</span><span class="modern-bar secondary" style="height:@Height(second)%"></span> }</div><small>@point.Label</small></div>
+                        <svg class="analytics-svg" viewBox="0 0 @ChartWidth 360" role="img" aria-label="رسم عدد الزائرين">
+                            @foreach (var tick in Ticks(MaxValue)) { <line x1="58" x2="@(ChartWidth - 18)" y1="@tick.Y" y2="@tick.Y"><title>@Compact(tick.Value)</title></line> }
+                            <polygon points="@AreaPoints" class="visit-fill" /><polyline points="@LinePoints" class="visit-line" />
+                            @for (var i = 0; i < result.Points.Count; i++)
+                            {
+                                var index = i;
+                                <circle class="@(ActiveVisitIndex == index ? "selected" : null)" cx="@X(index)" cy="@Y(result.Points[index].Visits)" r="5" tabindex="0" @onmouseenter="() => hoveredVisitIndex = index" @onmouseleave="() => hoveredVisitIndex = null" @onclick="() => SelectVisitPoint(index)" @onclick:stopPropagation="true"><title>@result.Points[index].FullLabel — @result.Points[index].Visits.ToString("N0") زيارة</title></circle>
+                            }
+                        </svg>
+                        <div class="line-axis-labels">@foreach (var item in Labels) { <span style="left:@LabelLeft(item.Index)%">@item.Point.Label</span> }</div>
+                        @if (ActiveVisitIndex is int selected)
+                        {
+                            var point = result.Points[selected];
+                            <button class="visit-tooltip @TooltipEdgeClass(selected)" style="left:@TooltipLeft(selected)%;top:@TooltipTop(selected)px" @onclick:stopPropagation="true" @onclick="ClearVisitTooltip" aria-label="إغلاق التفاصيل"><strong>@point.FullLabel</strong><span>عدد الزائرين: @point.Visits.ToString("N0") زيارة</span></button>
+                        }
                     }
+                    else
+                    {
+                        <div class="modern-bars">
+                            @foreach (var point in result.Points)
+                            {
+                                var first = Tab == "sales" ? (double)point.Sales : point.Orders;
+                                var second = Tab == "count" ? point.Products : 0;
+                                <div class="modern-bar-group"><div class="modern-bar-stack"><div class="bar-column"><span class="value-label">@(first > 0 ? ValueLabel(first) : "")</span><span class="modern-bar primary" style="height:@Height(first)%"><span class="chart-tooltip">@point.FullLabel<br />@(Tab == "sales" ? $"إجمالي المبيعات: ₪{point.Sales:N2}" : $"الطلبيات: {point.Orders:N0}")@if (Tab == "count") { <br /><span>المنتجات المباعة: @point.Products.ToString("N0")</span> }</span></span></div>@if (Tab == "count") { <div class="bar-column"><span class="value-label">@(second > 0 ? Compact(second) : "")</span><span class="modern-bar secondary" style="height:@Height(second)%"><span class="chart-tooltip">@point.FullLabel<br />المنتجات المباعة: @point.Products.ToString("N0")</span></span></div> }</div><small>@point.Label</small></div>
+                            }
+                        </div>
+                        <div class="chart-legend"><span><i class="primary"></i>@(Tab == "sales" ? "إجمالي المبيعات" : "عدد الطلبات")</span>@if (Tab == "count") { <span><i class="secondary"></i>عدد المنتجات المباعة</span> }</div>
+                    }
+                    </div>
                 </div>
             }
         </div>
@@ -53,6 +70,8 @@
     private DateTime? customFrom = DateTime.Today.AddDays(-29), customTo = DateTime.Today;
     private ReportResult result = new([], 0, 0, 0, 0);
     private bool loading;
+    private int? pinnedVisitIndex, hoveredVisitIndex;
+    private int? ActiveVisitIndex => pinnedVisitIndex ?? hoveredVisitIndex;
     private CancellationTokenSource? loadCancellation;
     private string Title => Tab switch { "sales" => "إجمالي قيمة المبيعات", "visits" => "عدد الزائرين", _ => "عدد المبيعات" };
     private string Description => Tab switch { "sales" => "قيمة المبيعات النهائية للطلبات غير الملغاة", "visits" => "عدد زيارات الصفحة الرئيسية", _ => "مقارنة عدد الطلبيات بعدد المنتجات المباعة" };
@@ -61,19 +80,27 @@
     private double MaxValue => Math.Max(1, result.Points.Max(x => x.Visits));
     private double MaxBar => Math.Max(1, result.Points.Select(x => Tab == "sales" ? (double)x.Sales : Math.Max(x.Orders, x.Products)).DefaultIfEmpty(1).Max());
     private double Height(double value) => Math.Max(value > 0 ? 2 : 0, value / MaxBar * 88);
-    private double X(int i) => result.Points.Count == 1 ? 520 : 70 + i * 900d / (result.Points.Count - 1);
+    private double ChartWidth => Math.Max(Tab == "visits" ? 680 : 620, result.Points.Count * (Tab == "count" ? 76 : 62) + 100);
+    private string ChartWidthPx => $"{ChartWidth:0}px";
+    private double X(int i) => result.Points.Count == 1 ? ChartWidth / 2 : 70 + i * (ChartWidth - 100) / (result.Points.Count - 1);
     private double Y(double value) => 315 - value / MaxValue * 260;
     private string LinePoints => string.Join(" ", result.Points.Select((x, i) => $"{X(i):0.#},{Y(x.Visits):0.#}"));
-    private string AreaPoints => $"70,315 {LinePoints} {(result.Points.Count == 1 ? 520 : X(result.Points.Count - 1)):0.#},315";
-    private IEnumerable<(int Index, ReportPoint Point)> Labels { get { var step = Math.Max(1, (int)Math.Ceiling(result.Points.Count / 7d)); return result.Points.Select((p, i) => (i, p)).Where(x => x.i % step == 0 || x.i == result.Points.Count - 1); } }
-    protected override async Task OnParametersSetAsync() { if (Tab == "visits" && period != ReportPeriod.Hourly) { period = ReportPeriod.Hourly; range = ChartRange.Day; } await Load(); }
+    private string AreaPoints => $"{X(0):0.#},315 {LinePoints} {X(result.Points.Count - 1):0.#},315";
+    private IEnumerable<(int Index, ReportPoint Point)> Labels { get { var step = Math.Max(1, (int)Math.Ceiling(result.Points.Count / 12d)); return result.Points.Select((p, i) => (i, p)).Where(x => x.i % step == 0 || x.i == result.Points.Count - 1); } }
+    protected override async Task OnParametersSetAsync() { ClearVisitTooltip(); if (Tab == "visits" && period != ReportPeriod.Hourly) { period = ReportPeriod.Hourly; range = ChartRange.Day; } else if (Tab != "visits" && period == ReportPeriod.Hourly) { period = ReportPeriod.Daily; range = ChartRange.Month; } await Load(); }
     private async Task ChangePeriod(ChangeEventArgs e) { if (Enum.TryParse<ReportPeriod>(e.Value?.ToString(), out var p)) period = p; await Load(); }
     private async Task ChangeRange(ChangeEventArgs e) { if (Enum.TryParse<ChartRange>(e.Value?.ToString(), out var r)) range = r; MakeCompatible(); if (range != ChartRange.Custom) await Load(); }
     private async Task Reset() { period = Tab == "visits" ? ReportPeriod.Hourly : ReportPeriod.Daily; range = Tab == "visits" ? ChartRange.Day : ChartRange.Month; await Load(); }
     private void MakeCompatible() { period = range switch { ChartRange.Day => Tab == "visits" ? ReportPeriod.Hourly : ReportPeriod.Daily, ChartRange.Week or ChartRange.Month or ChartRange.Quarter when period is ReportPeriod.Monthly or ReportPeriod.Yearly => ReportPeriod.Daily, ChartRange.HalfYear or ChartRange.Year when period == ReportPeriod.Yearly => ReportPeriod.Monthly, ChartRange.ThreeYears when period is ReportPeriod.Hourly or ReportPeriod.Daily => ReportPeriod.Monthly, _ => period }; }
     private (DateTime From, DateTime To) Dates() { var end = DateTime.Today.AddDays(1); return range switch { ChartRange.Day => (DateTime.Now.AddHours(-24), DateTime.Now), ChartRange.Week => (end.AddDays(-7), end), ChartRange.Month => (end.AddDays(-30), end), ChartRange.Quarter => (end.AddDays(-90), end), ChartRange.HalfYear => (end.AddMonths(-6), end), ChartRange.Year => (end.AddYears(-1), end), ChartRange.ThreeYears => (end.AddYears(-3), end), ChartRange.All => (new DateTime(2000, 1, 1), end), _ => (customFrom?.Date ?? end.AddDays(-30), (customTo?.Date ?? DateTime.Today).AddDays(1)) }; }
-    private async Task Load() { loadCancellation?.Cancel(); loadCancellation?.Dispose(); var request = new CancellationTokenSource(); loadCancellation = request; loading = true; try { var dates = Dates(); result = await ReportsService.GetReportAsync(period, dates.From, dates.To, Tab == "visits", request.Token); } catch (OperationCanceledException) { } finally { if (!request.IsCancellationRequested) loading = false; } }
+    private async Task Load() { ClearVisitTooltip(); loadCancellation?.Cancel(); loadCancellation?.Dispose(); var request = new CancellationTokenSource(); loadCancellation = request; loading = true; try { var dates = Dates(); result = await ReportsService.GetReportAsync(period, dates.From, dates.To, Tab == "visits", request.Token); } catch (OperationCanceledException) { } finally { if (!request.IsCancellationRequested) loading = false; } }
     private static IEnumerable<(double Value, double Y)> Ticks(double max) => Enumerable.Range(0, 5).Select(i => (max * i / 4, 315 - i * 65d));
     private string ValueLabel(double value) => Tab == "sales" ? $"₪{Compact(value)}" : Compact(value);
     private static string Compact(double value) => Math.Abs(value) >= 1_000_000 ? $"{value / 1_000_000:0.#}M" : Math.Abs(value) >= 1_000 ? $"{value / 1_000:0.#}K" : $"{value:0.#}";
+    private void SelectVisitPoint(int index) { pinnedVisitIndex = pinnedVisitIndex == index ? null : index; hoveredVisitIndex = null; }
+    private void ClearVisitTooltip() { pinnedVisitIndex = null; hoveredVisitIndex = null; }
+    private double LabelLeft(int index) => X(index) / ChartWidth * 100;
+    private double TooltipLeft(int index) => Math.Clamp(LabelLeft(index), 7, 93);
+    private double TooltipTop(int index) => Math.Max(8, Y(result.Points[index].Visits) - 82);
+    private string TooltipEdgeClass(int index) => LabelLeft(index) < 18 ? "edge-start" : LabelLeft(index) > 82 ? "edge-end" : "";
 }
