@@ -1,8 +1,10 @@
-﻿@page "/admin/orders"
+@page "/admin/orders"
 
+@using System.Globalization
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
 @using LaraFashion.Services
+@using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
 
 @inject OrderService OrderService
@@ -30,18 +32,96 @@
     <div class="checkout-error">@ErrorMessage</div>
 }
 
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="lf-orders-success">@SuccessMessage</div>
+}
+
+<div class="lf-orders-toolbar" dir="rtl">
+    <div class="lf-orders-view-switch" aria-label="طريقة عرض الطلبات">
+        <button type="button"
+                class="lf-orders-view-button @(viewMode == OrderViewMode.Cards ? "is-active" : string.Empty)"
+                aria-pressed="@(viewMode == OrderViewMode.Cards)"
+                @onclick="() => ChangeViewMode(OrderViewMode.Cards)">
+            عرض كبطاقات
+        </button>
+        <button type="button"
+                class="lf-orders-view-button @(viewMode == OrderViewMode.Table ? "is-active" : string.Empty)"
+                aria-pressed="@(viewMode == OrderViewMode.Table)"
+                @onclick="() => ChangeViewMode(OrderViewMode.Table)">
+            عرض كجدول
+        </button>
+    </div>
+
+    @if (orders.Count > 0)
+    {
+        <label class="lf-orders-select-all">
+            <input type="checkbox"
+                   checked="@AreAllVisibleSelected"
+                   @onchange="ToggleAllVisible" />
+            <span>تحديد كل الطلبات الظاهرة</span>
+        </label>
+    }
+</div>
+
+@if (selectedOrderIds.Count > 0)
+{
+    <section class="lf-orders-bulk-bar" dir="rtl" aria-label="إجراءات الطلبات المحددة">
+        <strong>تم تحديد @selectedOrderIds.Count طلبيات</strong>
+
+        <div class="lf-orders-selection-actions">
+            <button type="button" @onclick="SelectAllVisible">تحديد كل الطلبات الظاهرة</button>
+            @if (TryGetSingleSelectedStatus(out var commonStatus))
+            {
+                <button type="button" @onclick="() => SelectAllWithStatus(commonStatus)">
+                    تحديد جميع الطلبات بالحالة "@GetStatusText(commonStatus)"
+                </button>
+            }
+            <button type="button" @onclick="ClearSelection">إلغاء التحديد</button>
+        </div>
+
+        <div class="lf-orders-bulk-status">
+            <label for="bulk-order-status">الحالة الجديدة</label>
+            <select id="bulk-order-status" value="@bulkStatus" @onchange="OnBulkStatusChanged">
+                @foreach (var status in Enum.GetValues<OrderStatus>())
+                {
+                    <option value="@status">@GetStatusText(status)</option>
+                }
+            </select>
+            <button type="button"
+                    class="lf-orders-apply-status"
+                    disabled="@IsBulkUpdating"
+                    @onclick="ShowBulkConfirmation">
+                @(IsBulkUpdating ? "جاري التطبيق..." : "تطبيق الحالة")
+            </button>
+        </div>
+    </section>
+}
+
 @if (orders.Count == 0)
 {
     <div class="empty-cart-card">
         <p>لا توجد طلبات بعد</p>
     </div>
 }
-else
+else if (viewMode == OrderViewMode.Cards)
 {
-    <div class="orders-grid">
-        @foreach (var order in orders)
+    <div class="orders-grid lf-orders-cards" dir="rtl">
+        @foreach (var order in displayedOrders)
         {
-            <div class="order-card" @onclick="() => OpenOrder(order.Id)">
+            <div class="order-card lf-orders-card"
+                 @key="order.Id"
+                 role="button"
+                 tabindex="0"
+                 @onclick="() => OpenOrder(order.Id)"
+                 @onkeydown="e => HandleOrderKeyDown(e, order.Id)">
+                <label class="lf-orders-card-checkbox" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                    <input type="checkbox"
+                           aria-label="تحديد الطلب @order.OrderNumber"
+                           checked="@selectedOrderIds.Contains(order.Id)"
+                           @onchange="e => SetOrderSelection(order.Id, IsChecked(e))" />
+                </label>
+
                 <div class="order-header">
                     <h4>@order.OrderNumber</h4>
                     <span class="status-badge @GetStatusCssClass(order.Status)">@GetStatusText(order.Status)</span>
@@ -50,11 +130,78 @@ else
                 <div class="order-info">
                     <p><strong>الزبون:</strong> @order.Customer.FullName</p>
                     <p><strong>الهاتف:</strong> @order.Customer.PhoneNumber</p>
-                    <p><strong>المجموع:</strong> ₪@(order.FinalTotal > 0 ? order.FinalTotal : order.TotalPrice)</p>
+                    <p><strong>المجموع:</strong> ₪@GetOrderTotal(order)</p>
                     <p><strong>المنتجات:</strong> @order.Items.Count</p>
                 </div>
             </div>
         }
+    </div>
+}
+else
+{
+    <div class="lf-orders-table-container" dir="rtl">
+        <table class="lf-orders-table">
+            <thead>
+                <tr>
+                    <th class="lf-orders-checkbox-column">
+                        <input type="checkbox"
+                               aria-label="تحديد كل الطلبات الظاهرة"
+                               checked="@AreAllVisibleSelected"
+                               @onchange="ToggleAllVisible" />
+                    </th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.OrderNumber)">رقم الطلب <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.OrderNumber)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.CustomerName)">اسم الزبون <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.CustomerName)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.Phone)">الهاتف <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.Phone)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.CreatedAt)">تاريخ الطلب <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.CreatedAt)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.UpdatedAt)">آخر تعديل <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.UpdatedAt)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.ItemCount)">عدد المنتجات <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.ItemCount)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.Total)">المجموع <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.Total)</span></button></th>
+                    <th><button type="button" class="lf-orders-sort-button" @onclick="() => CycleSort(OrderSortColumn.Status)">الحالة <span aria-hidden="true">@GetSortIndicator(OrderSortColumn.Status)</span></button></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in displayedOrders)
+                {
+                    <tr @key="order.Id"
+                        role="button"
+                        tabindex="0"
+                        @onclick="() => OpenOrder(order.Id)"
+                        @onkeydown="e => HandleOrderKeyDown(e, order.Id)">
+                        <td class="lf-orders-checkbox-column" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                            <input type="checkbox"
+                                   aria-label="تحديد الطلب @order.OrderNumber"
+                                   checked="@selectedOrderIds.Contains(order.Id)"
+                                   @onchange="e => SetOrderSelection(order.Id, IsChecked(e))" />
+                        </td>
+                        <td class="lf-orders-nowrap"><strong>@order.OrderNumber</strong></td>
+                        <td>@order.Customer.FullName</td>
+                        <td class="lf-orders-nowrap">@order.Customer.PhoneNumber</td>
+                        <td class="lf-orders-nowrap">@order.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="lf-orders-nowrap">@order.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@order.Items.Count</td>
+                        <td class="lf-orders-nowrap">₪@GetOrderTotal(order)</td>
+                        <td class="lf-orders-nowrap">
+                            <span class="status-badge @GetStatusCssClass(order.Status)">@GetStatusText(order.Status)</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (IsBulkConfirmationVisible)
+{
+    <div class="modal-overlay lf-orders-confirm-overlay" role="presentation">
+        <div class="lf-orders-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-confirm-title" dir="rtl">
+            <h2 id="bulk-confirm-title">تأكيد تغيير حالة الطلبات</h2>
+            <p>سيتم تغيير حالة <strong>@selectedOrderIds.Count</strong> طلباً إلى <strong>"@GetStatusText(bulkStatus)"</strong>.</p>
+            <p class="lf-orders-confirm-warning">هذه العملية ستغيّر حالة عدة طلبات وتطبّق قواعد المخزون وسجل المبيعات الحالية.</p>
+            <div class="lf-orders-confirm-actions">
+                <button type="button" class="lf-orders-confirm-button" disabled="@IsBulkUpdating" @onclick="ConfirmBulkStatusUpdate">تأكيد</button>
+                <button type="button" disabled="@IsBulkUpdating" @onclick="CancelBulkConfirmation">إلغاء</button>
+            </div>
+        </div>
     </div>
 }
 
@@ -166,17 +313,30 @@ else
 }
 
 @code {
+    private const string ViewModeStorageKey = "larafashion.admin.orders.viewMode";
     private bool IsCheckingAuth = true;
-    private bool HasAccess;
+    private bool IsBulkUpdating;
+    private bool IsBulkConfirmationVisible;
     private string ErrorMessage = string.Empty;
+    private string SuccessMessage = string.Empty;
+    private string adminToken = string.Empty;
 
     private List<Order> orders = new();
+    private List<Order> displayedOrders = new();
+    private readonly HashSet<Guid> selectedOrderIds = new();
     private Order? selectedOrder;
     private OrderStatus selectedStatus;
+    private OrderStatus bulkStatus;
+    private OrderViewMode viewMode = OrderViewMode.Cards;
+    private OrderSortColumn? sortColumn;
+    private SortDirection sortDirection = SortDirection.None;
 
     private bool CanDeleteSelectedOrder =>
         selectedOrder is not null &&
         (selectedOrder.Status == OrderStatus.Cancelled || selectedOrder.Status == OrderStatus.Ready);
+
+    private bool AreAllVisibleSelected =>
+        displayedOrders.Count > 0 && displayedOrders.All(x => selectedOrderIds.Contains(x.Id));
 
     private async Task OpenOrder(Guid id)
     {
@@ -185,6 +345,11 @@ else
 
         if (selectedOrder is not null)
             selectedStatus = selectedOrder.Status;
+    }
+
+    private Task HandleOrderKeyDown(KeyboardEventArgs e, Guid id)
+    {
+        return e.Key is "Enter" or " " ? OpenOrder(id) : Task.CompletedTask;
     }
 
     private void CloseModal()
@@ -198,6 +363,12 @@ else
             selectedStatus = status;
     }
 
+    private void OnBulkStatusChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<OrderStatus>(e.Value?.ToString(), out var status))
+            bulkStatus = status;
+    }
+
     private async Task SaveStatus()
     {
         if (selectedOrder is null)
@@ -205,10 +376,11 @@ else
 
         try
         {
-            ErrorMessage = string.Empty;
+            ClearMessages();
             await OrderService.UpdateStatusAsync(selectedOrder.Id, selectedStatus);
-            orders = await OrderService.GetOrdersAsync();
+            await LoadOrdersAsync();
             selectedOrder = await OrderService.GetOrderAsync(selectedOrder.Id);
+            SuccessMessage = "تم حفظ حالة الطلبية.";
         }
         catch (Exception ex)
         {
@@ -228,17 +400,216 @@ else
 
         try
         {
-            ErrorMessage = string.Empty;
+            ClearMessages();
             var orderId = selectedOrder.Id;
             await OrderService.DeleteOrderAsync(orderId);
             selectedOrder = null;
-            orders = await OrderService.GetOrdersAsync();
+            await LoadOrdersAsync();
+            SuccessMessage = "تم حذف الطلبية نهائياً.";
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
         }
     }
+
+    private async Task ChangeViewMode(OrderViewMode mode)
+    {
+        if (viewMode == mode)
+            return;
+
+        viewMode = mode;
+        ResetSorting();
+        await BrowserStorageService.SetItemAsync(ViewModeStorageKey, mode == OrderViewMode.Table ? "table" : "cards");
+    }
+
+    private void CycleSort(OrderSortColumn column)
+    {
+        if (sortColumn != column)
+        {
+            sortColumn = column;
+            sortDirection = SortDirection.Ascending;
+        }
+        else
+        {
+            sortDirection = sortDirection switch
+            {
+                SortDirection.Ascending => SortDirection.Descending,
+                SortDirection.Descending => SortDirection.None,
+                _ => SortDirection.Ascending
+            };
+
+            if (sortDirection == SortDirection.None)
+                sortColumn = null;
+        }
+
+        ApplySorting();
+    }
+
+    private void ApplySorting()
+    {
+        if (sortColumn is null || sortDirection == SortDirection.None)
+        {
+            displayedOrders = orders.ToList();
+            return;
+        }
+
+        Func<Order, object?> selector = sortColumn.Value switch
+        {
+            OrderSortColumn.OrderNumber => x => x.OrderNumber,
+            OrderSortColumn.CustomerName => x => x.Customer.FullName,
+            OrderSortColumn.Phone => x => x.Customer.PhoneNumber,
+            OrderSortColumn.CreatedAt => x => x.CreatedAt,
+            OrderSortColumn.UpdatedAt => x => x.UpdatedAt,
+            OrderSortColumn.ItemCount => x => x.Items.Count,
+            OrderSortColumn.Total => x => GetOrderTotal(x),
+            OrderSortColumn.Status => x => GetStatusText(x.Status),
+            _ => x => x.CreatedAt
+        };
+
+        var comparer = ObjectSortComparer.Instance;
+        displayedOrders = sortDirection == SortDirection.Ascending
+            ? orders.OrderBy(selector, comparer).ToList()
+            : orders.OrderByDescending(selector, comparer).ToList();
+    }
+
+    private void ResetSorting()
+    {
+        sortColumn = null;
+        sortDirection = SortDirection.None;
+        displayedOrders = orders.ToList();
+    }
+
+    private string GetSortIndicator(OrderSortColumn column)
+    {
+        if (sortColumn != column)
+            return "↕";
+
+        return sortDirection switch
+        {
+            SortDirection.Ascending => "↑",
+            SortDirection.Descending => "↓",
+            _ => "↕"
+        };
+    }
+
+    private static bool IsChecked(ChangeEventArgs e) => e.Value is bool value && value;
+
+    private void SetOrderSelection(Guid id, bool isSelected)
+    {
+        if (isSelected)
+        {
+            var wasEmpty = selectedOrderIds.Count == 0;
+            selectedOrderIds.Add(id);
+            if (wasEmpty)
+            {
+                var order = orders.FirstOrDefault(x => x.Id == id);
+                if (order is not null)
+                    bulkStatus = order.Status;
+            }
+        }
+        else
+        {
+            selectedOrderIds.Remove(id);
+        }
+    }
+
+    private void ToggleAllVisible(ChangeEventArgs e)
+    {
+        if (IsChecked(e))
+            SelectAllVisible();
+        else
+            ClearVisibleSelection();
+    }
+
+    private void SelectAllVisible()
+    {
+        foreach (var order in displayedOrders)
+            selectedOrderIds.Add(order.Id);
+    }
+
+    private void ClearVisibleSelection()
+    {
+        foreach (var order in displayedOrders)
+            selectedOrderIds.Remove(order.Id);
+    }
+
+    private void ClearSelection()
+    {
+        selectedOrderIds.Clear();
+    }
+
+    private bool TryGetSingleSelectedStatus(out OrderStatus status)
+    {
+        var statuses = orders
+            .Where(x => selectedOrderIds.Contains(x.Id))
+            .Select(x => x.Status)
+            .Distinct()
+            .Take(2)
+            .ToList();
+
+        status = statuses.FirstOrDefault();
+        return statuses.Count == 1;
+    }
+
+    private void SelectAllWithStatus(OrderStatus status)
+    {
+        foreach (var order in orders.Where(x => x.Status == status))
+            selectedOrderIds.Add(order.Id);
+    }
+
+    private void ShowBulkConfirmation()
+    {
+        if (selectedOrderIds.Count > 0)
+            IsBulkConfirmationVisible = true;
+    }
+
+    private void CancelBulkConfirmation()
+    {
+        if (!IsBulkUpdating)
+            IsBulkConfirmationVisible = false;
+    }
+
+    private async Task ConfirmBulkStatusUpdate()
+    {
+        if (selectedOrderIds.Count == 0 || IsBulkUpdating)
+            return;
+
+        try
+        {
+            IsBulkUpdating = true;
+            ClearMessages();
+            var result = await OrderService.UpdateStatusesAsync(selectedOrderIds, bulkStatus, adminToken);
+            IsBulkConfirmationVisible = false;
+            selectedOrderIds.Clear();
+            await LoadOrdersAsync();
+            SuccessMessage = $"تم تحديث حالة {result.UpdatedOrders} طلبيات بنجاح.";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBulkUpdating = false;
+        }
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        orders = await OrderService.GetOrdersAsync();
+        selectedOrderIds.IntersectWith(orders.Select(x => x.Id));
+        ResetSorting();
+    }
+
+    private void ClearMessages()
+    {
+        ErrorMessage = string.Empty;
+        SuccessMessage = string.Empty;
+    }
+
+    private static decimal GetOrderTotal(Order order) =>
+        order.FinalTotal > 0 ? order.FinalTotal : order.TotalPrice;
 
     private string GetStatusText(OrderStatus status)
     {
@@ -271,17 +642,18 @@ else
         if (!firstRender)
             return;
 
-        var token = await BrowserStorageService.GetItemAsync("admin_token");
+        adminToken = await BrowserStorageService.GetItemAsync("admin_token") ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(token) || !AdminAuthService.IsTokenValid(token))
+        if (string.IsNullOrWhiteSpace(adminToken) || !AdminAuthService.IsTokenValid(adminToken))
         {
             Navigation.NavigateTo("/admin/login");
             return;
         }
 
-        HasAccess = true;
+        var storedViewMode = await BrowserStorageService.GetItemAsync(ViewModeStorageKey);
+        viewMode = storedViewMode == "table" ? OrderViewMode.Table : OrderViewMode.Cards;
         IsCheckingAuth = false;
-        orders = await OrderService.GetOrdersAsync();
+        await LoadOrdersAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -311,5 +683,50 @@ else
             return $"https://wa.me/{digits}";
 
         return string.Empty;
+    }
+
+    private enum OrderViewMode
+    {
+        Cards,
+        Table
+    }
+
+    private enum OrderSortColumn
+    {
+        OrderNumber,
+        CustomerName,
+        Phone,
+        CreatedAt,
+        UpdatedAt,
+        ItemCount,
+        Total,
+        Status
+    }
+
+    private enum SortDirection
+    {
+        None,
+        Ascending,
+        Descending
+    }
+
+    private sealed class ObjectSortComparer : IComparer<object?>
+    {
+        public static ObjectSortComparer Instance { get; } = new();
+
+        public int Compare(object? x, object? y)
+        {
+            if (ReferenceEquals(x, y))
+                return 0;
+            if (x is null)
+                return 1;
+            if (y is null)
+                return -1;
+            if (x is string left && y is string right)
+                return CultureInfo.CurrentCulture.CompareInfo.Compare(left, right, CompareOptions.IgnoreCase);
+            if (x is IComparable comparable)
+                return comparable.CompareTo(y);
+            return string.Compare(x.ToString(), y.ToString(), StringComparison.CurrentCultureIgnoreCase);
+        }
     }
 }

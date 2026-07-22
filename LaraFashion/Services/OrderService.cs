@@ -5,13 +5,32 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LaraFashion.Services;
 
+public sealed record BulkOrderStatusResult(int UpdatedOrders);
+
+public sealed record OrderCleanupResult(
+    int EligibleOrders,
+    int DeletedOrders,
+    int DeletedOfficialOrders,
+    int DeletedSandboxOrders,
+    int DeletedReadyOrders,
+    int DeletedCancelledOrders,
+    DateTime ExecutedAt);
+
 public class OrderService
 {
     private readonly AppDbContext _db;
+    private readonly AdminAuthService _adminAuthService;
+    private readonly ILogger<OrderService> _logger;
+    private static readonly SemaphoreSlim CleanupLock = new(1, 1);
 
-    public OrderService(AppDbContext db)
+    public OrderService(
+        AppDbContext db,
+        AdminAuthService adminAuthService,
+        ILogger<OrderService> logger)
     {
         _db = db;
+        _adminAuthService = adminAuthService;
+        _logger = logger;
     }
 
     public async Task<List<Order>> GetOrdersAsync()
@@ -134,32 +153,114 @@ public class OrderService
         if (order is null)
             return;
 
-        var oldStatus = order.Status;
-
-        if (oldStatus != OrderStatus.Cancelled && status == OrderStatus.Cancelled)
-        {
-            await RestoreOrderQuantitiesAsync(order);
-        }
-        else if (oldStatus == OrderStatus.Cancelled && status != OrderStatus.Cancelled)
-        {
-            await DecreaseOrderQuantitiesAsync(order);
-        }
-
-        order.Status = status;
-        order.UpdatedAt = DateTime.Now;
-
-        if (!order.IsSandbox)
-        {
-            var history = await _db.SalesHistory
-                .FirstOrDefaultAsync(x => x.OriginalOrderId == order.Id);
-            if (history is not null)
-            {
-                history.LastStatus = status;
-                history.StatusUpdatedAtUtc = order.UpdatedAt.ToUniversalTime();
-            }
-        }
+        var sizes = await LoadProductSizeLookupAsync([order]);
+        var histories = await LoadHistoryLookupAsync([order]);
+        ApplyStatusChange(order, status, DateTime.Now, sizes, histories);
 
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<BulkOrderStatusResult> UpdateStatusesAsync(
+        IEnumerable<Guid> orderIds,
+        OrderStatus status,
+        string adminToken)
+    {
+        EnsureAdmin(adminToken);
+
+        var ids = orderIds.Distinct().ToList();
+        if (ids.Count == 0)
+            throw new InvalidOperationException("لم يتم تحديد أي طلبية.");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            var orders = await _db.Orders
+                .Include(x => x.Items)
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync();
+
+            if (orders.Count != ids.Count)
+                throw new InvalidOperationException("تعذر العثور على إحدى الطلبيات المحددة. حدّث الصفحة وحاول مجدداً.");
+
+            var sizes = await LoadProductSizeLookupAsync(orders);
+            var histories = await LoadHistoryLookupAsync(orders);
+            var updatedAt = DateTime.Now;
+
+            foreach (var order in orders)
+                ApplyStatusChange(order, status, updatedAt, sizes, histories);
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return new BulkOrderStatusResult(orders.Count);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _db.ChangeTracker.Clear();
+            _logger.LogError(ex, "Bulk order status update failed for {OrderCount} orders.", ids.Count);
+            throw;
+        }
+    }
+
+    public async Task<OrderCleanupResult> CleanOldOrdersAsync(string adminToken)
+    {
+        EnsureAdmin(adminToken);
+        await CleanupLock.WaitAsync();
+
+        try
+        {
+            var executedAt = DateTime.Now;
+            var cutoff = executedAt.AddDays(-30);
+            var eligibleQuery = _db.Orders.Where(x =>
+                x.UpdatedAt <= cutoff &&
+                (x.Status == OrderStatus.Ready || x.Status == OrderStatus.Cancelled));
+
+            var orders = await eligibleQuery
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                .ToListAsync();
+
+            var officialCount = orders.Count(x => !x.IsSandbox);
+            var sandboxCount = orders.Count(x => x.IsSandbox);
+            var readyCount = orders.Count(x => x.Status == OrderStatus.Ready);
+            var cancelledCount = orders.Count(x => x.Status == OrderStatus.Cancelled);
+
+            if (orders.Count == 0)
+            {
+                return new OrderCleanupResult(0, 0, 0, 0, 0, 0, executedAt);
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                _db.OrderItems.RemoveRange(orders.SelectMany(x => x.Items));
+                _db.Customers.RemoveRange(orders.Select(x => x.Customer));
+                _db.Orders.RemoveRange(orders);
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _db.ChangeTracker.Clear();
+                _logger.LogError(ex, "Old order cleanup failed for {OrderCount} eligible orders.", orders.Count);
+                throw;
+            }
+
+            return new OrderCleanupResult(
+                orders.Count,
+                orders.Count,
+                officialCount,
+                sandboxCount,
+                readyCount,
+                cancelledCount,
+                executedAt);
+        }
+        finally
+        {
+            CleanupLock.Release();
+        }
     }
 
     public async Task DeleteOrderAsync(Guid orderId)
@@ -195,39 +296,85 @@ public class OrderService
         }
     }
 
-    private async Task RestoreOrderQuantitiesAsync(Order order)
+    private async Task<Dictionary<(Guid ProductId, string Size), ProductSize>> LoadProductSizeLookupAsync(
+        IReadOnlyCollection<Order> orders)
     {
+        var productIds = orders
+            .SelectMany(x => x.Items)
+            .Select(x => x.ProductId)
+            .Distinct()
+            .ToList();
+
+        if (productIds.Count == 0)
+            return new Dictionary<(Guid, string), ProductSize>();
+
+        return (await _db.ProductSizes
+                .Where(x => productIds.Contains(x.ProductId))
+                .ToListAsync())
+            .ToDictionary(x => (x.ProductId, x.SizeName));
+    }
+
+    private async Task<Dictionary<Guid, SalesHistory>> LoadHistoryLookupAsync(IReadOnlyCollection<Order> orders)
+    {
+        var orderIds = orders
+            .Where(x => !x.IsSandbox)
+            .Select(x => x.Id)
+            .ToList();
+
+        if (orderIds.Count == 0)
+            return new Dictionary<Guid, SalesHistory>();
+
+        return (await _db.SalesHistory
+                .Where(x => x.OriginalOrderId.HasValue && orderIds.Contains(x.OriginalOrderId.Value))
+                .ToListAsync())
+            .Where(x => x.OriginalOrderId.HasValue)
+            .ToDictionary(x => x.OriginalOrderId!.Value);
+    }
+
+    private static void ApplyStatusChange(
+        Order order,
+        OrderStatus status,
+        DateTime updatedAt,
+        IReadOnlyDictionary<(Guid ProductId, string Size), ProductSize> sizes,
+        IReadOnlyDictionary<Guid, SalesHistory> histories)
+    {
+        var oldStatus = order.Status;
+
         foreach (var item in order.Items)
         {
-            var size = await _db.ProductSizes
-                .FirstOrDefaultAsync(x =>
-                    x.ProductId == item.ProductId &&
-                    x.SizeName == item.Size);
+            sizes.TryGetValue((item.ProductId, item.Size), out var size);
 
-            if (size is not null)
+            if (oldStatus != OrderStatus.Cancelled && status == OrderStatus.Cancelled)
             {
-                size.Quantity += item.Quantity;
+                if (size is not null)
+                    size.Quantity += item.Quantity;
             }
+            else if (oldStatus == OrderStatus.Cancelled && status != OrderStatus.Cancelled)
+            {
+                if (size is null || size.Quantity < item.Quantity)
+                {
+                    throw new InvalidOperationException(
+                        $"لا يمكن تغيير حالة الطلبية، الكمية غير متوفرة للمنتج {item.ProductName}، المقاس {item.Size}.");
+                }
+
+                size.Quantity -= item.Quantity;
+            }
+        }
+
+        order.Status = status;
+        order.UpdatedAt = updatedAt;
+
+        if (!order.IsSandbox && histories.TryGetValue(order.Id, out var history))
+        {
+            history.LastStatus = status;
+            history.StatusUpdatedAtUtc = updatedAt.ToUniversalTime();
         }
     }
 
-    private async Task DecreaseOrderQuantitiesAsync(Order order)
+    private void EnsureAdmin(string token)
     {
-        foreach (var item in order.Items)
-        {
-            var size = await _db.ProductSizes
-                .FirstOrDefaultAsync(x =>
-                    x.ProductId == item.ProductId &&
-                    x.SizeName == item.Size);
-
-            if (size is null || size.Quantity < item.Quantity)
-            {
-                throw new InvalidOperationException(
-                    $"لا يمكن تغيير حالة الطلبية، الكمية غير متوفرة للمنتج {item.ProductName}، المقاس {item.Size}.");
-            }
-
-            size.Quantity -= item.Quantity;
-        }
+        if (string.IsNullOrWhiteSpace(token) || !_adminAuthService.IsTokenValid(token))
+            throw new UnauthorizedAccessException("انتهت صلاحية جلسة الإدارة.");
     }
 
     private async Task DeleteImageIfUnusedAsync(string? imageUrl)

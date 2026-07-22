@@ -6,6 +6,7 @@
 @inject BrowserStorageService BrowserStorageService
 @inject ImageMaintenanceService ImageMaintenanceService
 @inject ProductService ProductService
+@inject OrderService OrderService
 @inject NavigationManager Navigation
 
 <AdminNav />
@@ -154,6 +155,66 @@
     }
 </div>
 
+<div class="settings-card" dir="rtl">
+    <h2>تنظيف الطلبيات القديمة</h2>
+
+    <p>
+        يحذف نهائياً من جدول الطلبيات الطلبات التي مر عليها 30 يوماً أو أكثر منذ آخر تعديل، بشرط أن تكون حالتها جاهز أو ملغاة. يشمل الطلبات الرسمية وطلبات Sandbox، ويبقى سجل المبيعات محفوظاً ولا تتغير كميات المخزون.
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(OrderCleanupErrorMessage))
+    {
+        <div class="checkout-error">@OrderCleanupErrorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(OrderCleanupSuccessMessage))
+    {
+        <div class="settings-success">@OrderCleanupSuccessMessage</div>
+    }
+
+    <button type="button"
+            class="checkout-button settings-action-button settings-caution-button"
+            disabled="@IsCleaningOrders"
+            @onclick="RunOrderCleanup">
+        @(IsCleaningOrders ? "جاري تنظيف الطلبيات..." : "فحص وتنظيف الطلبيات")
+    </button>
+
+    @if (OrderCleanupResult is not null)
+    {
+        <div class="settings-result-grid">
+            <div class="settings-result-item">
+                <span>مؤهلة للحذف</span>
+                <strong>@OrderCleanupResult.EligibleOrders</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>تم حذفها</span>
+                <strong>@OrderCleanupResult.DeletedOrders</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>طلبات رسمية</span>
+                <strong>@OrderCleanupResult.DeletedOfficialOrders</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>طلبات Sandbox</span>
+                <strong>@OrderCleanupResult.DeletedSandboxOrders</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>بالحالة جاهز</span>
+                <strong>@OrderCleanupResult.DeletedReadyOrders</strong>
+            </div>
+            <div class="settings-result-item">
+                <span>بالحالة ملغاة</span>
+                <strong>@OrderCleanupResult.DeletedCancelledOrders</strong>
+            </div>
+        </div>
+
+        <div class="settings-order-cleanup-note">
+            <div><strong>وقت التنفيذ:</strong> @OrderCleanupResult.ExecutedAt.ToString("dd/MM/yyyy HH:mm:ss")</div>
+            <div>بقي سجل المبيعات محفوظاً، ولم تتغير كميات المخزون.</div>
+        </div>
+    }
+</div>
+
 <style>
     .settings-card {
         background: rgba(255,255,255,.94);
@@ -188,6 +249,11 @@
     .settings-action-button:disabled {
         opacity: .65;
         cursor: not-allowed;
+    }
+
+    .settings-caution-button {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        box-shadow: 0 12px 24px rgba(217,119,6,.20);
     }
 
     .settings-success {
@@ -241,27 +307,42 @@
     .settings-message-list h3 {
         margin: 0 0 10px;
     }
+
+    .settings-order-cleanup-note {
+        margin-top: 18px;
+        padding: 15px 17px;
+        border-radius: 16px;
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 800;
+        line-height: 1.8;
+    }
 </style>
 
 @code {
     private bool IsCheckingAuth = true;
     private bool IsRunning;
     private bool IsCleaningProducts;
+    private bool IsCleaningOrders;
+    private string AdminToken = string.Empty;
     private string ErrorMessage = string.Empty;
     private string SuccessMessage = string.Empty;
     private string ProductCleanupErrorMessage = string.Empty;
     private string ProductCleanupSuccessMessage = string.Empty;
+    private string OrderCleanupErrorMessage = string.Empty;
+    private string OrderCleanupSuccessMessage = string.Empty;
     private ImageMaintenanceResult? LastResult;
     private ProductCleanupResult? ProductCleanupResult;
+    private OrderCleanupResult? OrderCleanupResult;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
             return;
 
-        var token = await BrowserStorageService.GetItemAsync("admin_token");
+        AdminToken = await BrowserStorageService.GetItemAsync("admin_token") ?? string.Empty;
 
-        if (string.IsNullOrWhiteSpace(token) || !AdminAuthService.IsTokenValid(token))
+        if (string.IsNullOrWhiteSpace(AdminToken) || !AdminAuthService.IsTokenValid(AdminToken))
         {
             Navigation.NavigateTo("/admin/login");
             return;
@@ -269,6 +350,33 @@
 
         IsCheckingAuth = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RunOrderCleanup()
+    {
+        if (IsCleaningOrders)
+            return;
+
+        try
+        {
+            IsCleaningOrders = true;
+            OrderCleanupErrorMessage = string.Empty;
+            OrderCleanupSuccessMessage = string.Empty;
+            OrderCleanupResult = null;
+
+            OrderCleanupResult = await OrderService.CleanOldOrdersAsync(AdminToken);
+            OrderCleanupSuccessMessage = OrderCleanupResult.DeletedOrders == 0
+                ? "لا توجد طلبيات مؤهلة للتنظيف حالياً."
+                : $"تم حذف {OrderCleanupResult.DeletedOrders} طلبية قديمة. بقي سجل المبيعات محفوظاً.";
+        }
+        catch (Exception ex)
+        {
+            OrderCleanupErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsCleaningOrders = false;
+        }
     }
 
     private async Task RunImageMaintenance()

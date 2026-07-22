@@ -1,0 +1,274 @@
+.lf-orders-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.lf-orders-view-switch {
+    display: inline-flex;
+    gap: 8px;
+    padding: 5px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.lf-orders-view-button {
+    border: 0;
+    border-radius: 12px;
+    padding: 10px 18px;
+    color: #475569;
+    background: transparent;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.lf-orders-view-button.is-active {
+    color: #fff;
+    background: linear-gradient(135deg, #34c3eb, #7c3aed);
+    box-shadow: 0 8px 18px rgba(124, 58, 237, .2);
+}
+
+.lf-orders-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #334155;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.lf-orders-select-all input,
+.lf-orders-card-checkbox input,
+.lf-orders-checkbox-column input {
+    width: 19px;
+    height: 19px;
+    accent-color: #7c3aed;
+    cursor: pointer;
+}
+
+.lf-orders-bulk-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    margin-bottom: 20px;
+    border: 1px solid #c4b5fd;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+    color: #334155;
+}
+
+.lf-orders-selection-actions,
+.lf-orders-bulk-status,
+.lf-orders-confirm-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lf-orders-selection-actions button,
+.lf-orders-confirm-actions button {
+    border: 1px solid #d8b4fe;
+    border-radius: 12px;
+    padding: 9px 14px;
+    color: #5b21b6;
+    background: #fff;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.lf-orders-bulk-status label {
+    font-weight: 900;
+}
+
+.lf-orders-bulk-status select {
+    min-width: 180px;
+    height: 43px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: #fff;
+    color: #0f172a;
+    font-weight: 850;
+}
+
+.lf-orders-apply-status,
+.lf-orders-confirm-button {
+    border: 0 !important;
+    border-radius: 12px;
+    padding: 11px 18px;
+    color: #fff !important;
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.lf-orders-apply-status:disabled,
+.lf-orders-confirm-actions button:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.lf-orders-success {
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 18px;
+    background: #dcfce7;
+    color: #166534;
+    font-weight: 900;
+}
+
+.lf-orders-card {
+    position: relative;
+    padding-top: 48px;
+}
+
+.lf-orders-card:focus-visible,
+.lf-orders-table tbody tr:focus-visible {
+    outline: 3px solid rgba(124, 58, 237, .4);
+    outline-offset: 2px;
+}
+
+.lf-orders-card-checkbox {
+    position: absolute;
+    top: 16px;
+    inset-inline-start: 18px;
+    display: inline-flex;
+    padding: 3px;
+    cursor: pointer;
+}
+
+.lf-orders-table-container {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, .08);
+}
+
+.lf-orders-table {
+    width: 100%;
+    min-width: 1120px;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #334155;
+    text-align: right;
+}
+
+.lf-orders-table th,
+.lf-orders-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+.lf-orders-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.lf-orders-table tbody tr {
+    cursor: pointer;
+    transition: background-color .16s ease;
+}
+
+.lf-orders-table tbody tr:hover {
+    background: #f5f3ff;
+}
+
+.lf-orders-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.lf-orders-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    padding: 2px 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.lf-orders-sort-button span {
+    color: #7c3aed;
+    font-size: 16px;
+}
+
+.lf-orders-checkbox-column {
+    width: 52px;
+    min-width: 52px;
+    text-align: center !important;
+}
+
+.lf-orders-nowrap {
+    white-space: nowrap;
+}
+
+.lf-orders-confirm-overlay {
+    z-index: 1100;
+}
+
+.lf-orders-confirm-modal {
+    width: min(520px, 92vw);
+    padding: 28px;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 24px 65px rgba(15, 23, 42, .25);
+}
+
+.lf-orders-confirm-modal h2 {
+    margin-top: 0;
+    color: #334155;
+}
+
+.lf-orders-confirm-modal p {
+    color: #475569;
+    line-height: 1.7;
+}
+
+.lf-orders-confirm-warning {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #fff7ed;
+    color: #9a3412 !important;
+    font-weight: 800;
+}
+
+@media (max-width: 640px) {
+    .lf-orders-toolbar,
+    .lf-orders-bulk-status {
+        align-items: stretch;
+    }
+
+    .lf-orders-view-switch,
+    .lf-orders-view-button,
+    .lf-orders-bulk-status select,
+    .lf-orders-apply-status {
+        width: 100%;
+    }
+
+    .lf-orders-view-button {
+        flex: 1 1 0;
+        padding-inline: 10px;
+    }
+
+    .lf-orders-selection-actions button,
+    .lf-orders-confirm-actions button {
+        flex: 1 1 100%;
+    }
+}
