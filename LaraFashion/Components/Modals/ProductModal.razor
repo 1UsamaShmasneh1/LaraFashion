@@ -17,13 +17,41 @@
 
             <div class="modal-content-wrapper @(IsContentReady ? "modal-content-visible" : "modal-content-hidden")">
                 <div class="modal-grid">
-                    <div>
-                        @if (!string.IsNullOrWhiteSpace(Product.ImageUrl))
+                    <div class="modal-product-gallery">
+                        @if (!string.IsNullOrWhiteSpace(CurrentImageUrl))
                         {
-                            <img src="@Product.ImageUrl"
-                                 class="modal-product-image"
-                                 @onload="MarkContentReady"
-                                 @onerror="MarkContentReady" />
+                            <div class="modal-gallery-main">
+                                <img @key="CurrentImageUrl"
+                                     src="@CurrentImageUrl"
+                                     class="modal-product-image"
+                                     @onload="MarkContentReady"
+                                     @onerror="MarkContentReady" />
+
+                                @if (GalleryImageUrls.Count > 1)
+                                {
+                                    <button type="button" class="modal-gallery-nav modal-gallery-previous"
+                                            aria-label="الصورة السابقة" @onclick="ShowPreviousImage">‹</button>
+                                    <button type="button" class="modal-gallery-nav modal-gallery-next"
+                                            aria-label="الصورة التالية" @onclick="ShowNextImage">›</button>
+                                }
+                            </div>
+
+                            @if (GalleryImageUrls.Count > 1)
+                            {
+                                <div class="modal-gallery-thumbnails" dir="rtl">
+                                    @for (var index = 0; index < GalleryImageUrls.Count; index++)
+                                    {
+                                        var imageIndex = index;
+                                        var imageUrl = GalleryImageUrls[index];
+                                        <button type="button"
+                                                class="modal-gallery-thumbnail @(imageIndex == SelectedImageIndex ? "selected" : string.Empty)"
+                                                aria-label="عرض الصورة @(imageIndex + 1)"
+                                                @onclick="(() => SelectImage(imageIndex))">
+                                            <img src="@imageUrl" alt="" loading="lazy" />
+                                        </button>
+                                    }
+                                </div>
+                            }
                         }
                         else
                         {
@@ -116,6 +144,91 @@
     </div>
 }
 
+<style>
+    .modal-product-gallery {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .modal-gallery-main {
+        position: relative;
+        min-width: 0;
+    }
+
+    .modal-gallery-nav {
+        position: absolute;
+        top: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .92);
+        color: #334155;
+        box-shadow: 0 5px 16px rgba(15, 23, 42, .2);
+        font-size: 32px;
+        line-height: 1;
+        cursor: pointer;
+        transform: translateY(-50%);
+    }
+
+    .modal-gallery-previous {
+        left: 10px;
+    }
+
+    .modal-gallery-next {
+        right: 10px;
+    }
+
+    .modal-gallery-thumbnails {
+        display: flex;
+        gap: 9px;
+        max-width: 100%;
+        margin-top: 10px;
+        padding: 3px 2px 7px;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+    }
+
+    .modal-gallery-thumbnail {
+        flex: 0 0 72px;
+        width: 72px;
+        height: 72px;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        padding: 3px;
+        background: #f7f7f7;
+        cursor: pointer;
+    }
+
+    .modal-gallery-thumbnail.selected {
+        border-color: #7c3aed;
+    }
+
+    .modal-gallery-thumbnail > img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+        object-fit: contain;
+    }
+
+    @@media (max-width: 700px) {
+        .modal-gallery-nav {
+            width: 44px;
+            height: 44px;
+        }
+
+        .modal-gallery-thumbnail {
+            flex-basis: 64px;
+            width: 64px;
+            height: 64px;
+        }
+    }
+</style>
+
 @code {
     [Parameter]
     public bool IsOpen { get; set; }
@@ -140,6 +253,11 @@
     private int SelectedSizeQuantity;
     private bool IsContentReady;
     private Guid LastProductId;
+    private List<string> GalleryImageUrls = new();
+    private int SelectedImageIndex;
+    private string CurrentImageUrl => SelectedImageIndex >= 0 && SelectedImageIndex < GalleryImageUrls.Count
+        ? GalleryImageUrls[SelectedImageIndex]
+        : string.Empty;
 
     private void SelectSize(string size)
     {
@@ -207,6 +325,44 @@
         };
     }
 
+    private void SelectImage(int index)
+    {
+        if (index >= 0 && index < GalleryImageUrls.Count)
+            SelectedImageIndex = index;
+    }
+
+    private void ShowPreviousImage()
+    {
+        if (GalleryImageUrls.Count > 1)
+            SelectedImageIndex = (SelectedImageIndex - 1 + GalleryImageUrls.Count) % GalleryImageUrls.Count;
+    }
+
+    private void ShowNextImage()
+    {
+        if (GalleryImageUrls.Count > 1)
+            SelectedImageIndex = (SelectedImageIndex + 1) % GalleryImageUrls.Count;
+    }
+
+    private void InitializeGallery()
+    {
+        GalleryImageUrls = Product.Images
+            .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Id)
+            .Select(x => x.ImageUrl)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (GalleryImageUrls.Count == 0 && !string.IsNullOrWhiteSpace(Product.ImageUrl))
+            GalleryImageUrls.Add(Product.ImageUrl);
+
+        var primaryImageUrl = Product.PrimaryImageUrl;
+        var primaryIndex = GalleryImageUrls.FindIndex(x =>
+            string.Equals(x, primaryImageUrl, StringComparison.OrdinalIgnoreCase));
+        SelectedImageIndex = primaryIndex >= 0 ? primaryIndex : 0;
+        IsContentReady = GalleryImageUrls.Count == 0;
+    }
+
     protected override void OnParametersSet()
     {
         if (IsOpen && LastProductId != Product.Id)
@@ -215,7 +371,7 @@
             SelectedSize = string.Empty;
             SelectedSizeQuantity = 0;
             Quantity = 1;
-            IsContentReady = string.IsNullOrWhiteSpace(Product.ImageUrl);
+            InitializeGallery();
         }
 
         if (!IsOpen)
@@ -225,6 +381,8 @@
             SelectedSize = string.Empty;
             SelectedSizeQuantity = 0;
             Quantity = 1;
+            GalleryImageUrls = new();
+            SelectedImageIndex = 0;
         }
     }
 

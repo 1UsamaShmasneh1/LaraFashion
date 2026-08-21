@@ -21,16 +21,19 @@ public class OrderService
     private readonly AppDbContext _db;
     private readonly AdminAuthService _adminAuthService;
     private readonly ILogger<OrderService> _logger;
+    private readonly AppStoragePaths _storagePaths;
     private static readonly SemaphoreSlim CleanupLock = new(1, 1);
 
     public OrderService(
         AppDbContext db,
         AdminAuthService adminAuthService,
-        ILogger<OrderService> logger)
+        ILogger<OrderService> logger,
+        AppStoragePaths storagePaths)
     {
         _db = db;
         _adminAuthService = adminAuthService;
         _logger = logger;
+        _storagePaths = storagePaths;
     }
 
     public async Task<List<Order>> GetOrdersAsync()
@@ -383,13 +386,14 @@ public class OrderService
             return;
 
         var usedByProduct = await _db.Products.AnyAsync(x => x.ImageUrl == imageUrl);
+        var usedByProductImage = await _db.ProductImages.AnyAsync(x => x.ImageUrl == imageUrl);
         var usedByOrder = await _db.OrderItems.AnyAsync(x => x.ProductImageUrl == imageUrl);
 
-        if (usedByProduct || usedByOrder)
+        if (usedByProduct || usedByProductImage || usedByOrder)
             return;
 
         var fileName = Path.GetFileName(imageUrl);
-        var filePath = Path.Combine("/var/www/larafashion/uploads", fileName);
+        var filePath = Path.Combine(_storagePaths.UploadsPath, fileName);
 
         if (File.Exists(filePath))
         {

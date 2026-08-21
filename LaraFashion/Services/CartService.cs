@@ -43,7 +43,7 @@ public class CartService
         {
             existingItem.ProductName = product.Name;
             existingItem.ProductSerialNumber = product.SerialNumber;
-            existingItem.ProductImageUrl = product.ImageUrl;
+            existingItem.ProductImageUrl = product.PrimaryImageUrl;
             existingItem.UnitPrice = product.StorePrice;
             existingItem.OriginalUnitPrice = product.StoreOriginalPrice;
             existingItem.MaxAvailableQuantity = maxAvailableQuantity;
@@ -62,7 +62,7 @@ public class CartService
                 ProductId = product.Id,
                 ProductName = product.Name,
                 ProductSerialNumber = product.SerialNumber,
-                ProductImageUrl = product.ImageUrl,
+                ProductImageUrl = product.PrimaryImageUrl,
                 Size = size,
                 Quantity = quantity,
                 MaxAvailableQuantity = maxAvailableQuantity,

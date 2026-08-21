@@ -5,8 +5,15 @@
 
     <div class="product-image-container">
 
-        <img src="@Product.ImageUrl"
-             class="product-image" />
+        @if (!string.IsNullOrWhiteSpace(Product.PrimaryImageUrl))
+        {
+            <img src="@Product.PrimaryImageUrl"
+                 class="product-image" />
+        }
+        else
+        {
+            <div class="product-image-placeholder">لا توجد صورة</div>
+        }
 
         @if (Product.ShouldShowOldStorePrice || Product.DiscountType != LaraFashion.Models.Enums.DiscountType.None)
         {

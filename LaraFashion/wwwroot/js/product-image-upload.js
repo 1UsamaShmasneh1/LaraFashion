@@ -1,15 +1,15 @@
 
 (function () {
-    window.laraFashionUploadProductImage = async function (input) {
+    window.laraFashionUploadProductImages = async function (input) {
         const statusElement = document.getElementById("productImageUploadStatus");
-        const hiddenInput = document.getElementById("productImageUrlInput");
+        const hiddenInput = document.getElementById("productImageUrlsInput");
 
         try {
             if (!input || !input.files || input.files.length === 0) {
                 return;
             }
 
-            const file = input.files[0];
+            const files = Array.from(input.files);
             const token = localStorage.getItem("admin_token") || "";
 
             if (!token) {
@@ -18,56 +18,70 @@
             }
 
             if (statusElement) {
-                statusElement.textContent = "جاري رفع الصورة...";
+                statusElement.textContent = `جاري رفع ${files.length} صورة...`;
                 statusElement.style.color = "#0f766e";
             }
 
-            const formData = new FormData();
-            formData.append("file", file);
+            let uploadedCount = 0;
+            const errors = [];
 
-            const response = await fetch("/api/admin/upload-product-image", {
-                method: "POST",
-                headers: {
-                    "X-Admin-Token": token
-                },
-                body: formData
-            });
+            for (let index = 0; index < files.length; index++) {
+                const file = files[index];
 
-            if (!response.ok) {
-                let message = "فشل رفع الصورة.";
+                if (statusElement) {
+                    statusElement.textContent = `جاري رفع الصورة ${index + 1} من ${files.length}...`;
+                }
+
                 try {
-                    const error = await response.json();
-                    if (error && error.message) message = error.message;
-                } catch { }
+                    const formData = new FormData();
+                    formData.append("file", file);
 
-                if (statusElement) {
-                    statusElement.textContent = message;
-                    statusElement.style.color = "#dc2626";
+                    const response = await fetch("/api/admin/upload-product-image", {
+                        method: "POST",
+                        headers: { "X-Admin-Token": token },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        let message = "فشل رفع الصورة.";
+                        try {
+                            const error = await response.json();
+                            if (error && error.message) message = error.message;
+                        } catch { }
+                        errors.push(`${file.name}: ${message}`);
+                        continue;
+                    }
+
+                    const result = await response.json();
+                    const imageUrl = result.imageUrl || result.ImageUrl || "";
+
+                    if (!imageUrl) {
+                        errors.push(`${file.name}: لم يرجع رابط الصورة.`);
+                        continue;
+                    }
+
+                    if (hiddenInput) {
+                        hiddenInput.value = imageUrl;
+                        hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+
+                    uploadedCount++;
+                } catch (error) {
+                    errors.push(`${file.name}: فشل الاتصال بالخادم.`);
+                    console.error("Product image upload failed", error);
                 }
-                return;
             }
 
-            const result = await response.json();
-            const imageUrl = result.imageUrl || result.ImageUrl || "";
-
-            if (!imageUrl) {
-                if (statusElement) {
-                    statusElement.textContent = "تم الرفع لكن لم يرجع رابط الصورة.";
-                    statusElement.style.color = "#dc2626";
-                }
-                return;
-            }
-
-            if (hiddenInput) {
-                hiddenInput.value = imageUrl;
-                hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
-            }
-
-            input.setAttribute("data-uploaded-url", imageUrl);
+            input.value = "";
 
             if (statusElement) {
-                statusElement.textContent = "تم رفع الصورة. اضغط حفظ المنتج لتثبيتها.";
-                statusElement.style.color = "#16a34a";
+                if (errors.length === 0) {
+                    statusElement.textContent = `تم رفع ${uploadedCount} صورة. اضغط حفظ المنتج لتثبيتها.`;
+                    statusElement.style.color = "#16a34a";
+                } else {
+                    statusElement.textContent = `تم رفع ${uploadedCount} صورة، وفشل ${errors.length}: ${errors.join(" | ")}`;
+                    statusElement.style.color = "#dc2626";
+                }
             }
         } catch (error) {
             if (statusElement) {
@@ -78,8 +92,4 @@
         }
     };
 
-    window.laraFashionGetUploadedProductImageUrl = function () {
-        const hiddenInput = document.getElementById("productImageUrlInput");
-        return hiddenInput ? hiddenInput.value : "";
-    };
 })();

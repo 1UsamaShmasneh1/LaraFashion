@@ -130,9 +130,9 @@ else
 
                 <div class="product-image-container">
 
-                    @if (!string.IsNullOrWhiteSpace(product.ImageUrl))
+                    @if (!string.IsNullOrWhiteSpace(product.PrimaryImageUrl))
                     {
-                        <img src="@product.ImageUrl" class="product-image" />
+                        <img src="@product.PrimaryImageUrl" class="product-image" />
                     }
                     else
                     {
@@ -254,22 +254,44 @@ else
 
                 <input id="productImageUploadInput"
                        type="file"
+                       multiple
                        accept="image/*,.jpg,.jpeg,.png,.webp"
-                       onchange="laraFashionUploadProductImage(this)" />
+                       onchange="laraFashionUploadProductImages(this)" />
 
-                <input id="productImageUrlInput"
+                <input id="productImageUrlsInput"
                        type="hidden"
-                       value="@SelectedImageUrl"
                        @onchange="OnUploadedImageUrlChanged" />
 
                 <div id="productImageUploadStatus"
                      class="delivery-price-note"
                      style="margin-top:8px;font-weight:800;">
-                    @if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
+                    @if (SelectedImages.Any())
                     {
-                        <span>الصورة جاهزة للحفظ.</span>
+                        <span>@SelectedImages.Count صورة جاهزة للحفظ.</span>
                     }
                 </div>
+
+                @if (SelectedImages.Any())
+                {
+                    <div class="admin-product-images-editor" dir="rtl">
+                        @foreach (var image in SelectedImages.OrderBy(x => x.SortOrder))
+                        {
+                            <div @key="image.Id" class="admin-product-image-editor @(image.IsPrimary ? "is-primary" : string.Empty)">
+                                <img src="@image.ImageUrl" alt="" />
+                                @if (image.IsPrimary)
+                                {
+                                    <span class="admin-product-image-primary-badge">الصورة الرئيسية</span>
+                                }
+                                <div class="admin-product-image-actions">
+                                    <button type="button" disabled="@image.IsPrimary" @onclick="(() => MakeImagePrimary(image.Id))">رئيسية</button>
+                                    <button type="button" disabled="@(image.SortOrder == 0)" @onclick="(() => MoveImage(image.Id, -1))">↑</button>
+                                    <button type="button" disabled="@(image.SortOrder == SelectedImages.Count - 1)" @onclick="(() => MoveImage(image.Id, 1))">↓</button>
+                                    <button type="button" class="remove-image" @onclick="(() => RemoveImage(image.Id))">إزالة</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
 
             <h3>التصنيفات المتاحة</h3>
@@ -367,6 +389,75 @@ else
     </div>
 }
 
+<style>
+    .admin-product-images-editor {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+    }
+
+    .admin-product-image-editor {
+        position: relative;
+        min-width: 0;
+        padding: 8px;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        background: #f8fafc;
+    }
+
+    .admin-product-image-editor.is-primary {
+        border-color: #7c3aed;
+    }
+
+    .admin-product-image-editor > img {
+        display: block;
+        width: 100%;
+        height: 120px;
+        object-fit: contain;
+        border-radius: 12px;
+        background: white;
+    }
+
+    .admin-product-image-primary-badge {
+        display: block;
+        margin-top: 7px;
+        color: #6d28d9;
+        font-size: 12px;
+        font-weight: 900;
+        text-align: center;
+    }
+
+    .admin-product-image-actions {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .admin-product-image-actions > button {
+        min-height: 34px;
+        border: 0;
+        border-radius: 9px;
+        padding: 5px 8px;
+        background: #e2e8f0;
+        color: #334155;
+        font-weight: 850;
+        cursor: pointer;
+    }
+
+    .admin-product-image-actions > button:disabled {
+        cursor: default;
+        opacity: .45;
+    }
+
+    .admin-product-image-actions > .remove-image {
+        grid-column: 1 / -1;
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+</style>
+
 @code {
 
     private bool IsLoading = true;
@@ -401,7 +492,7 @@ else
 
     private Guid EditingProductId = Guid.Empty;
 
-    private string? SelectedImageUrl;
+    private List<ProductImage> SelectedImages = new();
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -440,7 +531,7 @@ else
         SelectedDiscountIds = new();
         SelectedCategoryIds = new();
         EditingProductId = Guid.Empty;
-        SelectedImageUrl = null;
+        SelectedImages = new();
 
         NewProduct = new Product
         {
@@ -475,18 +566,18 @@ else
             NewProduct.DiscountType = DiscountType.None;
             NewProduct.DiscountValue = 0;
 
-            var uploadedImageUrl = await JSRuntime.InvokeAsync<string>(
-                "laraFashionGetUploadedProductImageUrl");
-
-            if (!string.IsNullOrWhiteSpace(uploadedImageUrl))
+            NormalizeSelectedImages();
+            NewProduct.Images = SelectedImages.Select(x => new ProductImage
             {
-                SelectedImageUrl = uploadedImageUrl;
-                NewProduct.ImageUrl = uploadedImageUrl;
-            }
-            else if (!string.IsNullOrWhiteSpace(SelectedImageUrl))
-            {
-                NewProduct.ImageUrl = SelectedImageUrl;
-            }
+                Id = x.Id,
+                ProductId = NewProduct.Id,
+                ImageUrl = x.ImageUrl,
+                SortOrder = x.SortOrder,
+                IsPrimary = x.IsPrimary
+            }).ToList();
+            NewProduct.ImageUrl = NewProduct.Images.FirstOrDefault(x => x.IsPrimary)?.ImageUrl
+                ?? NewProduct.Images.FirstOrDefault()?.ImageUrl
+                ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(NewProduct.Name))
             {
@@ -544,7 +635,7 @@ else
         IsAddModalOpen = false;
         IsEditMode = false;
         EditingProductId = Guid.Empty;
-        SelectedImageUrl = null;
+        SelectedImages = new();
         NewProduct = new Product();
         SelectedDiscountIds = new();
         SelectedCategoryIds = new();
@@ -561,7 +652,32 @@ else
         ErrorMessage = string.Empty;
         IsEditMode = true;
         EditingProductId = product.Id;
-        SelectedImageUrl = product.ImageUrl;
+        SelectedImages = product.Images
+            .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Id)
+            .Select(x => new ProductImage
+            {
+                Id = x.Id,
+                ProductId = product.Id,
+                ImageUrl = x.ImageUrl,
+                SortOrder = x.SortOrder,
+                IsPrimary = x.IsPrimary
+            })
+            .ToList();
+
+        if (!SelectedImages.Any() && !string.IsNullOrWhiteSpace(product.ImageUrl))
+        {
+            SelectedImages.Add(new ProductImage
+            {
+                Id = Guid.NewGuid(),
+                ProductId = product.Id,
+                ImageUrl = product.ImageUrl,
+                IsPrimary = true
+            });
+        }
+
+        NormalizeSelectedImages();
 
         SelectedDiscountIds = product.ProductDiscounts
             .Select(x => x.DiscountId)
@@ -730,8 +846,67 @@ else
         if (string.IsNullOrWhiteSpace(imageUrl))
             return;
 
-        SelectedImageUrl = imageUrl;
-        NewProduct.ImageUrl = imageUrl;
+        if (SelectedImages.Any(x => string.Equals(x.ImageUrl, imageUrl, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        SelectedImages.Add(new ProductImage
+        {
+            Id = Guid.NewGuid(),
+            ProductId = NewProduct.Id,
+            ImageUrl = imageUrl,
+            SortOrder = SelectedImages.Count,
+            IsPrimary = SelectedImages.Count == 0
+        });
+
+        NormalizeSelectedImages();
+    }
+
+    private void MakeImagePrimary(Guid imageId)
+    {
+        foreach (var image in SelectedImages)
+            image.IsPrimary = image.Id == imageId;
+    }
+
+    private void RemoveImage(Guid imageId)
+    {
+        SelectedImages.RemoveAll(x => x.Id == imageId);
+        NormalizeSelectedImages();
+    }
+
+    private void MoveImage(Guid imageId, int offset)
+    {
+        var orderedImages = SelectedImages.OrderBy(x => x.SortOrder).ToList();
+        var currentIndex = orderedImages.FindIndex(x => x.Id == imageId);
+        var targetIndex = currentIndex + offset;
+
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= orderedImages.Count)
+            return;
+
+        (orderedImages[currentIndex], orderedImages[targetIndex]) =
+            (orderedImages[targetIndex], orderedImages[currentIndex]);
+
+        for (var index = 0; index < orderedImages.Count; index++)
+            orderedImages[index].SortOrder = index;
+
+        SelectedImages = orderedImages;
+        NormalizeSelectedImages();
+    }
+
+    private void NormalizeSelectedImages()
+    {
+        SelectedImages = SelectedImages
+            .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Id)
+            .ToList();
+
+        var primary = SelectedImages.FirstOrDefault(x => x.IsPrimary) ?? SelectedImages.FirstOrDefault();
+
+        for (var index = 0; index < SelectedImages.Count; index++)
+        {
+            SelectedImages[index].SortOrder = index;
+            SelectedImages[index].IsPrimary = SelectedImages[index] == primary;
+        }
     }
 
     private void ToggleDiscount(Guid discountId, object? value)

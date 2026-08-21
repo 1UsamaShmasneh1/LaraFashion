@@ -17,13 +17,16 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<AdminAuthService>();
 builder.Services.AddScoped<ReportsService>();
 
-var dbFolder = "/var/www/larafashion/data";
-Directory.CreateDirectory(dbFolder);
+var storagePaths = AppStoragePaths.Resolve(builder.Environment);
+var dbFolder = Path.GetDirectoryName(storagePaths.DatabasePath)
+    ?? throw new InvalidOperationException("The database directory could not be resolved.");
 
-var dbPath = Path.Combine(dbFolder, "larafashion.db");
+Directory.CreateDirectory(dbFolder);
+Directory.CreateDirectory(storagePaths.UploadsPath);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+    options.UseSqlite($"Data Source={storagePaths.DatabasePath}"));
+builder.Services.AddSingleton(storagePaths);
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<BrowserStorageService>();
@@ -38,6 +41,10 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (app.Environment.IsDevelopment())
+        await db.Database.MigrateAsync();
+
     var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
     await seeder.SeedAsync();
 }
@@ -53,13 +60,10 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
-var uploadsPath = "/var/www/larafashion/uploads";
-
-Directory.CreateDirectory(uploadsPath);
 
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(uploadsPath),
+    FileProvider = new PhysicalFileProvider(storagePaths.UploadsPath),
     RequestPath = "/uploads"
 });
 
@@ -93,7 +97,7 @@ app.MapPost("/api/store/visit", async (HttpContext context, ReportsService repor
 
 app.MapPost("/api/admin/upload-product-image", async (
     HttpRequest request,
-    IWebHostEnvironment environment,
+    AppStoragePaths storagePaths,
     LaraFashion.Services.AdminAuthService adminAuthService) =>
 {
     var token = request.Headers["X-Admin-Token"].ToString();
@@ -134,19 +138,11 @@ app.MapPost("/api/admin/upload-product-image", async (
         return Results.BadRequest(new { message = "Only JPG, PNG, and WEBP images are allowed." });
     }
 
-    var targetUploadsPath = "/var/www/larafashion/uploads";
-    if (!Directory.Exists("/var/www/larafashion"))
-    {
-        targetUploadsPath = Path.Combine(environment.WebRootPath, "uploads");
-    }
-
-    Directory.CreateDirectory(targetUploadsPath);
-
     const int maxImageSide = 1000;
     const int webpQuality = 82;
 
     var fileName = $"{Guid.NewGuid()}.webp";
-    var fullPath = Path.Combine(targetUploadsPath, fileName);
+    var fullPath = Path.Combine(storagePaths.UploadsPath, fileName);
 
     await using var inputStream = file.OpenReadStream();
     using var memoryStream = new MemoryStream();

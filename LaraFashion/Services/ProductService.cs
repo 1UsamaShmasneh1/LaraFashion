@@ -20,17 +20,21 @@ public class ProductCleanupResult
 public class ProductService
 {
     private readonly AppDbContext _db;
+    private readonly AppStoragePaths _storagePaths;
 
-    public ProductService(AppDbContext db)
+    public ProductService(AppDbContext db, AppStoragePaths storagePaths)
     {
         _db = db;
+        _storagePaths = storagePaths;
     }
 
     public async Task<List<Product>> GetActiveProductsAsync(Guid? categoryId = null)
     {
         var query = _db.Products
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(x => x.Sizes)
+            .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
@@ -51,7 +55,9 @@ public class ProductService
     {
         var query = _db.Products
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(x => x.Sizes)
+            .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
@@ -72,7 +78,9 @@ public class ProductService
     {
         var query = _db.Products
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(x => x.Sizes)
+            .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
@@ -94,7 +102,9 @@ public class ProductService
     {
         var query = _db.Products
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(x => x.Sizes)
+            .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
@@ -139,7 +149,7 @@ public class ProductService
                 ProductId = product.Id,
                 ProductName = product.Name,
                 ProductSerialNumber = product.SerialNumber,
-                ProductImageUrl = product.ImageUrl,
+                ProductImageUrl = product.PrimaryImageUrl,
                 Size = persistedItem.Size,
                 Quantity = quantity,
                 MaxAvailableQuantity = productSize.Quantity,
@@ -172,6 +182,8 @@ public class ProductService
         product.DiscountValue = 0;
         product.ProductDiscounts = new();
         product.ProductCategories = new();
+
+        NormalizeProductImages(product);
 
         foreach (var size in product.Sizes)
         {
@@ -217,6 +229,7 @@ public class ProductService
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
         var exists = await _db.Products.AnyAsync(x => x.Id == product.Id);
+        var removedImageUrls = new List<string>();
 
         if (!exists)
         {
@@ -227,7 +240,7 @@ public class ProductService
         }
         else
         {
-            await UpdateProductWithSizesAsync(product);
+            removedImageUrls = await UpdateProductWithSizesCoreAsync(product);
         }
 
         await ReplaceProductDiscountsAsync(product.Id, discountIds);
@@ -236,6 +249,9 @@ public class ProductService
         await _db.SaveChangesAsync();
 
         await transaction.CommitAsync();
+
+        foreach (var imageUrl in removedImageUrls)
+            await DeleteImageIfUnusedAsync(imageUrl);
     }
 
     public async Task UpdateProductAsync(Product product)
@@ -256,6 +272,7 @@ public class ProductService
     {
         var product = await _db.Products
             .Include(x => x.Sizes)
+            .Include(x => x.Images)
             .Include(x => x.ProductDiscounts)
             .Include(x => x.ProductCategories)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -270,16 +287,23 @@ public class ProductService
                 throw new InvalidOperationException(validation.Reason);
         }
 
-        var imageUrl = product.ImageUrl;
+        var imageUrls = product.Images
+            .Select(x => x.ImageUrl)
+            .Append(product.ImageUrl)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         _db.ProductDiscounts.RemoveRange(product.ProductDiscounts);
         _db.ProductCategories.RemoveRange(product.ProductCategories);
         _db.ProductSizes.RemoveRange(product.Sizes);
+        _db.ProductImages.RemoveRange(product.Images);
         _db.Products.Remove(product);
 
         await _db.SaveChangesAsync();
 
-        await DeleteImageIfUnusedAsync(imageUrl);
+        foreach (var imageUrl in imageUrls)
+            await DeleteImageIfUnusedAsync(imageUrl);
     }
 
     public async Task UpdateProductWithSizesAsync(Product product)
@@ -290,14 +314,32 @@ public class ProductService
         if (string.IsNullOrWhiteSpace(product.Name))
             throw new InvalidOperationException("اسم المنتج مطلوب.");
 
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        var removedImageUrls = await UpdateProductWithSizesCoreAsync(product);
+        await transaction.CommitAsync();
+
+        foreach (var imageUrl in removedImageUrls)
+            await DeleteImageIfUnusedAsync(imageUrl);
+    }
+
+    private async Task<List<string>> UpdateProductWithSizesCoreAsync(Product product)
+    {
         var existingProduct = await _db.Products
             .Include(x => x.Sizes)
+            .Include(x => x.Images)
             .FirstOrDefaultAsync(x => x.Id == product.Id);
 
         if (existingProduct is null)
-            return;
+            return new();
 
-        var oldImageUrl = existingProduct.ImageUrl;
+        var oldImageUrls = existingProduct.Images
+            .Select(x => x.ImageUrl)
+            .Append(existingProduct.ImageUrl)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        NormalizeProductImages(product);
 
         existingProduct.Name = product.Name;
         existingProduct.SerialNumber = product.SerialNumber;
@@ -305,14 +347,12 @@ public class ProductService
         existingProduct.OriginalPrice = product.OriginalPrice;
         existingProduct.DiscountType = LaraFashion.Models.Enums.DiscountType.None;
         existingProduct.DiscountValue = 0;
-        if (!string.IsNullOrWhiteSpace(product.ImageUrl))
-        {
-            existingProduct.ImageUrl = product.ImageUrl;
-        }
+        existingProduct.ImageUrl = product.PrimaryImageUrl;
         existingProduct.IsActive = product.IsActive;
         existingProduct.UpdatedAt = DateTime.Now;
 
         _db.ProductSizes.RemoveRange(existingProduct.Sizes);
+        _db.ProductImages.RemoveRange(existingProduct.Images);
 
         var newSizes = product.Sizes
             .Where(x => !string.IsNullOrWhiteSpace(x.SizeName))
@@ -327,12 +367,27 @@ public class ProductService
 
         await _db.ProductSizes.AddRangeAsync(newSizes);
 
+        var newImages = product.Images.Select(x => new ProductImage
+        {
+            Id = Guid.NewGuid(),
+            ProductId = existingProduct.Id,
+            ImageUrl = x.ImageUrl,
+            SortOrder = x.SortOrder,
+            IsPrimary = x.IsPrimary
+        }).ToList();
+
+        await _db.ProductImages.AddRangeAsync(newImages);
+
         await _db.SaveChangesAsync();
 
-        if (!string.Equals(oldImageUrl, existingProduct.ImageUrl, StringComparison.OrdinalIgnoreCase))
-        {
-            await DeleteImageIfUnusedAsync(oldImageUrl);
-        }
+        var retainedUrls = newImages
+            .Select(x => x.ImageUrl)
+            .Append(existingProduct.ImageUrl)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return oldImageUrls
+            .Where(x => !retainedUrls.Contains(x))
+            .ToList();
     }
 
 
@@ -409,6 +464,7 @@ public class ProductService
 
         var products = await _db.Products
             .Include(x => x.Sizes)
+            .Include(x => x.Images)
             .Include(x => x.ProductDiscounts)
             .Include(x => x.ProductCategories)
             .OrderBy(x => x.CreatedAt)
@@ -557,12 +613,32 @@ public class ProductService
 
     public async Task UpdateProductImageAsync(Guid productId, string imageUrl)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
+        var product = await _db.Products
+            .Include(x => x.Images)
+            .FirstOrDefaultAsync(x => x.Id == productId);
 
         if (product is null)
             return;
 
-        var oldImageUrl = product.ImageUrl;
+        var oldImageUrl = product.PrimaryImageUrl;
+
+        var selectedImage = product.Images.FirstOrDefault(x =>
+            string.Equals(x.ImageUrl, imageUrl, StringComparison.OrdinalIgnoreCase));
+
+        if (selectedImage is null && !string.IsNullOrWhiteSpace(imageUrl))
+        {
+            selectedImage = new ProductImage
+            {
+                Id = Guid.NewGuid(),
+                ProductId = product.Id,
+                ImageUrl = imageUrl,
+                SortOrder = product.Images.Count
+            };
+            product.Images.Add(selectedImage);
+        }
+
+        foreach (var image in product.Images)
+            image.IsPrimary = image == selectedImage;
 
         product.ImageUrl = imageUrl;
         product.UpdatedAt = DateTime.Now;
@@ -617,17 +693,52 @@ public class ProductService
             return;
 
         var usedByProduct = await _db.Products.AnyAsync(x => x.ImageUrl == imageUrl);
+        var usedByProductImage = await _db.ProductImages.AnyAsync(x => x.ImageUrl == imageUrl);
         var usedByOrder = await _db.OrderItems.AnyAsync(x => x.ProductImageUrl == imageUrl);
 
-        if (usedByProduct || usedByOrder)
+        if (usedByProduct || usedByProductImage || usedByOrder)
             return;
 
         var fileName = Path.GetFileName(imageUrl);
-        var filePath = Path.Combine("/var/www/larafashion/uploads", fileName);
+        var filePath = Path.Combine(_storagePaths.UploadsPath, fileName);
 
         if (File.Exists(filePath))
         {
             File.Delete(filePath);
         }
+    }
+
+    private static void NormalizeProductImages(Product product)
+    {
+        var images = product.Images
+            .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl))
+            .GroupBy(x => x.ImageUrl, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Id)
+            .ToList();
+
+        if (images.Count == 0 && !string.IsNullOrWhiteSpace(product.ImageUrl))
+        {
+            images.Add(new ProductImage
+            {
+                ImageUrl = product.ImageUrl,
+                IsPrimary = true
+            });
+        }
+
+        var primary = images.FirstOrDefault(x => x.IsPrimary) ?? images.FirstOrDefault();
+
+        for (var index = 0; index < images.Count; index++)
+        {
+            var image = images[index];
+            image.Id = image.Id == Guid.Empty ? Guid.NewGuid() : image.Id;
+            image.ProductId = product.Id;
+            image.SortOrder = index;
+            image.IsPrimary = image == primary;
+        }
+
+        product.Images = images;
+        product.ImageUrl = primary?.ImageUrl ?? string.Empty;
     }
 }

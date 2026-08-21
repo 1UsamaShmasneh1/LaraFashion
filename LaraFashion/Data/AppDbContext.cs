@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
 
     public DbSet<ProductSize> ProductSizes => Set<ProductSize>();
 
+    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
+
     public DbSet<Order> Orders => Set<Order>();
 
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
@@ -46,6 +48,16 @@ public class AppDbContext : DbContext
             .WithMany(x => x.ProductDiscounts)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.HasOne(x => x.Product)
+                .WithMany(x => x.Images)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new { x.ProductId, x.SortOrder });
+        });
 
         modelBuilder.Entity<ProductDiscount>()
             .HasOne(x => x.Discount)

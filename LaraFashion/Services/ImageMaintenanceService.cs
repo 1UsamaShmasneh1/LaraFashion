@@ -18,18 +18,18 @@ public class ImageMaintenanceResult
 public class ImageMaintenanceService
 {
     private readonly AppDbContext _db;
-    private readonly IWebHostEnvironment _environment;
+    private readonly AppStoragePaths _storagePaths;
 
-    public ImageMaintenanceService(AppDbContext db, IWebHostEnvironment environment)
+    public ImageMaintenanceService(AppDbContext db, AppStoragePaths storagePaths)
     {
         _db = db;
-        _environment = environment;
+        _storagePaths = storagePaths;
     }
 
     public async Task<ImageMaintenanceResult> CleanAndNormalizeImagesAsync()
     {
         var result = new ImageMaintenanceResult();
-        var uploadsPath = GetUploadsPath();
+        var uploadsPath = _storagePaths.UploadsPath;
         Directory.CreateDirectory(uploadsPath);
 
         var files = Directory.GetFiles(uploadsPath);
@@ -109,18 +109,14 @@ public class ImageMaintenanceService
         return result;
     }
 
-    private string GetUploadsPath()
-    {
-        var productionPath = "/var/www/larafashion/uploads";
-        if (Directory.Exists("/var/www/larafashion"))
-            return productionPath;
-
-        return Path.Combine(_environment.WebRootPath, "uploads");
-    }
-
     private async Task<HashSet<string>> GetUsedImageUrlsAsync()
     {
         var productUrls = await _db.Products
+            .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl) && x.ImageUrl.StartsWith("/uploads/"))
+            .Select(x => x.ImageUrl)
+            .ToListAsync();
+
+        var productImageUrls = await _db.ProductImages
             .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl) && x.ImageUrl.StartsWith("/uploads/"))
             .Select(x => x.ImageUrl)
             .ToListAsync();
@@ -131,6 +127,7 @@ public class ImageMaintenanceService
             .ToListAsync();
 
         return productUrls
+            .Concat(productImageUrls)
             .Concat(orderUrls)
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -148,6 +145,15 @@ public class ImageMaintenanceService
             product.UpdatedAt = DateTime.Now;
         }
 
+        var productImages = await _db.ProductImages
+            .Where(x => x.ImageUrl == oldUrl)
+            .ToListAsync();
+
+        foreach (var productImage in productImages)
+        {
+            productImage.ImageUrl = newUrl;
+        }
+
         var orderItems = await _db.OrderItems
             .Where(x => x.ProductImageUrl == oldUrl)
             .ToListAsync();
@@ -161,8 +167,9 @@ public class ImageMaintenanceService
     private async Task<bool> IsImageUrlUsedAsync(string imageUrl)
     {
         var usedByProduct = await _db.Products.AnyAsync(x => x.ImageUrl == imageUrl);
+        var usedByProductImage = await _db.ProductImages.AnyAsync(x => x.ImageUrl == imageUrl);
         var usedByOrder = await _db.OrderItems.AnyAsync(x => x.ProductImageUrl == imageUrl);
-        return usedByProduct || usedByOrder;
+        return usedByProduct || usedByProductImage || usedByOrder;
     }
 
     private static async Task ConvertToSmallWebpAsync(string sourcePath, string destinationPath)

@@ -14,6 +14,16 @@ public class Product
 
     public string ImageUrl { get; set; } = string.Empty;
 
+    public List<ProductImage> Images { get; set; } = new();
+
+    public string PrimaryImageUrl => Images
+        .Where(x => !string.IsNullOrWhiteSpace(x.ImageUrl))
+        .OrderByDescending(x => x.IsPrimary)
+        .ThenBy(x => x.SortOrder)
+        .ThenBy(x => x.Id)
+        .Select(x => x.ImageUrl)
+        .FirstOrDefault() ?? ImageUrl;
+
     public decimal OriginalPrice { get; set; }
 
     public DiscountType DiscountType { get; set; }
