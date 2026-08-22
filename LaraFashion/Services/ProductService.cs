@@ -271,10 +271,9 @@ public class ProductService
     private async Task DeleteProductInternalAsync(Guid id, bool enforceDeleteConditions)
     {
         var product = await _db.Products
+            .AsNoTracking()
             .Include(x => x.Sizes)
             .Include(x => x.Images)
-            .Include(x => x.ProductDiscounts)
-            .Include(x => x.ProductCategories)
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (product is null)
@@ -294,13 +293,12 @@ public class ProductService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        _db.ProductDiscounts.RemoveRange(product.ProductDiscounts);
-        _db.ProductCategories.RemoveRange(product.ProductCategories);
-        _db.ProductSizes.RemoveRange(product.Sizes);
-        _db.ProductImages.RemoveRange(product.Images);
-        _db.Products.Remove(product);
+        var deletedProducts = await _db.Products
+            .Where(x => x.Id == id)
+            .ExecuteDeleteAsync();
 
-        await _db.SaveChangesAsync();
+        if (deletedProducts == 0)
+            return;
 
         foreach (var imageUrl in imageUrls)
             await DeleteImageIfUnusedAsync(imageUrl);
