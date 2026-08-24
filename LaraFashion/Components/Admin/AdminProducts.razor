@@ -717,7 +717,7 @@ else
 
     private async Task ConfirmDeleteProduct(Guid id)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف المنتج؟ سيتم الحذف فقط إذا انتهت كل الكميات وكانت الطلبيات المرتبطة جاهزة أو ملغاة.");
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "هل أنت متأكد من حذف المنتج؟ سيُحذف المنتج ومخزونه المتبقي، ولن يتم الحذف إذا وجدت طلبيات مرتبطة ليست جاهزة أو ملغاة.");
 
         if (!confirmed)
             return;
@@ -821,7 +821,7 @@ else
         if (!SelectedProductIds.Any())
             return;
 
-        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف {SelectedProductIds.Count} منتج؟ سيتم حذف المنتجات التي انتهت كل كمياتها وكانت طلبياتها جاهزة أو ملغاة فقط.");
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"هل أنت متأكد من حذف {SelectedProductIds.Count} منتج؟ سيُحذف المخزون المتبقي للمنتجات المؤهلة، ولن تُحذف المنتجات المرتبطة بطلبيات ليست جاهزة أو ملغاة.");
 
         if (!confirmed)
             return;

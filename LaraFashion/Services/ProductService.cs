@@ -277,11 +277,13 @@ public class ProductService
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (product is null)
-            return;
+            throw new InvalidOperationException("المنتج المطلوب حذفه غير موجود في قاعدة البيانات.");
 
         if (enforceDeleteConditions)
         {
-            var validation = await ValidateProductCanBeDeletedAsync(product);
+            var validation = await ValidateProductCanBeDeletedAsync(
+                product,
+                requireFinishedQuantities: false);
             if (!validation.CanDelete)
                 throw new InvalidOperationException(validation.Reason);
         }
@@ -298,7 +300,7 @@ public class ProductService
             .ExecuteDeleteAsync();
 
         if (deletedProducts == 0)
-            return;
+            throw new InvalidOperationException("تعذر حذف المنتج لأنه لم يعد موجودًا في قاعدة البيانات.");
 
         foreach (var imageUrl in imageUrls)
             await DeleteImageIfUnusedAsync(imageUrl);
@@ -474,7 +476,9 @@ public class ProductService
         {
             try
             {
-                var validation = await ValidateProductCanBeDeletedAsync(product);
+                var validation = await ValidateProductCanBeDeletedAsync(
+                    product,
+                    requireFinishedQuantities: true);
 
                 if (!validation.AllQuantitiesFinished)
                 {
@@ -505,11 +509,13 @@ public class ProductService
         return result;
     }
 
-    private async Task<ProductDeleteValidation> ValidateProductCanBeDeletedAsync(Product product)
+    private async Task<ProductDeleteValidation> ValidateProductCanBeDeletedAsync(
+        Product product,
+        bool requireFinishedQuantities)
     {
         var allQuantitiesFinished = !product.Sizes.Any() || product.Sizes.All(x => x.Quantity <= 0);
 
-        if (!allQuantitiesFinished)
+        if (requireFinishedQuantities && !allQuantitiesFinished)
         {
             return new ProductDeleteValidation(
                 CanDelete: false,
@@ -529,14 +535,14 @@ public class ProductService
         {
             return new ProductDeleteValidation(
                 CanDelete: false,
-                AllQuantitiesFinished: true,
+                AllQuantitiesFinished: allQuantitiesFinished,
                 HasOpenOrders: true,
                 Reason: "لا يمكن حذف المنتج لأن هناك طلبيات مرتبطة به ليست بحالة جاهز أو ملغاة.");
         }
 
         return new ProductDeleteValidation(
             CanDelete: true,
-            AllQuantitiesFinished: true,
+            AllQuantitiesFinished: allQuantitiesFinished,
             HasOpenOrders: false,
             Reason: string.Empty);
     }

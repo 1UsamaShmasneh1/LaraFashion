@@ -40,11 +40,11 @@ namespace LaraFashion.Migrations
             migrationBuilder.Sql(
                 """
                 INSERT INTO "ProductImages" ("Id", "ProductId", "ImageUrl", "SortOrder", "IsPrimary")
-                SELECT lower(hex(randomblob(4))) || '-' ||
-                       lower(hex(randomblob(2))) || '-' ||
-                       lower(hex(randomblob(2))) || '-' ||
-                       lower(hex(randomblob(2))) || '-' ||
-                       lower(hex(randomblob(6))),
+                SELECT upper(hex(randomblob(4))) || '-' ||
+                       upper(hex(randomblob(2))) || '-' ||
+                       upper(hex(randomblob(2))) || '-' ||
+                       upper(hex(randomblob(2))) || '-' ||
+                       upper(hex(randomblob(6))),
                        "Id", "ImageUrl", 0, 1
                 FROM "Products"
                 WHERE trim("ImageUrl") <> '';
