@@ -36,6 +36,12 @@ public class AppDbContext : DbContext
 
     public DbSet<StoreVisit> StoreVisits => Set<StoreVisit>();
 
+    public DbSet<StoreChatSession> StoreChatSessions => Set<StoreChatSession>();
+
+    public DbSet<StoreChatMessage> StoreChatMessages => Set<StoreChatMessage>();
+
+    public DbSet<StoreChatSettings> StoreChatSettings => Set<StoreChatSettings>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -98,6 +104,29 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(x => x.StartedAtUtc);
             entity.HasIndex(x => new { x.VisitorIdHash, x.LastActivityAtUtc });
+        });
+
+        modelBuilder.Entity<StoreChatSession>(entity =>
+        {
+            entity.HasIndex(x => x.LastActivityAtUtc);
+            entity.HasMany(x => x.Messages)
+                .WithOne(x => x.Session)
+                .HasForeignKey(x => x.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StoreChatMessage>(entity =>
+        {
+            entity.HasIndex(x => new { x.SessionId, x.CreatedAtUtc });
+            entity.HasIndex(x => x.DetectedIntent);
+            entity.HasIndex(x => x.IsFallback);
+        });
+
+        modelBuilder.Entity<StoreChatSettings>(entity =>
+        {
+            entity.ToTable("StoreChatSettings");
+            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.Property(x => x.IsCustomerChatEnabled).HasDefaultValue(false);
         });
     }
 }

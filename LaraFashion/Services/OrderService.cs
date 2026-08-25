@@ -7,6 +7,11 @@ namespace LaraFashion.Services;
 
 public sealed record BulkOrderStatusResult(int UpdatedOrders);
 
+public sealed record PublicOrderLookupResult(IReadOnlyList<Order> OpenOrders, Order? ClosedOrder, SalesHistory? History)
+{
+    public bool HasAny => OpenOrders.Count > 0 || ClosedOrder is not null || History is not null;
+}
+
 public sealed record OrderCleanupResult(
     int EligibleOrders,
     int DeletedOrders,
@@ -145,6 +150,56 @@ public class OrderService
             .Include(x => x.Customer)
             .Include(x => x.Items)
             .FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public async Task<PublicOrderLookupResult> LookupPublicOrdersByPhoneAsync(string phoneNumber)
+    {
+        var normalized = PhoneNumberNormalizer.Normalize(phoneNumber);
+        if (normalized is null)
+            return new([], null, null);
+
+        var phoneCandidates = await _db.Orders.AsNoTracking()
+            .Where(x => !x.IsSandbox)
+            .Select(x => new { x.Id, x.Customer.PhoneNumber })
+            .ToListAsync();
+        var matchingOrderIds = phoneCandidates
+            .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
+            .Select(x => x.Id)
+            .ToList();
+
+        var matches = await _db.Orders.AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.Customer)
+            .Include(x => x.Items)
+            .Where(x => matchingOrderIds.Contains(x.Id))
+            .ToListAsync();
+        var openOrders = matches
+            .Where(x => x.Status is not OrderStatus.Ready and not OrderStatus.Cancelled)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+        if (openOrders.Count > 0)
+            return new(openOrders, null, null);
+
+        var closedOrder = matches
+            .Where(x => x.Status is OrderStatus.Ready or OrderStatus.Cancelled)
+            .OrderByDescending(x => x.UpdatedAt)
+            .FirstOrDefault();
+        if (closedOrder is not null)
+            return new([], closedOrder, null);
+
+        var historyCandidates = await _db.SalesHistory.AsNoTracking()
+            .Where(x => x.LastStatus == OrderStatus.Ready || x.LastStatus == OrderStatus.Cancelled)
+            .Select(x => new { x.Id, x.PhoneNumber })
+            .ToListAsync();
+        var matchingHistoryIds = historyCandidates
+            .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
+            .Select(x => x.Id)
+            .ToList();
+        var history = await _db.SalesHistory.AsNoTracking()
+            .Where(x => matchingHistoryIds.Contains(x.Id))
+            .OrderByDescending(x => x.StatusUpdatedAtUtc)
+            .FirstOrDefaultAsync();
+        return new([], null, history);
     }
 
     public async Task UpdateStatusAsync(Guid orderId, OrderStatus status)

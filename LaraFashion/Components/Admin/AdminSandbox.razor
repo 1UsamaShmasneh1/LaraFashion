@@ -11,6 +11,8 @@
 @inject BrowserStorageService BrowserStorageService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject SandboxFilterState SandboxFilterState
+@implements IDisposable
 
 <AdminNav />
 
@@ -25,6 +27,14 @@
 <h1 class="admin-page-title">
     متجر Sandbox
 </h1>
+
+@if (!string.IsNullOrWhiteSpace(SandboxFilterState.Size))
+{
+    <div class="sandbox-chat-filter" dir="rtl">
+        <span>فلتر مساعد المتجر: المقاس @SandboxFilterState.Size</span>
+        <button type="button" @onclick="ClearChatSizeFilterAsync">إلغاء الفلتر</button>
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(SuccessMessage))
 {
@@ -155,6 +165,31 @@ else
         font-weight: 900;
     }
 
+    .sandbox-chat-filter {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        max-width: 680px;
+        padding: 12px 16px;
+        margin: 12px 0 18px;
+        border: 1px solid #99f6e4;
+        border-radius: 14px;
+        background: #f0fdfa;
+        color: #115e59;
+        font-weight: 800;
+    }
+
+    .sandbox-chat-filter button {
+        border: 0;
+        border-radius: 9px;
+        padding: 8px 12px;
+        background: #0f766e;
+        color: #fff;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
     @@media (max-width: 700px) {
         .sandbox-card-actions {
             flex-direction: column;
@@ -163,6 +198,11 @@ else
 
         .sandbox-publish-button {
             width: 100%;
+        }
+
+        .sandbox-chat-filter {
+            align-items: stretch;
+            flex-direction: column;
         }
     }
 </style>
@@ -177,6 +217,11 @@ else
     private List<Product> Products = new();
     private List<Category> Categories = new();
     private Guid SelectedCategoryId = Guid.Empty;
+
+    protected override void OnInitialized()
+    {
+        SandboxFilterState.Changed += OnSandboxFilterChangedAsync;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -200,9 +245,19 @@ else
     private async Task LoadProducts()
     {
         IsLoading = true;
-        Products = await ProductService.GetUnpublishedProductsAsync(SelectedCategoryId == Guid.Empty ? null : SelectedCategoryId);
+        Products = await ProductService.GetUnpublishedProductsAsync(
+            SelectedCategoryId == Guid.Empty ? null : SelectedCategoryId,
+            SandboxFilterState.Size);
         IsLoading = false;
     }
+
+    private async Task OnSandboxFilterChangedAsync()
+    {
+        await LoadProducts();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Task ClearChatSizeFilterAsync() => SandboxFilterState.ClearSizeAsync();
 
     private async Task SelectSandboxCategory(Guid categoryId)
     {
@@ -258,4 +313,6 @@ else
             IsPublishingAll = false;
         }
     }
+
+    public void Dispose() => SandboxFilterState.Changed -= OnSandboxFilterChangedAsync;
 }

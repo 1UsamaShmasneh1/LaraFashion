@@ -402,6 +402,98 @@ namespace LaraFashion.Migrations
                     b.ToTable("SalesHistory");
                 });
 
+            modelBuilder.Entity("LaraFashion.Models.StoreChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AiModel")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AiProvider")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AiUsed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DetectedIntent")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtractedSize")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FallbackReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsFallback")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DetectedIntent");
+
+                    b.HasIndex("IsFallback");
+
+                    b.HasIndex("SessionId", "CreatedAtUtc");
+
+                    b.ToTable("StoreChatMessages");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.StoreChatSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastActivityAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastActivityAtUtc");
+
+                    b.ToTable("StoreChatSessions");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.StoreChatSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCustomerChatEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StoreChatSettings", (string)null);
+                });
+
             modelBuilder.Entity("LaraFashion.Models.StoreVisit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -505,6 +597,17 @@ namespace LaraFashion.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LaraFashion.Models.StoreChatMessage", b =>
+                {
+                    b.HasOne("LaraFashion.Models.StoreChatSession", "Session")
+                        .WithMany("Messages")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("LaraFashion.Models.Category", b =>
                 {
                     b.Navigation("ProductCategories");
@@ -529,6 +632,11 @@ namespace LaraFashion.Migrations
                     b.Navigation("ProductDiscounts");
 
                     b.Navigation("Sizes");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.StoreChatSession", b =>
+                {
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

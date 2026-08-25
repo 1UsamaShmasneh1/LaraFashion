@@ -17,6 +17,8 @@ public class ProductCleanupResult
     public List<string> Messages { get; set; } = new();
 }
 
+public sealed record CatalogOverview(int ProductCount, decimal MinimumPrice, decimal MaximumPrice, bool HasActiveDiscounts);
+
 public class ProductService
 {
     private readonly AppDbContext _db;
@@ -28,7 +30,7 @@ public class ProductService
         _storagePaths = storagePaths;
     }
 
-    public async Task<List<Product>> GetActiveProductsAsync(Guid? categoryId = null)
+    public async Task<List<Product>> GetActiveProductsAsync(Guid? categoryId = null, string? size = null)
     {
         var query = _db.Products
             .AsNoTracking()
@@ -46,9 +48,55 @@ public class ProductService
             query = query.Where(x => x.ProductCategories.Any(pc => pc.CategoryId == categoryId.Value));
         }
 
+        if (!string.IsNullOrWhiteSpace(size))
+        {
+            var normalizedSize = size.Trim().ToUpperInvariant();
+            query = query.Where(x => x.Sizes.Any(s =>
+                s.Quantity > 0 && s.SizeName.Trim().ToUpper() == normalizedSize));
+        }
+
         return await query
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<CatalogOverview> GetCatalogOverviewAsync(StoreChatMode mode = StoreChatMode.Customer)
+    {
+        var products = mode == StoreChatMode.Sandbox
+            ? await GetUnpublishedProductsAsync()
+            : await GetActiveProductsAsync();
+        if (products.Count == 0)
+            return new(0, 0, 0, false);
+
+        return new(
+            products.Count,
+            products.Min(x => x.StorePrice),
+            products.Max(x => x.StorePrice),
+            products.Any(x => x.DiscountType != DiscountType.None || x.ProductDiscounts.Any(pd => pd.Discount.IsActive)));
+    }
+
+    public async Task<IReadOnlyList<string>> GetAvailableSizesAsync(StoreChatMode mode = StoreChatMode.Customer)
+    {
+        var productQuery = _db.Products
+            .AsNoTracking()
+            .AsQueryable();
+
+        productQuery = mode == StoreChatMode.Sandbox
+            ? productQuery.Where(product => !product.IsPublished)
+            : productQuery.Where(product => product.IsActive && product.IsPublished);
+
+        var sizeNames = await productQuery
+            .SelectMany(product => product.Sizes.Where(size => size.Quantity > 0))
+            .Select(size => size.SizeName)
+            .ToListAsync();
+
+        var availableSizes = sizeNames
+            .Where(size => !string.IsNullOrWhiteSpace(size))
+            .Select(SizeLabelParser.NormalizeAvailableLabelForDisplay)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        availableSizes.Sort(SizeLabelParser.CompareAvailableLabels);
+        return availableSizes;
     }
 
     public async Task<List<Product>> GetAllProductsAsync(Guid? categoryId = null)
@@ -74,7 +122,7 @@ public class ProductService
             .ToListAsync();
     }
 
-    public async Task<List<Product>> GetUnpublishedProductsAsync(Guid? categoryId = null)
+    public async Task<List<Product>> GetUnpublishedProductsAsync(Guid? categoryId = null, string? size = null)
     {
         var query = _db.Products
             .AsNoTracking()
@@ -91,6 +139,13 @@ public class ProductService
         if (categoryId.HasValue && categoryId.Value != Guid.Empty)
         {
             query = query.Where(x => x.ProductCategories.Any(pc => pc.CategoryId == categoryId.Value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(size))
+        {
+            var normalizedSize = size.Trim().ToUpperInvariant();
+            query = query.Where(x => x.Sizes.Any(s =>
+                s.Quantity > 0 && s.SizeName.Trim().ToUpper() == normalizedSize));
         }
 
         return await query

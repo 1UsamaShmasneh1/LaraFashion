@@ -1,5 +1,11 @@
 ﻿@inherits LayoutComponentBase
 @using LaraFashion.Components.Cart
+@using LaraFashion.Components.Chat
+@using LaraFashion.Services
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject StoreChatSettingsService ChatSettingsService
+@inject ILogger<MainLayout> Logger
 
 <CartPersistence />
 
@@ -40,3 +46,76 @@
     </main>
 
 </div>
+
+@if (showChat)
+{
+    <StoreChatWidget Mode="chatMode" />
+}
+
+@code {
+    private bool showChat;
+    private StoreChatMode chatMode = StoreChatMode.Customer;
+    private long navigationVersion;
+    private bool disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        await UpdateChatVisibilityAsync(Navigation.Uri);
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await UpdateChatVisibilityAsync(args.Location);
+            if (!disposed)
+                StateHasChanged();
+        });
+    }
+
+    private async Task UpdateChatVisibilityAsync(string location)
+    {
+        var version = Interlocked.Increment(ref navigationVersion);
+        var path = new Uri(location, UriKind.Absolute).AbsolutePath.TrimEnd('/');
+        if (string.IsNullOrEmpty(path))
+            path = "/";
+
+        var isSandbox = path.Equals("/admin/sandbox", StringComparison.OrdinalIgnoreCase);
+        var isAdminPage = path.Equals("/admin", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase);
+
+        if (isSandbox)
+        {
+            chatMode = StoreChatMode.Sandbox;
+            showChat = true;
+            return;
+        }
+
+        chatMode = StoreChatMode.Customer;
+        if (isAdminPage)
+        {
+            showChat = false;
+            return;
+        }
+
+        var customerChatEnabled = false;
+        try
+        {
+            customerChatEnabled = await ChatSettingsService.GetCustomerChatEnabledAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not read the customer chat visibility setting; using the safe disabled default.");
+        }
+
+        if (!disposed && version == navigationVersion)
+            showChat = customerChatEnabled;
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

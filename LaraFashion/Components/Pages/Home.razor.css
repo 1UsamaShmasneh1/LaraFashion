@@ -1,0 +1,23 @@
+.store-size-filter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    width: fit-content;
+    max-width: calc(100% - 2rem);
+    margin: 0 auto 1rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: #e8f5fb;
+    color: #1688b5;
+    font-weight: 700;
+}
+
+.store-size-filter button {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+}

@@ -1,0 +1,442 @@
+@using System.Text
+@using LaraFashion.Models
+@using LaraFashion.Models.Enums
+@using LaraFashion.Services
+@inject OrderService OrderService
+@inject StoreChatAgentService AgentService
+@inject StoreChatService StoreChatService
+@inject NavigationManager Navigation
+@inject ILogger<StoreChatWidget> Logger
+@implements IDisposable
+
+<div class="store-chat" dir="rtl">
+    @if (!isOpen)
+    {
+        <button type="button" class="store-chat-launcher" @onclick="OpenChat"
+                aria-label="مساعد المتجر" title="مساعد المتجر" data-tooltip="مساعد المتجر">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v8.5a2.25 2.25 0 0 1-2.25 2.25H10l-4.9 3.05a.75.75 0 0 1-1.15-.64V17.1A2.25 2.25 0 0 1 3 15.25v-8.5A2.25 2.25 0 0 1 5.25 4.5Zm2.25 5.25a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm4.5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm4.5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />
+            </svg>
+        </button>
+    }
+    else
+    {
+        <section class="store-chat-panel" aria-label="مساعد المتجر">
+            <header class="store-chat-header">
+                <strong>مساعد المتجر</strong>
+                <button type="button" @onclick="CloseChat" aria-label="تصغير المحادثة">×</button>
+            </header>
+
+            <div class="store-chat-messages" aria-live="polite">
+                <div class="store-chat-message assistant">مرحبًا، كيف يمكنني مساعدتك؟ يمكنك أن تسألني عن المنتجات، الأسعار، العروض، المقاسات أو حالة طلبك.</div>
+                @foreach (var message in messages)
+                {
+                    <div class="store-chat-message @(message.IsUser ? "user" : "assistant")">@message.Content</div>
+                }
+
+                @if (showQuickActions)
+                {
+                    <div class="store-chat-actions">
+                        <button type="button" disabled="@isBusy" @onclick="(() => HandleQuickActionAsync(ChatAction.Catalog))">المنتجات والعروض</button>
+                        <button type="button" disabled="@isBusy" @onclick="(() => HandleQuickActionAsync(ChatAction.AvailableSizes))">المقاسات المتوفرة</button>
+                        <button type="button" disabled="@isBusy" @onclick="(() => HandleQuickActionAsync(ChatAction.Size))">البحث حسب المقاس</button>
+                        <button type="button" disabled="@isBusy" @onclick="(() => HandleQuickActionAsync(ChatAction.Order))">حالة طلبي</button>
+                        <a href="https://wa.me/972536208730" target="_blank" rel="noopener noreferrer" @onclick="RecordWhatsAppAsync">التواصل عبر واتساب</a>
+                    </div>
+                }
+
+                @if (state == ConversationState.AwaitingSizeSelection && pendingSizeOptions.Count > 0)
+                {
+                    <div class="store-chat-size-choices" aria-label="اختر المقاس">
+                        @foreach (var sizeOption in pendingSizeOptions)
+                        {
+                            <button type="button" disabled="@isBusy" @onclick="(() => SelectSizeAsync(sizeOption))">@sizeOption</button>
+                        }
+                    </div>
+                }
+
+                @if (isBusy)
+                {
+                    <div class="store-chat-status">جاري التحقق...</div>
+                }
+            </div>
+
+            <div class="store-chat-compose">
+                <input value="@input" @oninput="OnInput" @onkeydown="HandleKeyDown" maxlength="500"
+                       disabled="@isBusy" placeholder="اكتب رسالتك..." aria-label="رسالتك" />
+                <button type="button" disabled="@(isBusy || string.IsNullOrWhiteSpace(input))" @onclick="SendAsync">إرسال</button>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public StoreChatMode Mode { get; set; } = StoreChatMode.Customer;
+
+    private readonly List<ChatBubble> messages = [];
+    private readonly List<SafeChatTurn> safeHistory = [];
+    private readonly List<string> pendingSizeOptions = [];
+    private StoreChatConversationContext conversationContext = new();
+    private readonly CancellationTokenSource disposeCancellation = new();
+    private Guid? sessionId;
+    private string input = string.Empty;
+    private bool isOpen;
+    private bool isBusy;
+    private bool showQuickActions = true;
+    private ConversationState state;
+    private StoreChatMode? activeMode;
+
+    protected override void OnParametersSet()
+    {
+        if (activeMode.HasValue && activeMode.Value != Mode)
+        {
+            messages.Clear();
+            safeHistory.Clear();
+            pendingSizeOptions.Clear();
+            conversationContext = new StoreChatConversationContext();
+            sessionId = null;
+            input = string.Empty;
+            isOpen = false;
+            isBusy = false;
+            showQuickActions = true;
+            state = ConversationState.None;
+        }
+
+        activeMode = Mode;
+        conversationContext.Mode = Mode;
+    }
+
+    private void OpenChat() => isOpen = true;
+    private void CloseChat() => isOpen = false;
+    private void OnInput(ChangeEventArgs args) => input = args.Value?.ToString() ?? string.Empty;
+
+    private async Task HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !args.ShiftKey && !isBusy)
+            await SendAsync();
+    }
+
+    private async Task SendAsync()
+    {
+        var text = input.Trim();
+        if (isBusy || text.Length == 0)
+            return;
+        if (text.Length > 500)
+            text = text[..500];
+
+        input = string.Empty;
+        isBusy = true;
+        showQuickActions = false;
+        messages.Add(new(true, text));
+        try
+        {
+            if (state == ConversationState.AwaitingPhone)
+            {
+                await HandlePhoneAsync(text);
+                return;
+            }
+
+            if (state == ConversationState.AwaitingSizeSelection)
+            {
+                var selected = pendingSizeOptions.FirstOrDefault(option => SameSize(option, text));
+                if (selected is not null)
+                {
+                    await ApplySelectedSizeAsync(text, selected);
+                    return;
+                }
+                // A correction such as "الأصغر" or "غيره" needs the agent and its conversation context.
+                state = ConversationState.None;
+            }
+
+            var redacted = PhoneNumberNormalizer.RedactSensitiveData(text);
+            if (redacted.SanitizedText == "[رقم هاتف]")
+            {
+                await ReplyAndSaveAsync(
+                    text,
+                    "لحماية خصوصيتك، أرسل رقم الهاتف فقط بعد أن تطلب فحص حالة الطلب.",
+                    new("privacy_clarification", IsFallback: true, FallbackReason: "phone_without_order_context"),
+                    includeInSafeHistory: false);
+                showQuickActions = true;
+                return;
+            }
+
+            var agentResult = await AgentService.RespondAsync(
+                redacted.SanitizedText,
+                safeHistory,
+                conversationContext,
+                disposeCancellation.Token);
+            await HandleAgentResultAsync(text, redacted.SanitizedText, agentResult);
+        }
+        catch (OperationCanceledException) when (disposeCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Store chat interaction failed.");
+            messages.Add(new(false, "تعذر التحقق من هذه المعلومة الآن، حاول مرة أخرى بعد قليل."));
+            showQuickActions = true;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task HandleAgentResultAsync(string originalText, string sanitizedText, StoreChatAgentResult result)
+    {
+        state = result.BeginOrderLookup ? ConversationState.AwaitingPhone : ConversationState.None;
+        pendingSizeOptions.Clear();
+        var hasConfirmedAgeChoices = result.Action == "recommend_sizes_for_age" &&
+            result.SuggestedSizes is { Count: > 1 } &&
+            conversationContext.LastShownSizes.Count > 1 &&
+            result.SuggestedSizes.All(size => conversationContext.LastShownSizes.Any(shown => SameSize(size, shown)));
+        if (hasConfirmedAgeChoices ||
+            (result.Action == "clarification" && result.SuggestedSizes is { Count: > 1 }))
+        {
+            pendingSizeOptions.AddRange(result.SuggestedSizes!);
+            state = ConversationState.AwaitingSizeSelection;
+        }
+
+        var metadata = new ChatMessageMetadata(
+            result.Action,
+            result.Size,
+            result.AiUsed,
+            result.AiProvider,
+            result.AiModel,
+            result.IsFallback,
+            result.FallbackReason);
+        await ReplyAndSaveAsync(originalText, result.Response, metadata, sanitizedText: sanitizedText);
+
+        showQuickActions = result.IsFallback || result.Action == "clarification";
+        if (result.AppliedSizeFilter)
+            NavigateToStorefrontIfNeeded();
+    }
+
+    private async Task HandleQuickActionAsync(ChatAction action)
+    {
+        if (isBusy)
+            return;
+
+        isBusy = true;
+        showQuickActions = false;
+        var label = action switch
+        {
+            ChatAction.Catalog => "المنتجات والعروض",
+            ChatAction.AvailableSizes => "المقاسات المتوفرة",
+            ChatAction.Size => "البحث حسب المقاس",
+            _ => "حالة طلبي"
+        };
+        messages.Add(new(true, label));
+        try
+        {
+            if (action == ChatAction.Size)
+            {
+                state = ConversationState.AwaitingSize;
+                await ReplyAndSaveAsync(label, "ما هو المقاس الذي تبحث عنه؟", new("size_clarification"));
+                return;
+            }
+
+            var localAction = action switch
+            {
+                ChatAction.Catalog => "catalog",
+                ChatAction.AvailableSizes => "available_sizes",
+                _ => "order"
+            };
+            var result = await AgentService.RunQuickActionAsync(localAction, conversationContext, disposeCancellation.Token);
+            await HandleAgentResultAsync(label, label, result);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Store chat quick action failed.");
+            messages.Add(new(false, "تعذر التحقق من هذه المعلومة الآن، حاول مرة أخرى بعد قليل."));
+            showQuickActions = true;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task SelectSizeAsync(string size)
+    {
+        if (isBusy || !pendingSizeOptions.Any(option => SameSize(option, size)))
+            return;
+
+        isBusy = true;
+        messages.Add(new(true, size));
+        try
+        {
+            await ApplySelectedSizeAsync(size, size);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not apply chat size selection.");
+            messages.Add(new(false, "تعذر عرض المنتجات الآن، حاول مرة أخرى بعد قليل."));
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ApplySelectedSizeAsync(string userText, string size)
+    {
+        var result = await AgentService.ApplySizeFilterAsync(size, conversationContext, disposeCancellation.Token);
+        state = ConversationState.None;
+        pendingSizeOptions.Clear();
+        await HandleAgentResultAsync(userText, userText, result);
+    }
+
+    private async Task HandlePhoneAsync(string rawPhone)
+    {
+        var phone = PhoneNumberNormalizer.Normalize(rawPhone);
+        if (phone is null)
+        {
+            state = ConversationState.AwaitingPhone;
+            await ReplyAndSaveAsync(
+                rawPhone,
+                "رقم الهاتف غير صالح. أرسله كاملًا كما استخدمته عند إرسال الطلب.",
+                new("order_lookup", IsFallback: true, FallbackReason: "invalid_phone"),
+                includeInSafeHistory: false);
+            return;
+        }
+
+        state = ConversationState.None;
+        var result = await OrderService.LookupPublicOrdersByPhoneAsync(phone);
+        var response = FormatOrderResult(result);
+        await ReplyAndSaveAsync(rawPhone, response, new("order_lookup"), phone, includeInSafeHistory: false);
+        AddSafeTurn("assistant", "تم عرض نتيجة البحث عن الطلب للعميل محليًا دون مشاركة التفاصيل.");
+    }
+
+    private async Task ReplyAndSaveAsync(
+        string userText,
+        string response,
+        ChatMessageMetadata metadata,
+        string? phone = null,
+        bool includeInSafeHistory = true,
+        string? sanitizedText = null)
+    {
+        messages.Add(new(false, response));
+        sessionId = await StoreChatService.AddExchangeAsync(sessionId, userText, response, metadata, phone);
+        if (includeInSafeHistory)
+        {
+            AddSafeTurn("user", sanitizedText ?? PhoneNumberNormalizer.RedactSensitiveData(userText).SanitizedText);
+            AddSafeTurn("assistant", PhoneNumberNormalizer.RedactSensitiveData(response).SanitizedText);
+        }
+    }
+
+    private void AddSafeTurn(string role, string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return;
+        safeHistory.Add(new(role, content.Length <= 700 ? content : content[..700]));
+        if (safeHistory.Count > 12)
+            safeHistory.RemoveRange(0, safeHistory.Count - 12);
+    }
+
+    private async Task RecordWhatsAppAsync()
+    {
+        if (isBusy)
+            return;
+        isBusy = true;
+        messages.Add(new(true, "التواصل عبر واتساب"));
+        const string response = "تم فتح واتساب في نافذة جديدة.";
+        messages.Add(new(false, response));
+        try
+        {
+            sessionId = await StoreChatService.AddExchangeAsync(
+                sessionId, "التواصل عبر واتساب", response, new("whatsapp"));
+            AddSafeTurn("user", "التواصل عبر واتساب");
+            AddSafeTurn("assistant", response);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not persist WhatsApp chat action.");
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void NavigateToStorefrontIfNeeded()
+    {
+        if (Mode == StoreChatMode.Sandbox)
+            return;
+
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        if (!string.IsNullOrEmpty(path))
+            Navigation.NavigateTo("/", forceLoad: false);
+    }
+
+    private static bool SameSize(string left, string right) =>
+        string.Equals(SizeLabelParser.NormalizeLabelKey(left), SizeLabelParser.NormalizeLabelKey(right), StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatOrderResult(PublicOrderLookupResult result)
+    {
+        if (!result.HasAny)
+            return "لم نعثر على طلب مرتبط برقم الهاتف المدخل.";
+        if (result.OpenOrders.Count > 0)
+            return string.Join("\n\n──────────\n\n", result.OpenOrders.Select(FormatOrder));
+        if (result.ClosedOrder is not null)
+            return FormatOrder(result.ClosedOrder);
+
+        var history = result.History!;
+        return $"رقم الطلب: {history.OrderNumber}\nالحالة: {StatusText(history.LastStatus)}\n" +
+               $"تاريخ الطلب: {history.CreatedAtUtc.ToLocalTime():yyyy/MM/dd HH:mm}\n" +
+               $"آخر تحديث: {history.StatusUpdatedAtUtc.ToLocalTime():yyyy/MM/dd HH:mm}\n" +
+               $"الاسم: {history.CustomerName}\nرقم الهاتف: {history.PhoneNumber}\n" +
+               $"إجمالي القطع: {history.TotalQuantity}\nالمجموع النهائي: ₪{history.FinalTotal:0.##}\n" +
+               "تفاصيل المنتجات غير متوفرة في السجل التاريخي.";
+    }
+
+    private static string FormatOrder(Order order)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"رقم الطلب: {order.OrderNumber}");
+        builder.AppendLine($"الحالة: {StatusText(order.Status)}");
+        builder.AppendLine($"تاريخ الطلب: {order.CreatedAt:yyyy/MM/dd HH:mm}");
+        builder.AppendLine($"آخر تحديث: {order.UpdatedAt:yyyy/MM/dd HH:mm}");
+        if (!string.IsNullOrWhiteSpace(order.Customer.FullName)) builder.AppendLine($"الاسم: {order.Customer.FullName}");
+        builder.AppendLine($"رقم الهاتف: {order.Customer.PhoneNumber}");
+        var address = string.Join("، ", new[] { order.Customer.City, order.Customer.Street, order.Customer.HouseNumber }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
+        if (address.Length > 0) builder.AppendLine($"العنوان: {address}");
+        builder.AppendLine("المنتجات:");
+        foreach (var item in order.Items)
+        {
+            builder.Append($"• {item.ProductName}");
+            if (!string.IsNullOrWhiteSpace(item.ProductSerialNumber)) builder.Append($" ({item.ProductSerialNumber})");
+            builder.AppendLine($" — المقاس {item.Size} — الكمية {item.Quantity} — ₪{item.UnitPrice:0.##} للوحدة — ₪{item.TotalPrice:0.##}");
+        }
+        builder.AppendLine($"السعر قبل التخفيض: ₪{order.OriginalTotal:0.##}");
+        if (order.DiscountAmount > 0)
+        {
+            builder.AppendLine($"قيمة التخفيض: ₪{order.DiscountAmount:0.##}");
+            if (!string.IsNullOrWhiteSpace(order.DiscountName)) builder.AppendLine($"التخفيض: {order.DiscountName}");
+        }
+        builder.Append($"المجموع النهائي: ₪{order.FinalTotal:0.##}");
+        return builder.ToString();
+    }
+
+    private static string StatusText(OrderStatus status) => status switch
+    {
+        OrderStatus.New => "جديد",
+        OrderStatus.Preparing => "قيد التحضير",
+        OrderStatus.Ready => "جاهز",
+        OrderStatus.Shipped => "تم الإرسال",
+        OrderStatus.Cancelled => "ملغى",
+        _ => "غير معروف"
+    };
+
+    private sealed record ChatBubble(bool IsUser, string Content);
+    private enum ConversationState { None, AwaitingSize, AwaitingSizeSelection, AwaitingPhone }
+    private enum ChatAction { Catalog, AvailableSizes, Size, Order }
+
+    public void Dispose()
+    {
+        disposeCancellation.Cancel();
+        disposeCancellation.Dispose();
+    }
+}

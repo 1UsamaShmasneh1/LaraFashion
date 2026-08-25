@@ -1,0 +1,483 @@
+@page "/admin/chats"
+@using LaraFashion.Models
+@using LaraFashion.Services
+@inject StoreChatService StoreChatService
+@inject StoreChatSettingsService ChatSettingsService
+@inject AdminAuthService AdminAuthService
+@inject BrowserStorageService BrowserStorageService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>المحادثات</PageTitle>
+<AdminNav />
+
+@if (!isAuthorized)
+{
+    <div class="admin-chats-loading">جاري التحقق من جلسة الإدارة...</div>
+}
+else
+{
+    <section class="admin-chats" dir="rtl">
+        <div class="admin-chat-visibility">
+            <div>
+                <h2>حالة مساعد المتجر</h2>
+                <div class="admin-chat-visibility-status @(customerChatEnabled ? "enabled" : "disabled")">
+                    <span aria-hidden="true">●</span>
+                    @(customerChatEnabled ? "ظاهر لزبائن المتجر" : "مخفي عن زبائن المتجر")
+                </div>
+                <p>يبقى مساعد المتجر ظاهرًا دائمًا داخل متجر Sandbox لأغراض الاختبار.</p>
+            </div>
+            <button type="button" disabled="@isSavingVisibility" @onclick="ToggleCustomerChatVisibilityAsync">
+                @(isSavingVisibility ? "جاري الحفظ..." : customerChatEnabled ? "إخفاء التشات عن الزبائن" : "إظهار التشات للزبائن")
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(successMessage))
+        {
+            <div class="admin-chats-success">@successMessage</div>
+        }
+
+        <div class="admin-chats-heading">
+            <h1>المحادثات</h1>
+            <div class="admin-chat-filters">
+                <form class="admin-chat-search" @onsubmit="ApplySearchAsync" @onsubmit:preventDefault>
+                    <input type="search" value="@searchText" @oninput="HandleSearchInput"
+                           placeholder="بحث بالهاتف أو محتوى المحادثة" aria-label="بحث في المحادثات" />
+                    <button type="submit">بحث</button>
+                </form>
+                <label>
+                    <input type="checkbox" checked="@fallbackOnly" @onchange="ToggleFallbackAsync" />
+                    الرسائل غير المفهومة / Fallback فقط
+                </label>
+                <label>
+                    عدد الصفوف
+                    <select value="@pageData.PageSize" @onchange="ChangePageSizeAsync">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        @if (selectedSessionIds.Count > 0)
+        {
+            <div class="admin-chat-selection-toolbar">
+                <span>تم تحديد @selectedSessionIds.Count محادثات</span>
+                <button type="button" disabled="@isBulkDeleting" @onclick="DeleteSelectedSessionsAsync">
+                    @(isBulkDeleting ? "جاري الحذف..." : "حذف المحدد")
+                </button>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="admin-chats-error">@errorMessage</div>
+        }
+
+        @if (pageData.Items.Count == 0)
+        {
+            <div class="admin-chats-empty">لا توجد محادثات مطابقة.</div>
+        }
+        else
+        {
+            <div class="admin-chat-table-scroll">
+                <table class="admin-chat-table">
+                    <thead>
+                        <tr>
+                            <th class="admin-chat-select-column">
+                                <input type="checkbox"
+                                       checked="@AreAllCurrentPageSelected"
+                                       @onchange="ToggleCurrentPageSelection"
+                                       aria-label="تحديد كل محادثات الصفحة الحالية" />
+                            </th>
+                            <th>البداية</th>
+                            <th>آخر نشاط</th>
+                            <th>الهاتف</th>
+                            <th>الرسائل</th>
+                            <th>AI</th>
+                            <th>غير مفهوم</th>
+                            <th>آخر موضوع</th>
+                            <th>عرض</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var session in pageData.Items)
+                        {
+                            <tr class="@((selectedSession?.Id == session.Id || selectedSessionIds.Contains(session.Id)) ? "selected" : string.Empty)">
+                                <td class="admin-chat-select-column">
+                                    <input type="checkbox"
+                                           checked="@selectedSessionIds.Contains(session.Id)"
+                                           @onchange="(args => ToggleSessionSelection(session.Id, args))"
+                                           @onclick:stopPropagation="true"
+                                           aria-label="تحديد المحادثة" />
+                                </td>
+                                <td>@LocalTime(session.StartedAtUtc)</td>
+                                <td>@LocalTime(session.LastActivityAtUtc)</td>
+                                <td>@(string.IsNullOrWhiteSpace(session.PhoneNumber) ? "—" : session.PhoneNumber)</td>
+                                <td>@session.MessageCount</td>
+                                <td>@session.AiMessageCount</td>
+                                <td>@session.FallbackCount</td>
+                                <td>@(string.IsNullOrWhiteSpace(session.LastIntent) ? "—" : session.LastIntent)</td>
+                                <td>
+                                    <button type="button" class="admin-chat-view-button"
+                                            disabled="@(loadingSessionId == session.Id)"
+                                            @onclick="(() => OpenSessionAsync(session.Id))">
+                                        @(loadingSessionId == session.Id ? "جاري..." : "عرض")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-chat-pager">
+                <button type="button" disabled="@(pageData.Page <= 1)" @onclick="PreviousPageAsync">السابق</button>
+                <span>صفحة @pageData.Page من @TotalPages</span>
+                <button type="button" disabled="@(pageData.Page >= TotalPages)" @onclick="NextPageAsync">التالي</button>
+            </div>
+        }
+
+        @if (selectedSession is not null)
+        {
+            <section class="admin-chat-details" aria-labelledby="chat-details-heading">
+                <header>
+                    <div>
+                        <h2 id="chat-details-heading">تفاصيل المحادثة</h2>
+                        <div class="admin-chat-details-summary">
+                            <span><strong>البداية:</strong> @LocalTime(selectedSession.StartedAtUtc)</span>
+                            <span><strong>آخر نشاط:</strong> @LocalTime(selectedSession.LastActivityAtUtc)</span>
+                            <span><strong>الهاتف:</strong> @(string.IsNullOrWhiteSpace(selectedSession.PhoneNumber) ? "—" : selectedSession.PhoneNumber)</span>
+                        </div>
+                    </div>
+                    <div class="admin-chat-details-actions">
+                        <button type="button" class="delete" disabled="@isDeletingSession" @onclick="DeleteSelectedSessionAsync">
+                            @(isDeletingSession ? "جاري الحذف..." : "حذف المحادثة")
+                        </button>
+                        <button type="button" @onclick="CloseDetails">إغلاق</button>
+                    </div>
+                </header>
+                <div class="admin-chat-transcript">
+                    @foreach (var message in selectedSession.Messages)
+                    {
+                        <article class="admin-chat-message @(message.Role == "User" ? "user" : "assistant")">
+                            <strong>@(message.Role == "User" ? "الزبون" : "المساعد")</strong>
+                            <div class="content">@message.Content</div>
+                            <small>@LocalTime(message.CreatedAtUtc)</small>
+                            @if (message.Role == "User")
+                            {
+                                <dl>
+                                    @if (!string.IsNullOrWhiteSpace(message.DetectedIntent)) { <dt>Intent</dt><dd>@message.DetectedIntent</dd> }
+                                    @if (!string.IsNullOrWhiteSpace(message.ExtractedSize)) { <dt>المقاس</dt><dd>@message.ExtractedSize</dd> }
+                                    <dt>استخدم AI</dt><dd>@(message.AiUsed ? "نعم" : "لا")</dd>
+                                    @if (!string.IsNullOrWhiteSpace(message.AiProvider)) { <dt>المزود</dt><dd>@message.AiProvider</dd> }
+                                    @if (!string.IsNullOrWhiteSpace(message.AiModel)) { <dt>النموذج</dt><dd>@message.AiModel</dd> }
+                                    <dt>Fallback</dt><dd>@(message.IsFallback ? "نعم" : "لا")</dd>
+                                    @if (!string.IsNullOrWhiteSpace(message.FallbackReason)) { <dt>السبب</dt><dd>@message.FallbackReason</dd> }
+                                </dl>
+                            }
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+    </section>
+}
+
+@code {
+    private string adminToken = string.Empty;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isAuthorized;
+    private bool fallbackOnly;
+    private bool customerChatEnabled;
+    private bool isSavingVisibility;
+    private bool isDeletingSession;
+    private bool isBulkDeleting;
+    private Guid? loadingSessionId;
+    private string searchText = string.Empty;
+    private string appliedSearchText = string.Empty;
+    private readonly HashSet<Guid> selectedSessionIds = new();
+    private ChatSessionPage pageData = new([], 0, 1, 10);
+    private StoreChatSession? selectedSession;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(pageData.TotalCount / (double)pageData.PageSize));
+    private bool AreAllCurrentPageSelected =>
+        pageData.Items.Count > 0 && pageData.Items.All(item => selectedSessionIds.Contains(item.Id));
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        adminToken = await BrowserStorageService.GetItemAsync("admin_token") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(adminToken) || !AdminAuthService.IsTokenValid(adminToken))
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        isAuthorized = true;
+        await LoadPageAndSettingsAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadPageAndSettingsAsync()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            var pageTask = StoreChatService.GetSessionsAsync(
+                adminToken, pageData.Page, pageData.PageSize, fallbackOnly, appliedSearchText);
+            var settingTask = ChatSettingsService.GetCustomerChatEnabledAsync();
+            await Task.WhenAll(pageTask, settingTask);
+            pageData = await pageTask;
+            customerChatEnabled = await settingTask;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch
+        {
+            errorMessage = "تعذر تحميل إعدادات المحادثات حاليًا.";
+        }
+    }
+
+    private async Task LoadPageAsync()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            pageData = await StoreChatService.GetSessionsAsync(
+                adminToken, pageData.Page, pageData.PageSize, fallbackOnly, appliedSearchText);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch
+        {
+            errorMessage = "تعذر تحميل المحادثات حاليًا.";
+        }
+    }
+
+    private async Task ToggleCustomerChatVisibilityAsync()
+    {
+        if (isSavingVisibility)
+            return;
+
+        try
+        {
+            isSavingVisibility = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            var newValue = !customerChatEnabled;
+            await ChatSettingsService.SetCustomerChatEnabledAsync(newValue, adminToken);
+            customerChatEnabled = newValue;
+            successMessage = newValue
+                ? "تم إظهار مساعد المتجر للزبائن."
+                : "تم إخفاء مساعد المتجر عن الزبائن، وسيبقى متاحًا في Sandbox.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch
+        {
+            errorMessage = "تعذر تحديث ظهور مساعد المتجر حاليًا.";
+        }
+        finally
+        {
+            isSavingVisibility = false;
+        }
+    }
+
+    private async Task ToggleFallbackAsync(ChangeEventArgs args)
+    {
+        fallbackOnly = args.Value is bool value && value;
+        pageData = pageData with { Page = 1 };
+        ClearSelectionAndDetails();
+        await LoadPageAsync();
+    }
+
+    private async Task ApplySearchAsync()
+    {
+        appliedSearchText = searchText.Trim();
+        pageData = pageData with { Page = 1 };
+        ClearSelectionAndDetails();
+        await LoadPageAsync();
+    }
+
+    private void HandleSearchInput(ChangeEventArgs args)
+    {
+        searchText = args.Value?.ToString() ?? string.Empty;
+        ClearSelectionAndDetails();
+    }
+
+    private async Task ChangePageSizeAsync(ChangeEventArgs args)
+    {
+        if (!int.TryParse(args.Value?.ToString(), out var pageSize))
+            return;
+
+        pageData = pageData with { Page = 1, PageSize = pageSize };
+        ClearSelectionAndDetails();
+        await LoadPageAsync();
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        pageData = pageData with { Page = Math.Max(1, pageData.Page - 1) };
+        selectedSession = null;
+        await LoadPageAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        pageData = pageData with { Page = Math.Min(TotalPages, pageData.Page + 1) };
+        selectedSession = null;
+        await LoadPageAsync();
+    }
+
+    private async Task OpenSessionAsync(Guid id)
+    {
+        if (loadingSessionId.HasValue)
+            return;
+
+        try
+        {
+            errorMessage = string.Empty;
+            loadingSessionId = id;
+            selectedSession = await StoreChatService.GetChatSessionDetailsAsync(adminToken, id);
+            if (selectedSession is null)
+                errorMessage = "لم تعد هذه المحادثة موجودة.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch
+        {
+            errorMessage = "تعذر تحميل تفاصيل المحادثة حاليًا.";
+        }
+        finally
+        {
+            loadingSessionId = null;
+        }
+    }
+
+    private void CloseDetails() => selectedSession = null;
+
+    private void ToggleSessionSelection(Guid id, ChangeEventArgs args)
+    {
+        if (args.Value is bool isSelected && isSelected)
+            selectedSessionIds.Add(id);
+        else
+            selectedSessionIds.Remove(id);
+    }
+
+    private void ToggleCurrentPageSelection(ChangeEventArgs args)
+    {
+        var shouldSelect = args.Value is bool isSelected && isSelected;
+        foreach (var item in pageData.Items)
+        {
+            if (shouldSelect)
+                selectedSessionIds.Add(item.Id);
+            else
+                selectedSessionIds.Remove(item.Id);
+        }
+    }
+
+    private void ClearSelectionAndDetails()
+    {
+        selectedSessionIds.Clear();
+        selectedSession = null;
+    }
+
+    private async Task DeleteSelectedSessionsAsync()
+    {
+        if (selectedSessionIds.Count == 0 || isBulkDeleting)
+            return;
+
+        var idsToDelete = selectedSessionIds.ToArray();
+        var confirmation = $"سيتم حذف {idsToDelete.Length} محادثات وجميع الرسائل التابعة لها نهائيًا. هل تريد المتابعة؟";
+        if (!await JS.InvokeAsync<bool>("confirm", confirmation))
+            return;
+
+        try
+        {
+            isBulkDeleting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            var result = await StoreChatService.DeleteChatSessionsAsync(idsToDelete, adminToken);
+
+            if (selectedSession is not null && idsToDelete.Contains(selectedSession.Id))
+                selectedSession = null;
+
+            selectedSessionIds.ExceptWith(idsToDelete);
+            await ReloadAfterDeleteAsync();
+            successMessage = $"تم حذف {result.DeletedSessions} محادثات.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch (ArgumentException)
+        {
+            errorMessage = "تعذر تنفيذ الحذف لأن قائمة المحادثات المحددة غير صالحة.";
+        }
+        catch
+        {
+            errorMessage = "تعذر حذف المحادثات المحددة حاليًا.";
+        }
+        finally
+        {
+            isBulkDeleting = false;
+        }
+    }
+
+    private async Task DeleteSelectedSessionAsync()
+    {
+        if (selectedSession is null || isDeletingSession)
+            return;
+        if (!await JS.InvokeAsync<bool>("confirm", "هل تريد حذف هذه المحادثة ورسائلها؟"))
+            return;
+
+        try
+        {
+            isDeletingSession = true;
+            errorMessage = string.Empty;
+            var id = selectedSession.Id;
+            await StoreChatService.DeleteSessionAsync(adminToken, id);
+            selectedSession = null;
+            selectedSessionIds.Remove(id);
+            await ReloadAfterDeleteAsync();
+            successMessage = "تم حذف المحادثة ورسائلها.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+        catch
+        {
+            errorMessage = "تعذر حذف المحادثة حاليًا.";
+        }
+        finally
+        {
+            isDeletingSession = false;
+        }
+    }
+
+    private async Task ReloadAfterDeleteAsync()
+    {
+        await LoadPageAsync();
+        var lastValidPage = Math.Max(1, (int)Math.Ceiling(pageData.TotalCount / (double)pageData.PageSize));
+        if (pageData.Page > lastValidPage)
+        {
+            pageData = pageData with { Page = lastValidPage };
+            await LoadPageAsync();
+        }
+    }
+
+    private static string LocalTime(DateTime utc) => utc.ToLocalTime().ToString("yyyy/MM/dd HH:mm");
+}

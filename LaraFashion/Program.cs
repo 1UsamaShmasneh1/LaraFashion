@@ -16,6 +16,16 @@ builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<AdminAuthService>();
 builder.Services.AddScoped<ReportsService>();
+builder.Services.AddScoped<StoreChatService>();
+builder.Services.AddScoped<StoreChatSettingsService>();
+builder.Services.AddScoped<StoreChatAgentService>();
+builder.Services.AddScoped<StorefrontFilterState>();
+builder.Services.AddScoped<SandboxFilterState>();
+builder.Services.AddHttpClient("Groq", client =>
+{
+    client.BaseAddress = new Uri("https://api.groq.com/");
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
 
 var storagePaths = AppStoragePaths.Resolve(builder.Environment);
 var dbFolder = Path.GetDirectoryName(storagePaths.DatabasePath)

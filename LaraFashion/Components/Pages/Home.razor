@@ -6,7 +6,9 @@
 
 @inject LaraFashion.Services.ProductService ProductService
 @inject LaraFashion.Services.CategoryService CategoryService
+@inject LaraFashion.Services.StorefrontFilterState FilterState
 @inject IJSRuntime JS
+@implements IDisposable
 
 <div class="category-button-bar store-category-filter" dir="rtl">
     <button type="button"
@@ -24,6 +26,14 @@
         </button>
     }
 </div>
+
+@if (!string.IsNullOrWhiteSpace(FilterState.Size))
+{
+    <div class="store-size-filter" dir="rtl">
+        <span>المقاس: @FilterState.Size</span>
+        <button type="button" title="إلغاء فلتر المقاس" @onclick="ClearSizeFilter">×</button>
+    </div>
+}
 
 @if (IsLoading)
 {
@@ -63,6 +73,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        FilterState.Changed += OnFilterChanged;
         Categories = await CategoryService.GetActiveAsync();
         await LoadProducts();
     }
@@ -75,9 +86,21 @@ else
     private async Task LoadProducts()
     {
         IsLoading = true;
-        Products = await ProductService.GetActiveProductsAsync(SelectedCategoryId == Guid.Empty ? null : SelectedCategoryId);
+        Products = await ProductService.GetActiveProductsAsync(
+            SelectedCategoryId == Guid.Empty ? null : SelectedCategoryId,
+            FilterState.Size);
         IsLoading = false;
     }
+
+    private Task ClearSizeFilter() => FilterState.ClearSizeAsync();
+
+    private Task OnFilterChanged() => InvokeAsync(async () =>
+    {
+        await LoadProducts();
+        StateHasChanged();
+    });
+
+    public void Dispose() => FilterState.Changed -= OnFilterChanged;
 
     private async Task SelectStoreCategory(Guid categoryId)
     {
