@@ -1,0 +1,527 @@
+@using System.Text.Json
+@using LaraFashion.Models
+@using LaraFashion.Models.Enums
+@using LaraFashion.Services
+@inject OrderService OrderService
+@inject BrowserStorageService BrowserStorageService
+@inject AdminAuthService AdminAuthService
+@inject ILogger<MyOrdersButton> Logger
+@implements IDisposable
+
+<button type="button" class="my-orders-trigger" @onclick="OpenModal" aria-haspopup="dialog" disabled="@(!interactionReady)">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4.5 7.5 12 3l7.5 4.5v9L12 21l-7.5-4.5v-9Z" />
+        <path d="m4.8 7.7 7.2 4.2 7.2-4.2M12 12v8.5M8.2 5.3l7.5 4.4" />
+    </svg>
+    <span>طلباتي</span>
+</button>
+
+@if (isOpen)
+{
+    <div class="my-orders-overlay" dir="rtl">
+        <section class="my-orders-modal"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="my-orders-title">
+            <header class="my-orders-modal-header">
+                <div>
+                    <h2 id="my-orders-title">@(state == MyOrdersState.Orders ? $"طلبات {customerName}" : "طلباتي")</h2>
+                    @if (state == MyOrdersState.Orders)
+                    {
+                        <span class="my-orders-count">@OrdersCountText(orders.Count)</span>
+                    }
+                </div>
+                <button type="button" class="my-orders-close" @onclick="CloseModal" aria-label="إغلاق نافذة طلباتي">×</button>
+            </header>
+
+            <div class="my-orders-content">
+                @switch (state)
+                {
+                    case MyOrdersState.EnterPhone:
+                        <form class="my-orders-form" @onsubmit="LookupIdentityAsync" @onsubmit:preventDefault="true">
+                            <div class="my-orders-intro-icon" aria-hidden="true">#</div>
+                            <p>أدخل رقم الهاتف المستخدم عند إرسال الطلبية.</p>
+                            <label for="my-orders-phone">رقم الهاتف</label>
+                            <input id="my-orders-phone"
+                                   type="tel"
+                                   inputmode="tel"
+                                   autocomplete="tel"
+                                   maxlength="30"
+                                   @bind="phoneInput"
+                                   disabled="@isBusy" />
+                            @if (!string.IsNullOrWhiteSpace(errorMessage))
+                            {
+                                <div class="my-orders-message my-orders-message-error" role="alert">@errorMessage</div>
+                            }
+                            <button type="submit" class="my-orders-primary" disabled="@isBusy">
+                                @(isBusy ? "جاري التحقق..." : "متابعة")
+                            </button>
+                        </form>
+                        break;
+
+                    case MyOrdersState.ConfirmIdentity:
+                        <div class="my-orders-centered">
+                            <div class="my-orders-confirm-icon" aria-hidden="true">✓</div>
+                            <h3>هل أنت @customerName؟</h3>
+                            <div class="my-orders-confirm-actions">
+                                <button type="button" class="my-orders-primary" @onclick="ConfirmIdentityAsync" disabled="@isBusy">
+                                    نعم، هذا أنا
+                                </button>
+                                <button type="button" class="my-orders-secondary" @onclick="RejectIdentityAsync" disabled="@isBusy">لا</button>
+                            </div>
+                        </div>
+                        break;
+
+                    case MyOrdersState.LoadingOrders:
+                        <div class="my-orders-centered" role="status" aria-live="polite">
+                            <div class="my-orders-spinner" aria-hidden="true"></div>
+                            <h3>@loadingMessage</h3>
+                            <p>لن نعرض أي بيانات قبل اكتمال التحديث.</p>
+                        </div>
+                        break;
+
+                    case MyOrdersState.Error:
+                        <div class="my-orders-centered">
+                            <div class="my-orders-error-icon" aria-hidden="true">!</div>
+                            <div class="my-orders-message my-orders-message-error" role="alert">@errorMessage</div>
+                            <button type="button" class="my-orders-primary" @onclick="RetrySyncAsync" disabled="@isBusy">
+                                @(isBusy ? "جاري المحاولة..." : "إعادة المحاولة")
+                            </button>
+                            <button type="button" class="my-orders-link-button" @onclick="ChangePhoneAsync" disabled="@isBusy">تغيير رقم الهاتف</button>
+                        </div>
+                        break;
+
+                    case MyOrdersState.Orders:
+                        <div class="my-orders-toolbar">
+                            <button type="button" class="my-orders-link-button" @onclick="ChangePhoneAsync">تغيير رقم الهاتف</button>
+                        </div>
+
+                        @if (orders.Count == 0)
+                        {
+                            <div class="my-orders-empty">لا توجد طلبيات لعرضها حاليًا.</div>
+                        }
+                        else
+                        {
+                            <div class="my-orders-list">
+                                @foreach (var order in orders)
+                                {
+                                    <article class="my-order-card @(order.IsHistorical ? "my-order-historical" : string.Empty)">
+                                        <div class="my-order-topline">
+                                            <div>
+                                                <span class="my-order-label">رقم الطلب</span>
+                                                <strong>@order.OrderNumber</strong>
+                                            </div>
+                                            <div class="my-order-badges">
+                                                @if (order.IsSandbox)
+                                                {
+                                                    <span class="my-order-badge my-order-sandbox">تجريبي</span>
+                                                }
+                                                <span class="my-order-badge @StatusCss(order.Status)">@StatusText(order.Status)</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="my-order-meta">
+                                            <span>تاريخ الطلب: <strong>@order.CreatedAt.ToString("yyyy/MM/dd HH:mm")</strong></span>
+                                            <span>إجمالي الكمية: <strong>@order.TotalQuantity</strong></span>
+                                        </div>
+
+                                        @if (order.IsHistorical)
+                                        {
+                                            <div class="my-orders-message my-orders-history-note">
+                                                بعض تفاصيل هذه الطلبية لم تعد متوفرة لأنها طلبية قديمة.
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @if (order.Items.Count > 0)
+                                            {
+                                                <div class="my-order-items">
+                                                    @foreach (var item in order.Items)
+                                                    {
+                                                        <div class="my-order-item">
+                                                            @if (!string.IsNullOrWhiteSpace(item.ProductImageUrl))
+                                                            {
+                                                                <img src="@item.ProductImageUrl" alt="@item.ProductName" loading="lazy" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="my-order-image-placeholder" aria-hidden="true">صورة</div>
+                                                            }
+                                                            <div class="my-order-item-details">
+                                                                <strong>@item.ProductName</strong>
+                                                                <span>المقاس: @item.Size</span>
+                                                                <span>الكمية: @item.Quantity × ₪@item.UnitPrice.ToString("N2")</span>
+                                                            </div>
+                                                            <strong class="my-order-item-total">₪@item.TotalPrice.ToString("N2")</strong>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+
+                                            @if (HasAddress(order))
+                                            {
+                                                <div class="my-order-address">
+                                                    <span class="my-order-label">عنوان التوصيل</span>
+                                                    <strong>@AddressText(order)</strong>
+                                                </div>
+                                            }
+                                        }
+
+                                        <div class="my-order-totals">
+                                            @if (order.OriginalTotal.HasValue)
+                                            {
+                                                <span>السعر الأصلي <strong>₪@order.OriginalTotal.Value.ToString("N2")</strong></span>
+                                            }
+                                            @if (order.DiscountAmount.HasValue)
+                                            {
+                                                <span>التخفيض <strong>-₪@order.DiscountAmount.Value.ToString("N2")</strong></span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(order.DiscountName))
+                                            {
+                                                <span>اسم التخفيض <strong>@order.DiscountName</strong></span>
+                                            }
+                                            <span class="my-order-final">السعر النهائي <strong>₪@order.FinalTotal.ToString("N2")</strong></span>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
+                        break;
+                }
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsSandbox { get; set; }
+
+    private static readonly JsonSerializerOptions CacheJsonOptions = new(JsonSerializerDefaults.Web);
+    private MyOrdersState state = MyOrdersState.EnterPhone;
+    private bool isOpen;
+    private bool initialized;
+    private bool interactionReady;
+    private bool isBusy;
+    private bool disposed;
+    private int operationVersion;
+    private string phoneInput = string.Empty;
+    private string normalizedPhone = string.Empty;
+    private string customerName = string.Empty;
+    private string errorMessage = string.Empty;
+    private string loadingMessage = "جاري تحديث الطلبات...";
+    private string adminToken = string.Empty;
+    private IReadOnlyList<CustomerOrderSummary> orders = [];
+
+    private string ModeName => IsSandbox ? "sandbox" : "customer";
+    private string CacheKey => IsSandbox
+        ? "larafashion.my-orders.sandbox.v1"
+        : "larafashion.my-orders.customer.v1";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || initialized)
+            return;
+
+        initialized = true;
+
+        if (IsSandbox)
+        {
+            adminToken = await BrowserStorageService.GetItemAsync("admin_token") ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(adminToken) || !AdminAuthService.IsTokenValid(adminToken))
+                return;
+        }
+
+        interactionReady = true;
+        await InitializeFromCacheAsync();
+        await SafeStateHasChangedAsync();
+    }
+
+    private void OpenModal()
+    {
+        if (interactionReady)
+            isOpen = true;
+    }
+
+    private void CloseModal() => isOpen = false;
+
+    private async Task InitializeFromCacheAsync()
+    {
+        try
+        {
+            var json = await BrowserStorageService.GetItemAsync(CacheKey);
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            var cache = JsonSerializer.Deserialize<MyOrdersCacheEntry>(json, CacheJsonOptions);
+            var now = DateTime.UtcNow;
+            var normalizedCachedPhone = PhoneNumberNormalizer.Normalize(cache?.NormalizedPhone);
+            if (cache is null ||
+                !cache.Verified ||
+                !string.Equals(cache.Mode, ModeName, StringComparison.Ordinal) ||
+                cache.ExpiresAtUtc <= now ||
+                normalizedCachedPhone is null ||
+                normalizedCachedPhone != cache.NormalizedPhone)
+            {
+                await BrowserStorageService.RemoveItemAsync(CacheKey);
+                ResetToPhoneEntry();
+                await SafeStateHasChangedAsync();
+                return;
+            }
+
+            normalizedPhone = cache.NormalizedPhone;
+            phoneInput = cache.NormalizedPhone;
+            customerName = cache.CustomerName;
+            loadingMessage = "جاري تحديث طلباتك...";
+            state = MyOrdersState.LoadingOrders;
+            await SafeStateHasChangedAsync();
+            await LoadOrdersAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not initialize the {Mode} my-orders cache.", ModeName);
+            await RemoveCacheSafelyAsync();
+            ResetToPhoneEntry();
+            await SafeStateHasChangedAsync();
+        }
+    }
+
+    private async Task LookupIdentityAsync()
+    {
+        if (isBusy)
+            return;
+
+        errorMessage = string.Empty;
+        var trimmedPhone = phoneInput.Trim();
+        var normalized = PhoneNumberNormalizer.Normalize(trimmedPhone);
+        if (normalized is null)
+        {
+            errorMessage = "أدخل رقم هاتف صالحًا ثم حاول مرة أخرى.";
+            return;
+        }
+
+        var version = ++operationVersion;
+        isBusy = true;
+        loadingMessage = "جاري التحقق من رقم الهاتف...";
+        state = MyOrdersState.LoadingOrders;
+        await SafeStateHasChangedAsync();
+
+        try
+        {
+            var result = await OrderService.LookupCustomerOrderIdentityAsync(trimmedPhone, IsSandbox, adminToken);
+            if (!CanApply(version))
+                return;
+
+            if (!result.HasOrders || string.IsNullOrWhiteSpace(result.CustomerName) || string.IsNullOrWhiteSpace(result.NormalizedPhone))
+            {
+                normalizedPhone = string.Empty;
+                customerName = string.Empty;
+                errorMessage = "لم نجد طلبيات مسجلة بهذا الرقم. تأكد من رقم الهاتف وحاول مرة أخرى.";
+                state = MyOrdersState.EnterPhone;
+                return;
+            }
+
+            normalizedPhone = result.NormalizedPhone;
+            phoneInput = trimmedPhone;
+            customerName = result.CustomerName;
+            state = MyOrdersState.ConfirmIdentity;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Customer order identity lookup failed in {Mode} mode.", ModeName);
+            if (CanApply(version))
+            {
+                errorMessage = "تعذر التحقق من رقم الهاتف حاليًا. تحقق من الاتصال وحاول مرة أخرى.";
+                state = MyOrdersState.EnterPhone;
+            }
+        }
+        finally
+        {
+            if (version == operationVersion)
+                isBusy = false;
+        }
+    }
+
+    private async Task ConfirmIdentityAsync()
+    {
+        if (isBusy || string.IsNullOrWhiteSpace(normalizedPhone))
+            return;
+
+        loadingMessage = "جاري تحميل طلباتك...";
+        state = MyOrdersState.LoadingOrders;
+        await LoadOrdersAsync();
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        if (isBusy || string.IsNullOrWhiteSpace(normalizedPhone))
+            return;
+
+        var version = ++operationVersion;
+        isBusy = true;
+        errorMessage = string.Empty;
+        await SafeStateHasChangedAsync();
+
+        try
+        {
+            var result = await OrderService.GetCustomerOrdersByPhoneAsync(normalizedPhone, IsSandbox, adminToken);
+            if (!CanApply(version))
+                return;
+
+            if (result.Orders.Count == 0)
+            {
+                await RemoveCacheSafelyAsync();
+                ResetToPhoneEntry();
+                errorMessage = "لم نجد طلبيات مسجلة بهذا الرقم. تأكد من رقم الهاتف وحاول مرة أخرى.";
+                return;
+            }
+
+            normalizedPhone = result.NormalizedPhone;
+            customerName = result.CustomerName;
+            orders = result.Orders;
+            var now = DateTime.UtcNow;
+            var cache = new MyOrdersCacheEntry
+            {
+                Mode = ModeName,
+                Verified = true,
+                NormalizedPhone = normalizedPhone,
+                CustomerName = customerName,
+                Orders = orders,
+                LastSyncedAtUtc = now,
+                ExpiresAtUtc = now.AddHours(1)
+            };
+            try
+            {
+                await BrowserStorageService.SetItemAsync(CacheKey, JsonSerializer.Serialize(cache, CacheJsonOptions));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Could not persist the refreshed {Mode} my-orders cache.", ModeName);
+            }
+
+            if (CanApply(version))
+                state = MyOrdersState.Orders;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Customer orders synchronization failed in {Mode} mode.", ModeName);
+            if (CanApply(version))
+            {
+                orders = [];
+                errorMessage = "تعذر تحديث الطلبات حاليًا. تحقق من الاتصال وحاول مرة أخرى.";
+                state = MyOrdersState.Error;
+            }
+        }
+        finally
+        {
+            if (version == operationVersion)
+                isBusy = false;
+        }
+    }
+
+    private async Task RetrySyncAsync()
+    {
+        if (isBusy)
+            return;
+
+        loadingMessage = "جاري تحديث طلباتك...";
+        state = MyOrdersState.LoadingOrders;
+        await LoadOrdersAsync();
+    }
+
+    private async Task RejectIdentityAsync()
+    {
+        ++operationVersion;
+        await RemoveCacheSafelyAsync();
+        ResetToPhoneEntry();
+    }
+
+    private async Task ChangePhoneAsync()
+    {
+        ++operationVersion;
+        await RemoveCacheSafelyAsync();
+        ResetToPhoneEntry();
+    }
+
+    private void ResetToPhoneEntry()
+    {
+        isBusy = false;
+        phoneInput = string.Empty;
+        normalizedPhone = string.Empty;
+        customerName = string.Empty;
+        orders = [];
+        errorMessage = string.Empty;
+        loadingMessage = "جاري تحديث الطلبات...";
+        state = MyOrdersState.EnterPhone;
+    }
+
+    private async Task RemoveCacheSafelyAsync()
+    {
+        try
+        {
+            await BrowserStorageService.RemoveItemAsync(CacheKey);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not remove the {Mode} my-orders cache.", ModeName);
+        }
+    }
+
+    private bool CanApply(int version) => !disposed && version == operationVersion;
+
+    private async Task SafeStateHasChangedAsync()
+    {
+        if (!disposed)
+            await InvokeAsync(StateHasChanged);
+    }
+
+    private static bool HasAddress(CustomerOrderSummary order) =>
+        !string.IsNullOrWhiteSpace(order.City) ||
+        !string.IsNullOrWhiteSpace(order.Street) ||
+        !string.IsNullOrWhiteSpace(order.HouseNumber);
+
+    private static string AddressText(CustomerOrderSummary order) =>
+        string.Join("، ", new[] { order.City, order.Street, order.HouseNumber }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+    private static string OrdersCountText(int count) => count switch
+    {
+        1 => "طلبية واحدة",
+        2 => "طلبيتان",
+        _ => $"{count} طلبيات"
+    };
+
+    private static string StatusText(OrderStatus status) => status switch
+    {
+        OrderStatus.New => "جديد",
+        OrderStatus.Preparing => "قيد التحضير",
+        OrderStatus.Ready => "جاهز",
+        OrderStatus.Shipped => "تم الإرسال",
+        OrderStatus.Cancelled => "ملغاة",
+        _ => status.ToString()
+    };
+
+    private static string StatusCss(OrderStatus status) => status switch
+    {
+        OrderStatus.New => "my-order-status-new",
+        OrderStatus.Preparing => "my-order-status-preparing",
+        OrderStatus.Ready => "my-order-status-ready",
+        OrderStatus.Shipped => "my-order-status-shipped",
+        OrderStatus.Cancelled => "my-order-status-cancelled",
+        _ => string.Empty
+    };
+
+    public void Dispose()
+    {
+        disposed = true;
+        ++operationVersion;
+    }
+
+    private enum MyOrdersState
+    {
+        EnterPhone,
+        ConfirmIdentity,
+        LoadingOrders,
+        Orders,
+        Error
+    }
+}

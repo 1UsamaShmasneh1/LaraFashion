@@ -202,6 +202,110 @@ public class OrderService
         return new([], null, history);
     }
 
+    public async Task<CustomerOrderIdentityResult> LookupCustomerOrderIdentityAsync(
+        string phoneNumber,
+        bool includeSandbox,
+        string? adminToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (includeSandbox)
+            EnsureAdmin(adminToken ?? string.Empty);
+
+        var normalized = PhoneNumberNormalizer.Normalize(phoneNumber);
+        if (normalized is null)
+            return new(false, string.Empty, null);
+
+        var orderCandidates = await _db.Orders.AsNoTracking()
+            .Where(x => includeSandbox || !x.IsSandbox)
+            .Select(x => new
+            {
+                x.Customer.PhoneNumber,
+                x.Customer.FullName,
+                x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var historyCandidates = await _db.SalesHistory.AsNoTracking()
+            .Select(x => new
+            {
+                x.PhoneNumber,
+                x.CustomerName,
+                x.CreatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var latestOrderIdentity = orderCandidates
+            .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
+            .Select(x => new CustomerIdentityCandidate(x.FullName, x.CreatedAt))
+            .Concat(historyCandidates
+                .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
+                .Select(x => new CustomerIdentityCandidate(
+                    x.CustomerName,
+                    ReportsService.ToJerusalem(x.CreatedAtUtc))))
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefault();
+
+        return latestOrderIdentity is null
+            ? new(false, string.Empty, normalized)
+            : new(true, latestOrderIdentity.CustomerName, normalized);
+    }
+
+    public async Task<CustomerOrdersResult> GetCustomerOrdersByPhoneAsync(
+        string phoneNumber,
+        bool includeSandbox,
+        string? adminToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (includeSandbox)
+            EnsureAdmin(adminToken ?? string.Empty);
+
+        var normalized = PhoneNumberNormalizer.Normalize(phoneNumber)
+            ?? throw new ArgumentException("رقم الهاتف غير صالح.", nameof(phoneNumber));
+
+        var phoneCandidates = await _db.Orders.AsNoTracking()
+            .Where(x => includeSandbox || !x.IsSandbox)
+            .Select(x => new { x.Id, x.Customer.PhoneNumber })
+            .ToListAsync(cancellationToken);
+        var matchingOrderIds = phoneCandidates
+            .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
+            .Select(x => x.Id)
+            .ToList();
+
+        var liveOrders = matchingOrderIds.Count == 0
+            ? []
+            : await _db.Orders.AsNoTracking()
+                .AsSplitQuery()
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                .Where(x => matchingOrderIds.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+
+        var historyPhoneCandidates = await _db.SalesHistory.AsNoTracking()
+            .Select(x => new { x.Id, x.PhoneNumber })
+            .ToListAsync(cancellationToken);
+        var matchingHistoryIds = historyPhoneCandidates
+            .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
+            .Select(x => x.Id)
+            .ToList();
+        var histories = matchingHistoryIds.Count == 0
+            ? []
+            : await _db.SalesHistory.AsNoTracking()
+                .Where(x => matchingHistoryIds.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+
+        var liveOrderIds = liveOrders.Select(x => x.Id).ToHashSet();
+        var orders = liveOrders
+            .Select(ToCustomerOrderSummary)
+            .Concat(histories
+                .Where(x => !x.OriginalOrderId.HasValue || !liveOrderIds.Contains(x.OriginalOrderId.Value))
+                .Select(ToHistoricalCustomerOrderSummary))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        var customerName = orders.FirstOrDefault()?.CustomerName ?? string.Empty;
+        return new(customerName, normalized, orders);
+    }
+
     public async Task UpdateStatusAsync(Guid orderId, OrderStatus status)
     {
         var order = await _db.Orders
@@ -460,4 +564,52 @@ public class OrderService
     {
         return $"LF-{DateTime.Now:yyyyMMddHHmmss}";
     }
+
+    private static CustomerOrderSummary ToCustomerOrderSummary(Order order)
+    {
+        var hasDiscount = order.DiscountAmount > 0 || !string.IsNullOrWhiteSpace(order.DiscountName);
+        return new CustomerOrderSummary
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            CustomerName = order.Customer.FullName,
+            CreatedAt = order.CreatedAt,
+            Status = order.Status,
+            FinalTotal = order.FinalTotal > 0 ? order.FinalTotal : order.TotalPrice,
+            OriginalTotal = hasDiscount ? order.OriginalTotal : null,
+            DiscountAmount = order.DiscountAmount > 0 ? order.DiscountAmount : null,
+            DiscountName = string.IsNullOrWhiteSpace(order.DiscountName) ? null : order.DiscountName,
+            City = order.Customer.City,
+            Street = order.Customer.Street,
+            HouseNumber = order.Customer.HouseNumber,
+            IsSandbox = order.IsSandbox,
+            TotalQuantity = order.Items.Sum(x => x.Quantity),
+            Items = order.Items.Select(x => new CustomerOrderItemSummary
+            {
+                ProductName = x.ProductName,
+                ProductImageUrl = x.ProductImageUrl,
+                Size = x.Size,
+                Quantity = x.Quantity,
+                UnitPrice = x.UnitPrice,
+                TotalPrice = x.TotalPrice
+            }).ToList()
+        };
+    }
+
+    private static CustomerOrderSummary ToHistoricalCustomerOrderSummary(SalesHistory history)
+    {
+        return new CustomerOrderSummary
+        {
+            OrderId = history.OriginalOrderId,
+            OrderNumber = history.OrderNumber,
+            CustomerName = history.CustomerName,
+            CreatedAt = ReportsService.ToJerusalem(history.CreatedAtUtc),
+            Status = history.LastStatus,
+            FinalTotal = history.FinalTotal,
+            IsHistorical = true,
+            TotalQuantity = history.TotalQuantity
+        };
+    }
+
+    private sealed record CustomerIdentityCandidate(string CustomerName, DateTime CreatedAt);
 }

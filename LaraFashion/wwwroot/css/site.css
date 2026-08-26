@@ -2301,7 +2301,7 @@ button.lf-delete-order-btn {
 
 .store-actions a,
 .store-actions .cart-button,
-.store-actions button,
+.store-actions > button,
 a.whatsapp-button,
 a.instagram-button {
     display: inline-flex !important;
@@ -2420,7 +2420,7 @@ a.instagram-button {
 
     .store-actions a,
     .store-actions .cart-button,
-    .store-actions button,
+    .store-actions > button,
     a.whatsapp-button,
     a.instagram-button {
         min-width: 92px !important;

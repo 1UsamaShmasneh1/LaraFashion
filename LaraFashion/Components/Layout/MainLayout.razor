@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using LaraFashion.Components.Cart
 @using LaraFashion.Components.Chat
+@using LaraFashion.Components.Orders
 @using LaraFashion.Services
 @implements IDisposable
 @inject NavigationManager Navigation
@@ -29,6 +30,11 @@
 
             <CartButton />
 
+            @if (showMyOrders)
+            {
+                <MyOrdersButton @key="myOrdersModeKey" IsSandbox="isSandbox" />
+            }
+
             <a class="whatsapp-button" href="https://wa.me/972536208730" target="_blank">
                 WhatsApp
             </a>
@@ -54,6 +60,9 @@
 
 @code {
     private bool showChat;
+    private bool showMyOrders;
+    private bool isSandbox;
+    private string myOrdersModeKey = "customer";
     private StoreChatMode chatMode = StoreChatMode.Customer;
     private long navigationVersion;
     private bool disposed;
@@ -84,6 +93,10 @@
         var isSandbox = path.Equals("/admin/sandbox", StringComparison.OrdinalIgnoreCase);
         var isAdminPage = path.Equals("/admin", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase);
+
+        this.isSandbox = isSandbox;
+        showMyOrders = !isAdminPage || isSandbox;
+        myOrdersModeKey = isSandbox ? "sandbox" : "customer";
 
         if (isSandbox)
         {
