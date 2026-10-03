@@ -213,6 +213,8 @@ else
 
             <h2>@selectedOrder.OrderNumber</h2>
 
+            <button type="button" class="continue-shopping-button" @onclick="OpenNumberEditor">تعديل رقم الطلب</button>
+
             <div class="lf-order-status-card" dir="rtl" style="padding:22px;border-radius:26px;background:linear-gradient(135deg,#ffffff,#f8fafc);border:1px solid #e2e8f0;box-shadow:0 14px 34px rgba(15,23,42,.10);margin:18px 0 24px;display:flex;flex-direction:column;gap:16px;">
                 <div class="lf-order-status-top" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
                     <div class="lf-order-status-title" style="display:flex;flex-direction:column;gap:8px;text-align:right;color:#334155;font-weight:950;">
@@ -312,6 +314,33 @@ else
     </div>
 }
 
+@if (IsNumberEditorOpen && selectedOrder is not null)
+{
+    <div class="modal-overlay lf-orders-confirm-overlay">
+        <div class="lf-orders-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="number-edit-title" dir="rtl">
+            <h2 id="number-edit-title">تعديل رقم الطلب</h2>
+            <p>سيتم تعديل رقم الطلب الظاهر فقط، دون تغيير بيانات الطلب أو محتوياته</p>
+            <p>رقم الطلب الحالي: <strong dir="ltr">@OriginalOrderNumber</strong></p>
+            @if (!string.IsNullOrWhiteSpace(NumberEditError))
+            {
+                <div class="checkout-error">@NumberEditError</div>
+            }
+            <div class="form-group">
+                <label for="new-order-number">الرقم الجديد</label>
+                <input id="new-order-number" dir="ltr" maxlength="64" disabled="@IsSavingNumber" @bind="NewOrderNumber" />
+            </div>
+            <div class="form-group">
+                <label for="number-edit-reason">سبب التعديل</label>
+                <input id="number-edit-reason" maxlength="500" disabled="@IsSavingNumber" @bind="NumberEditReason" />
+            </div>
+            <div class="lf-orders-confirm-actions">
+                <button type="button" class="lf-orders-confirm-button" disabled="@IsSavingNumber" @onclick="SaveOrderNumber">حفظ</button>
+                <button type="button" disabled="@IsSavingNumber" @onclick="CancelNumberEditor">إلغاء</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private const string ViewModeStorageKey = "larafashion.admin.orders.viewMode";
     private bool IsCheckingAuth = true;
@@ -320,6 +349,13 @@ else
     private string ErrorMessage = string.Empty;
     private string SuccessMessage = string.Empty;
     private string adminToken = string.Empty;
+    private bool IsNumberEditorOpen;
+    private bool IsSavingNumber;
+    private string NewOrderNumber = string.Empty;
+    private string NumberEditReason = string.Empty;
+    private string NumberEditError = string.Empty;
+    private string OriginalOrderNumber = string.Empty;
+    private int ExpectedNumberRevision;
 
     private List<Order> orders = new();
     private List<Order> displayedOrders = new();
@@ -354,7 +390,42 @@ else
 
     private void CloseModal()
     {
+        if (IsSavingNumber) return;
+        IsNumberEditorOpen = false;
         selectedOrder = null;
+    }
+
+    private void OpenNumberEditor()
+    {
+        if (selectedOrder is null) return;
+        OriginalOrderNumber = selectedOrder.OrderNumber;
+        NewOrderNumber = selectedOrder.OrderNumber;
+        ExpectedNumberRevision = selectedOrder.NumberRevision;
+        NumberEditReason = NumberEditError = string.Empty;
+        IsNumberEditorOpen = true;
+    }
+
+    private void CancelNumberEditor()
+    {
+        if (!IsSavingNumber) IsNumberEditorOpen = false;
+    }
+
+    private async Task SaveOrderNumber()
+    {
+        if (selectedOrder is null || IsSavingNumber) return;
+        IsSavingNumber = true;
+        NumberEditError = string.Empty;
+        try
+        {
+            var id = selectedOrder.Id;
+            var changed = await OrderService.EditOrderNumberAsync(id, NewOrderNumber, ExpectedNumberRevision, NumberEditReason, adminToken);
+            await LoadOrdersAsync();
+            selectedOrder = await OrderService.GetOrderAsync(id);
+            IsNumberEditorOpen = false;
+            SuccessMessage = changed ? "تم تعديل رقم الطلب الظاهر وحفظ سجل التدقيق." : "رقم الطلب لم يتغير.";
+        }
+        catch (Exception ex) { NumberEditError = ex.Message; }
+        finally { IsSavingNumber = false; }
     }
 
     private void OnSelectedStatusChanged(ChangeEventArgs e)

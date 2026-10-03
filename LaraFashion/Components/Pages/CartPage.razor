@@ -11,6 +11,7 @@
 @inject LaraFashion.Services.BrowserStorageService BrowserStorageService
 
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <h1 class="cart-page-title">
 
@@ -188,6 +189,7 @@ else
 }
 
 <CheckoutModal IsOpen="IsCheckoutOpen"
+                SubmissionError="@ErrorMessage"
                 OnClose="CloseCheckout"
                 OnConfirm="ConfirmOrder" />
 
@@ -197,6 +199,7 @@ else
         <div class="success-modal">
 
             <h2 dir="rtl">تم إرسال الطلب بنجاح</h2>
+            <p dir="rtl">رقم الطلب: <strong dir="ltr">@SuccessfulOrderNumber</strong></p>
 
             <button class="checkout-button"
                     @onclick="CloseSuccess">
@@ -212,6 +215,34 @@ else
     private bool IsCheckoutOpen;
     private bool IsSubmittingOrder;
     private string ErrorMessage = string.Empty;
+    private string SuccessfulOrderNumber = string.Empty;
+    private const string AttemptStorageKey = "larafashion.checkout.attempt";
+    private sealed record PendingCheckout(Guid Id, string CartHash);
+
+    private string CartHash() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(CartService.Items
+            .OrderBy(x => x.ProductId).ThenBy(x => x.Size).Select(x => new { x.ProductId, x.Size, x.Quantity })))));
+
+    private async Task<PendingCheckout?> ReadPendingCheckout()
+    {
+        var json = await JS.InvokeAsync<string?>("sessionStorage.getItem", AttemptStorageKey);
+        try { return json is null ? null : System.Text.Json.JsonSerializer.Deserialize<PendingCheckout>(json); }
+        catch (System.Text.Json.JsonException) { return null; }
+    }
+
+    private async Task<bool> RecoverCheckout()
+    {
+        var pending = await ReadPendingCheckout();
+        if (pending is null) return false;
+        var receipt = await OrderService.GetCheckoutReceiptAsync(pending.Id);
+        if (receipt is null) return false;
+        if (pending.CartHash == CartHash()) CartService.Clear();
+        SuccessfulOrderNumber = receipt.OrderNumber;
+        IsCheckoutOpen = false;
+        IsOrderSuccess = true;
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", AttemptStorageKey);
+        return true;
+    }
 
     private void Remove(LaraFashion.Models.CartItem item)
     {
@@ -236,6 +267,7 @@ else
     private async Task OpenCheckout()
     {
         ErrorMessage = string.Empty;
+        if (await RecoverCheckout()) return;
         await RefreshCartQuantitiesAsync();
 
         if (!CartService.Items.Any())
@@ -277,6 +309,7 @@ else
         {
             IsSubmittingOrder = true;
             ErrorMessage = string.Empty;
+            if (await RecoverCheckout()) return;
 
             await RefreshCartQuantitiesAsync();
 
@@ -288,18 +321,24 @@ else
             }
 
             var discountResult = CartService.CalculateBestDiscount();
+            var pending = await ReadPendingCheckout() ?? new PendingCheckout(Guid.NewGuid(), CartHash());
+            pending = pending with { CartHash = CartHash() };
+            await JS.InvokeVoidAsync("sessionStorage.setItem", AttemptStorageKey, System.Text.Json.JsonSerializer.Serialize(pending));
 
-            await OrderService.CreateOrderAsync(
+            var savedOrder = await OrderService.CreateOrderAsync(
                 customer,
                 CartService.Items.ToList(),
                 discountResult,
-                await IsAdminSessionValidAsync());
+                await IsAdminSessionValidAsync(),
+                pending.Id);
 
             IsCheckoutOpen = false;
 
             CartService.Clear();
 
+            SuccessfulOrderNumber = savedOrder.OrderNumber;
             IsOrderSuccess = true;
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", AttemptStorageKey);
         }
         catch (InvalidOperationException ex)
         {

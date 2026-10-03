@@ -703,6 +703,7 @@ else
             ImageUrl = product.ImageUrl,
             IsActive = product.IsActive,
             IsPublished = product.IsPublished,
+            InventorySnapshot = product.Sizes.ToDictionary(x => x.Id, x => x.Quantity),
             Sizes = product.Sizes.Select(x => new ProductSize
             {
                 Id = x.Id,

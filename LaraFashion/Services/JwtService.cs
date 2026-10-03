@@ -47,9 +47,12 @@ public class JwtService
     }
 
     public bool ValidateAdminToken(string token)
+        => GetAdminIdentity(token) is not null;
+
+    public string? GetAdminIdentity(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
-            return false;
+            return null;
 
         var jwtSettings = _configuration.GetSection("JwtSettings");
 
@@ -61,7 +64,7 @@ public class JwtService
 
         try
         {
-            tokenHandler.ValidateToken(
+            var principal = tokenHandler.ValidateToken(
                 token,
                 new TokenValidationParameters
                 {
@@ -77,11 +80,11 @@ public class JwtService
                 },
                 out _);
 
-            return true;
+            return principal.IsInRole("Admin") ? principal.Identity?.Name : null;
         }
         catch
         {
-            return false;
+            return null;
         }
     }
 }

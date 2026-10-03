@@ -23,16 +23,19 @@ public class ProductService
 {
     private readonly AppDbContext _db;
     private readonly AppStoragePaths _storagePaths;
+    private readonly IDbContextFactory<AppDbContext> _factory;
 
-    public ProductService(AppDbContext db, AppStoragePaths storagePaths)
+    public ProductService(AppDbContext db, AppStoragePaths storagePaths, IDbContextFactory<AppDbContext> factory)
     {
         _db = db;
         _storagePaths = storagePaths;
+        _factory = factory;
     }
 
     public async Task<List<Product>> GetActiveProductsAsync(Guid? categoryId = null, string? size = null)
     {
-        var query = _db.Products
+        await using var db = await _factory.CreateDbContextAsync();
+        var query = db.Products
             .AsNoTracking()
             .AsSplitQuery()
             .Include(x => x.Sizes)
@@ -41,7 +44,7 @@ public class ProductService
                 .ThenInclude(x => x.Discount)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
-            .Where(x => x.IsActive && x.IsPublished && x.Sizes.Any(s => s.Quantity > 0));
+            .Where(x => x.IsActive && x.IsPublished && x.Sizes.Any(s => s.Quantity > 0 && s.SizeName.Trim() != ""));
 
         if (categoryId.HasValue && categoryId.Value != Guid.Empty)
         {
@@ -155,7 +158,8 @@ public class ProductService
 
     public async Task<Product?> GetProductAsync(Guid id, bool includeUnpublished = false)
     {
-        var query = _db.Products
+        await using var db = await _factory.CreateDbContextAsync();
+        var query = db.Products
             .AsNoTracking()
             .AsSplitQuery()
             .Include(x => x.Sizes)
@@ -281,81 +285,58 @@ public class ProductService
         if (string.IsNullOrWhiteSpace(product.Name))
             throw new InvalidOperationException("اسم المنتج مطلوب.");
 
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-
-        var exists = await _db.Products.AnyAsync(x => x.Id == product.Id);
-        var removedImageUrls = new List<string>();
-
-        if (!exists)
+        var removedImageUrls = await SqliteWork.WriteAsync(_factory, async db =>
         {
-            if (mustExist)
-                throw new InvalidOperationException("المنتج المطلوب تعديله غير موجود في قاعدة البيانات.");
-
-            await AddProductAsync(product);
-        }
-        else
-        {
-            removedImageUrls = await UpdateProductWithSizesCoreAsync(product);
-        }
-
-        await ReplaceProductDiscountsAsync(product.Id, discountIds);
-        await ReplaceProductCategoriesAsync(product.Id, categoryIds);
-
-        await _db.SaveChangesAsync();
-
-        await transaction.CommitAsync();
+            var removed = await UpdateProductWithSizesCoreAsync(product, db);
+            await ReplaceProductDiscountsAsync(product.Id, discountIds, db);
+            await ReplaceProductCategoriesAsync(product.Id, categoryIds, db);
+            return removed;
+        });
 
         foreach (var imageUrl in removedImageUrls)
             await DeleteImageIfUnusedAsync(imageUrl);
     }
 
-    public async Task UpdateProductAsync(Product product)
-    {
-        product.UpdatedAt = DateTime.Now;
-
-        _db.Products.Update(product);
-
-        await _db.SaveChangesAsync();
-    }
+    public Task UpdateProductAsync(Product product) => UpdateProductWithSizesAsync(product);
 
     public async Task DeleteProductAsync(Guid id)
     {
-        await DeleteProductInternalAsync(id, enforceDeleteConditions: true);
+        await DeleteProductInternalAsync(id, requireFinishedQuantities: false);
     }
 
-    private async Task DeleteProductInternalAsync(Guid id, bool enforceDeleteConditions)
+    private async Task DeleteProductInternalAsync(Guid id, bool requireFinishedQuantities)
     {
-        var product = await _db.Products
-            .AsNoTracking()
-            .Include(x => x.Sizes)
-            .Include(x => x.Images)
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        if (product is null)
-            throw new InvalidOperationException("المنتج المطلوب حذفه غير موجود في قاعدة البيانات.");
-
-        if (enforceDeleteConditions)
+        var imageUrls = await SqliteWork.WriteAsync(_factory, async db =>
         {
-            var validation = await ValidateProductCanBeDeletedAsync(
-                product,
-                requireFinishedQuantities: false);
-            if (!validation.CanDelete)
-                throw new InvalidOperationException(validation.Reason);
-        }
+            var product = await db.Products
+                .AsNoTracking()
+                .Include(x => x.Sizes)
+                .Include(x => x.Images)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-        var imageUrls = product.Images
-            .Select(x => x.ImageUrl)
-            .Append(product.ImageUrl)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            if (product is null)
+                throw new InvalidOperationException("المنتج المطلوب حذفه غير موجود في قاعدة البيانات.");
 
-        var deletedProducts = await _db.Products
-            .Where(x => x.Id == id)
-            .ExecuteDeleteAsync();
+            var imageUrls = product.Images
+                .Select(x => x.ImageUrl)
+                .Append(product.ImageUrl)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-        if (deletedProducts == 0)
-            throw new InvalidOperationException("تعذر حذف المنتج لأنه لم يعد موجودًا في قاعدة البيانات.");
+            // Recheck both policies inside the DELETE statement, using persisted inventory.
+            var deletedProducts = await db.Products
+                .Where(x => x.Id == id
+                    && (!requireFinishedQuantities || !x.Sizes.Any(s => s.Quantity > 0))
+                    && !db.Orders.Any(o => o.Status != OrderStatus.Ready && o.Status != OrderStatus.Cancelled
+                        && o.Items.Any(i => i.ProductId == x.Id)))
+                .ExecuteDeleteAsync();
+
+            if (deletedProducts == 0)
+                throw new InvalidOperationException("تعذر حذف المنتج: يوجد طلب مفتوح أو مخزون يمنع التنظيف، أو تغيرت البيانات.");
+
+            return imageUrls;
+        });
 
         foreach (var imageUrl in imageUrls)
             await DeleteImageIfUnusedAsync(imageUrl);
@@ -369,23 +350,28 @@ public class ProductService
         if (string.IsNullOrWhiteSpace(product.Name))
             throw new InvalidOperationException("اسم المنتج مطلوب.");
 
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-        var removedImageUrls = await UpdateProductWithSizesCoreAsync(product);
-        await transaction.CommitAsync();
+        var removedImageUrls = await SqliteWork.WriteAsync(_factory, db => UpdateProductWithSizesCoreAsync(product, db));
 
         foreach (var imageUrl in removedImageUrls)
             await DeleteImageIfUnusedAsync(imageUrl);
     }
 
-    private async Task<List<string>> UpdateProductWithSizesCoreAsync(Product product)
+    private async Task<List<string>> UpdateProductWithSizesCoreAsync(Product product, AppDbContext db)
     {
-        var existingProduct = await _db.Products
+        var existingProduct = await db.Products
             .Include(x => x.Sizes)
             .Include(x => x.Images)
             .FirstOrDefaultAsync(x => x.Id == product.Id);
 
         if (existingProduct is null)
-            return new();
+            throw new InvalidOperationException("المنتج المطلوب تعديله غير موجود في قاعدة البيانات.");
+
+        if (product.InventorySnapshot is null || product.InventorySnapshot.Count != existingProduct.Sizes.Count
+            || existingProduct.Sizes.Any(x => !product.InventorySnapshot.TryGetValue(x.Id, out var q) || q != x.Quantity))
+            throw new InvalidOperationException("تغير مخزون المنتج أو مقاساته منذ فتح التعديل. أعد فتح المنتج ثم احفظ.");
+        if (product.Sizes.Any(x => x.Quantity < 0 || string.IsNullOrWhiteSpace(x.SizeName))
+            || product.Sizes.Select(x => x.SizeName).Distinct().Count() != product.Sizes.Count)
+            throw new InvalidOperationException("المقاسات والكميات غير صالحة أو مكررة.");
 
         var oldImageUrls = existingProduct.Images
             .Select(x => x.ImageUrl)
@@ -406,11 +392,14 @@ public class ProductService
         existingProduct.IsActive = product.IsActive;
         existingProduct.UpdatedAt = DateTime.Now;
 
-        _db.ProductSizes.RemoveRange(existingProduct.Sizes);
-        _db.ProductImages.RemoveRange(existingProduct.Images);
+        // Preserve existing size IDs. Only explicitly removed rows are deleted.
+        var removedSizes = existingProduct.Sizes.Where(x => !product.Sizes.Any(s => s.Id == x.Id)).ToList();
+        db.ProductSizes.RemoveRange(removedSizes);
+        db.ProductImages.RemoveRange(existingProduct.Images);
 
         var newSizes = product.Sizes
             .Where(x => !string.IsNullOrWhiteSpace(x.SizeName))
+            .Where(x => !existingProduct.Sizes.Any(s => s.Id == x.Id))
             .Select(x => new ProductSize
             {
                 Id = Guid.NewGuid(),
@@ -420,7 +409,13 @@ public class ProductService
             })
             .ToList();
 
-        await _db.ProductSizes.AddRangeAsync(newSizes);
+        foreach (var size in existingProduct.Sizes.Except(removedSizes))
+        {
+            var edited = product.Sizes.Single(x => x.Id == size.Id);
+            size.SizeName = edited.SizeName;
+            size.Quantity = edited.Quantity;
+        }
+        await db.ProductSizes.AddRangeAsync(newSizes);
 
         var newImages = product.Images.Select(x => new ProductImage
         {
@@ -431,9 +426,9 @@ public class ProductService
             IsPrimary = x.IsPrimary
         }).ToList();
 
-        await _db.ProductImages.AddRangeAsync(newImages);
+        await db.ProductImages.AddRangeAsync(newImages);
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var retainedUrls = newImages
             .Select(x => x.ImageUrl)
@@ -518,6 +513,7 @@ public class ProductService
         var result = new ProductCleanupResult();
 
         var products = await _db.Products
+            .AsNoTracking()
             .Include(x => x.Sizes)
             .Include(x => x.Images)
             .Include(x => x.ProductDiscounts)
@@ -551,7 +547,7 @@ public class ProductService
                 }
 
                 result.EligibleProducts++;
-                await DeleteProductInternalAsync(product.Id, enforceDeleteConditions: false);
+                await DeleteProductInternalAsync(product.Id, requireFinishedQuantities: true);
                 result.DeletedProducts++;
             }
             catch (Exception ex)
@@ -620,8 +616,9 @@ public class ProductService
         await _db.SaveChangesAsync();
     }
 
-    private async Task ReplaceProductDiscountsAsync(Guid productId, List<Guid> discountIds)
+    private async Task ReplaceProductDiscountsAsync(Guid productId, List<Guid> discountIds, AppDbContext? context = null)
     {
+        var db = context ?? _db;
         if (productId == Guid.Empty)
             throw new InvalidOperationException("رقم المنتج غير صالح.");
 
@@ -630,11 +627,11 @@ public class ProductService
             .Distinct()
             .ToList();
 
-        var existingLinks = await _db.ProductDiscounts
+        var existingLinks = await db.ProductDiscounts
             .Where(x => x.ProductId == productId)
             .ToListAsync();
 
-        _db.ProductDiscounts.RemoveRange(existingLinks);
+        db.ProductDiscounts.RemoveRange(existingLinks);
 
         var newLinks = discountIds.Select(discountId => new ProductDiscount
         {
@@ -642,11 +639,12 @@ public class ProductService
             DiscountId = discountId
         });
 
-        await _db.ProductDiscounts.AddRangeAsync(newLinks);
+        await db.ProductDiscounts.AddRangeAsync(newLinks);
     }
 
-    private async Task ReplaceProductCategoriesAsync(Guid productId, List<Guid> categoryIds)
+    private async Task ReplaceProductCategoriesAsync(Guid productId, List<Guid> categoryIds, AppDbContext? context = null)
     {
+        var db = context ?? _db;
         if (productId == Guid.Empty)
             throw new InvalidOperationException("رقم المنتج غير صالح.");
 
@@ -655,11 +653,11 @@ public class ProductService
             .Distinct()
             .ToList();
 
-        var existingLinks = await _db.ProductCategories
+        var existingLinks = await db.ProductCategories
             .Where(x => x.ProductId == productId)
             .ToListAsync();
 
-        _db.ProductCategories.RemoveRange(existingLinks);
+        db.ProductCategories.RemoveRange(existingLinks);
 
         var newLinks = categoryIds.Select(categoryId => new ProductCategory
         {
@@ -667,7 +665,7 @@ public class ProductService
             CategoryId = categoryId
         });
 
-        await _db.ProductCategories.AddRangeAsync(newLinks);
+        await db.ProductCategories.AddRangeAsync(newLinks);
     }
 
     public async Task UpdateProductImageAsync(Guid productId, string imageUrl)

@@ -66,6 +66,27 @@ namespace LaraFashion.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LaraFashion.Models.CheckoutAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("CheckoutAttempts");
+                });
+
             modelBuilder.Entity("LaraFashion.Models.CustomerInfo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -161,6 +182,10 @@ namespace LaraFashion.Migrations
                     b.Property<bool>("IsSandbox")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("NumberRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -220,6 +245,56 @@ namespace LaraFashion.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.OrderNumberAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdminIdentity")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ChangedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NewNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreviousNumber")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderNumberAudits");
+                });
+
+            modelBuilder.Entity("LaraFashion.Models.OrderNumberReservation", b =>
+                {
+                    b.Property<string>("Number")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Number");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderNumberReservations");
                 });
 
             modelBuilder.Entity("LaraFashion.Models.Product", b =>
@@ -339,6 +414,7 @@ namespace LaraFashion.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Quantity")
+                        .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SizeName")

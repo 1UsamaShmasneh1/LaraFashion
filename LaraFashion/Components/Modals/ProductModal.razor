@@ -384,6 +384,11 @@
             GalleryImageUrls = new();
             SelectedImageIndex = 0;
         }
+        else if (!string.IsNullOrWhiteSpace(SelectedSize))
+        {
+            SelectedSizeQuantity = Product.Sizes.FirstOrDefault(x => x.SizeName == SelectedSize)?.Quantity ?? 0;
+            Quantity = Math.Clamp(Quantity, 1, Math.Max(1, SelectedSizeQuantity));
+        }
     }
 
     private void MarkContentReady()

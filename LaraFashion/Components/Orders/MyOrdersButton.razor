@@ -236,10 +236,13 @@
         await SafeStateHasChangedAsync();
     }
 
-    private void OpenModal()
+    private async Task OpenModal()
     {
         if (interactionReady)
+        {
             isOpen = true;
+            if (!string.IsNullOrWhiteSpace(normalizedPhone)) await LoadOrdersAsync();
+        }
     }
 
     private void CloseModal() => isOpen = false;

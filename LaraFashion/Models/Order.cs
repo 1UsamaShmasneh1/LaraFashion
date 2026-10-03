@@ -8,6 +8,8 @@ public class Order
 
     public string OrderNumber { get; set; } = string.Empty;
 
+    public int NumberRevision { get; set; }
+
     public CustomerInfo Customer { get; set; } = new();
 
     public List<OrderItem> Items { get; set; } = new();

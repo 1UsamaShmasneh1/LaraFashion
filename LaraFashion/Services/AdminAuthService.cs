@@ -41,4 +41,6 @@ public class AdminAuthService
     {
         return _jwtService.ValidateAdminToken(token);
     }
+
+    public string? GetAdminIdentity(string token) => _jwtService.GetAdminIdentity(token);
 }

@@ -8,6 +8,7 @@
 @inject LaraFashion.Services.CategoryService CategoryService
 @inject LaraFashion.Services.StorefrontFilterState FilterState
 @inject IJSRuntime JS
+@inject ILogger<Home> Logger
 @implements IDisposable
 
 <div class="category-button-bar store-category-filter" dir="rtl">
@@ -70,12 +71,14 @@ else
     private List<Product> Products = new();
     private List<Category> Categories = new();
     private Guid SelectedCategoryId = Guid.Empty;
+    private readonly CancellationTokenSource refreshCancellation = new();
 
     protected override async Task OnInitializedAsync()
     {
         FilterState.Changed += OnFilterChanged;
         Categories = await CategoryService.GetActiveAsync();
         await LoadProducts();
+        _ = RefreshAvailabilityAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -83,13 +86,39 @@ else
         if (firstRender) await JS.InvokeVoidAsync("storeVisits.record");
     }
 
-    private async Task LoadProducts()
+    private async Task LoadProducts(bool quiet = false)
     {
-        IsLoading = true;
-        Products = await ProductService.GetActiveProductsAsync(
-            SelectedCategoryId == Guid.Empty ? null : SelectedCategoryId,
-            FilterState.Size);
+        if (!quiet) IsLoading = true;
+        var category = SelectedCategoryId;
+        var size = FilterState.Size;
+        var products = await ProductService.GetActiveProductsAsync(category == Guid.Empty ? null : category, size);
+        if (category == SelectedCategoryId && size == FilterState.Size && !refreshCancellation.IsCancellationRequested)
+        {
+            Products = products;
+            if (IsModalOpen)
+            {
+                var selected = products.FirstOrDefault(x => x.Id == SelectedProduct.Id)
+                    ?? await ProductService.GetProductAsync(SelectedProduct.Id);
+                if (selected is null || !selected.IsActive) IsModalOpen = false;
+                else SelectedProduct = selected;
+            }
+        }
         IsLoading = false;
+    }
+
+    private async Task RefreshAvailabilityAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(refreshCancellation.Token))
+                await InvokeAsync(async () =>
+                {
+                    try { await LoadProducts(quiet: true); StateHasChanged(); }
+                    catch { Logger.LogWarning("Could not refresh storefront availability."); }
+                });
+        }
+        catch (OperationCanceledException) { }
     }
 
     private Task ClearSizeFilter() => FilterState.ClearSizeAsync();
@@ -100,7 +129,11 @@ else
         StateHasChanged();
     });
 
-    public void Dispose() => FilterState.Changed -= OnFilterChanged;
+    public void Dispose()
+    {
+        FilterState.Changed -= OnFilterChanged;
+        refreshCancellation.Cancel();
+    }
 
     private async Task SelectStoreCategory(Guid categoryId)
     {
@@ -108,9 +141,15 @@ else
         await LoadProducts();
     }
 
-    private void OpenProduct(Product product)
+    private async Task OpenProduct(Product product)
     {
-        SelectedProduct = product;
+        var fresh = await ProductService.GetProductAsync(product.Id);
+        if (fresh is null || !fresh.IsActive || !fresh.Sizes.Any(x => x.Quantity > 0))
+        {
+            await LoadProducts();
+            return;
+        }
+        SelectedProduct = fresh;
         IsModalOpen = true;
     }
 

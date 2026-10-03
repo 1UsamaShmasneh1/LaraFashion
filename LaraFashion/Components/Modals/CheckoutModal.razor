@@ -16,10 +16,10 @@
             
                 <h2>تأكيد الطلب</h2>
 
-                @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                @if (!string.IsNullOrWhiteSpace(ErrorMessage) || !string.IsNullOrWhiteSpace(SubmissionError))
                 {
                     <div class="checkout-error">
-                        @ErrorMessage
+                        @(string.IsNullOrWhiteSpace(ErrorMessage) ? SubmissionError : ErrorMessage)
                     </div>
                 }
 
@@ -73,6 +73,7 @@
                     </button>
 
                     <button class="checkout-button"
+                            disabled="@IsSubmitting"
                             @onclick="ConfirmOrder">
                         ارسال الطلب
                     </button>
@@ -88,6 +89,7 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<CustomerInfo> OnConfirm { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string SubmissionError { get; set; } = string.Empty;
 
     private CustomerInfo Customer { get; set; } = new();
     private bool IsDeliveryConfirmed;
@@ -95,9 +97,11 @@
 
     private bool IsContentReady;
     private bool WasOpen;
+    private bool IsSubmitting;
 
     private async Task ConfirmOrder()
     {
+        if (IsSubmitting) return;
         ErrorMessage = string.Empty;
 
         if (string.IsNullOrWhiteSpace(Customer.FullName) ||
@@ -114,7 +118,9 @@
             return;
         }
 
-        await OnConfirm.InvokeAsync(Customer);
+        IsSubmitting = true;
+        try { await OnConfirm.InvokeAsync(Customer); }
+        finally { IsSubmitting = false; }
     }
 
     private async Task BackToCart()

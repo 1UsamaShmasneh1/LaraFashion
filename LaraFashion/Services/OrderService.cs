@@ -2,10 +2,14 @@ using LaraFashion.Data;
 using LaraFashion.Models;
 using LaraFashion.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace LaraFashion.Services;
 
 public sealed record BulkOrderStatusResult(int UpdatedOrders);
+public sealed record CheckoutReceipt(Guid OrderId, string OrderNumber);
 
 public sealed record PublicOrderLookupResult(IReadOnlyList<Order> OpenOrders, Order? ClosedOrder, SalesHistory? History)
 {
@@ -23,130 +27,184 @@ public sealed record OrderCleanupResult(
 
 public class OrderService
 {
-    private readonly AppDbContext _db;
     private readonly AdminAuthService _adminAuthService;
-    private readonly ILogger<OrderService> _logger;
     private readonly AppStoragePaths _storagePaths;
+    private readonly IDbContextFactory<AppDbContext> _factory;
     private static readonly SemaphoreSlim CleanupLock = new(1, 1);
 
     public OrderService(
-        AppDbContext db,
         AdminAuthService adminAuthService,
-        ILogger<OrderService> logger,
-        AppStoragePaths storagePaths)
+        AppStoragePaths storagePaths,
+        IDbContextFactory<AppDbContext> factory)
     {
-        _db = db;
         _adminAuthService = adminAuthService;
-        _logger = logger;
         _storagePaths = storagePaths;
+        _factory = factory;
     }
 
     public async Task<List<Order>> GetOrdersAsync()
     {
-        return await _db.Orders
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.Orders
+            .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Items)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
     }
 
-    public async Task<Order> CreateOrderAsync(
+    public async Task<CheckoutReceipt?> GetCheckoutReceiptAsync(Guid attemptId)
+    {
+        // The opaque per-attempt capability returns no customer or order contents.
+        await using var db = await _factory.CreateDbContextAsync();
+        var attempt = await db.CheckoutAttempts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == attemptId);
+        if (attempt is null) return null;
+        var number = await db.Orders.Where(x => x.Id == attempt.OrderId).Select(x => x.OrderNumber).SingleOrDefaultAsync()
+            ?? await db.SalesHistory.Where(x => x.OriginalOrderId == attempt.OrderId).Select(x => x.OrderNumber).SingleOrDefaultAsync()
+            ?? await db.OrderNumberAudits.Where(x => x.OrderId == attempt.OrderId).OrderByDescending(x => x.ChangedAtUtc)
+                .Select(x => x.NewNumber).FirstOrDefaultAsync()
+            ?? await db.OrderNumberReservations.Where(x => x.OrderId == attempt.OrderId).Select(x => x.Number).FirstAsync();
+        return new(attempt.OrderId, number);
+    }
+
+    public Task<Order> CreateOrderAsync(
         CustomerInfo customer,
         List<CartItem> cartItems,
         CartDiscountResult discountResult,
-        bool allowUnpublished = false)
+        bool allowUnpublished = false,
+        Guid? checkoutAttemptId = null)
     {
-        var isSandboxOrder = false;
-
-        foreach (var item in cartItems)
+        // Capture UI input before the first await; Blazor may process other events while saving.
+        customer = new CustomerInfo { FullName = customer.FullName, PhoneNumber = customer.PhoneNumber,
+            City = customer.City, Street = customer.Street, HouseNumber = customer.HouseNumber };
+        cartItems = cartItems.Select(x => new CartItem { ProductId = x.ProductId, ProductName = x.ProductName,
+            ProductSerialNumber = x.ProductSerialNumber, ProductImageUrl = x.ProductImageUrl,
+            Size = x.Size, Quantity = x.Quantity, UnitPrice = x.UnitPrice }).ToList();
+        discountResult = new CartDiscountResult { OriginalTotal = discountResult.OriginalTotal,
+            DiscountAmount = discountResult.DiscountAmount, DiscountName = discountResult.DiscountName };
+        if (cartItems.Count == 0 || cartItems.Any(x => x.Quantity <= 0 || string.IsNullOrWhiteSpace(x.Size)))
+            throw new InvalidOperationException("السلة فارغة أو تحتوي كمية أو مقاساً غير صالح.");
+        if (checkoutAttemptId == Guid.Empty) throw new InvalidOperationException("محاولة الشراء غير صالحة.");
+        var requestHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
-            var product = await _db.Products
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == item.ProductId);
-
-            if (product is null || !product.IsActive || (!product.IsPublished && !allowUnpublished))
+            customer.FullName,
+            customer.PhoneNumber,
+            customer.City,
+            customer.Street,
+            customer.HouseNumber,
+            Items = cartItems.OrderBy(x => x.ProductId).ThenBy(x => x.Size).ThenBy(x => x.Quantity).ThenBy(x => x.UnitPrice)
+                .Select(x => new { x.ProductId, x.Size, x.Quantity, x.UnitPrice }),
+            discountResult.OriginalTotal,
+            discountResult.DiscountAmount,
+            discountResult.DiscountName,
+            allowUnpublished
+        }))));
+        return SqliteWork.WriteAsync(_factory, async db =>
+        {
+            if (checkoutAttemptId.HasValue)
             {
-                throw new InvalidOperationException(
-                    $"المنتج {item.ProductName} غير متاح لإرسال الطلب.");
+                var attempt = await db.CheckoutAttempts.FindAsync(checkoutAttemptId.Value);
+                if (attempt is not null)
+                {
+                    if (attempt.RequestHash != requestHash)
+                        throw new InvalidOperationException("محاولة الشراء هذه تخص سلة أخرى. افتح محاولة جديدة بعد مراجعة الطلب السابق.");
+                    return await db.Orders.Include(x => x.Customer).Include(x => x.Items).SingleOrDefaultAsync(x => x.Id == attempt.OrderId)
+                        ?? throw new InvalidOperationException("تم إرسال هذه المحاولة سابقاً وأرشفة الطلب. راجع طلباتي؛ لن يخصم المخزون مجدداً.");
+                }
             }
-
-            isSandboxOrder |= !product.IsPublished;
-
-            var size = await _db.ProductSizes
-                .FirstOrDefaultAsync(x =>
-                    x.ProductId == item.ProductId &&
-                    x.SizeName == item.Size);
-
-            if (size is null || size.Quantity < item.Quantity)
+            var isSandboxOrder = false;
+            foreach (var group in cartItems.GroupBy(x => (x.ProductId, x.Size)))
             {
-                throw new InvalidOperationException(
-                    $"الكمية غير متوفرة للمنتج {item.ProductName}، المقاس {item.Size}.");
+                var product = await db.Products.AsNoTracking().SingleOrDefaultAsync(x => x.Id == group.Key.ProductId);
+                if (product is null || !product.IsActive || (!product.IsPublished && !allowUnpublished))
+                    throw new InvalidOperationException("أحد المنتجات لم يعد متاحاً لإرسال الطلب.");
+                isSandboxOrder |= !product.IsPublished;
+                var quantity = group.Sum(x => x.Quantity);
+                var changed = await db.ProductSizes
+                    .Where(x => x.ProductId == group.Key.ProductId && x.SizeName == group.Key.Size && x.Quantity >= quantity)
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity - quantity));
+                if (changed != 1)
+                    throw new InvalidOperationException($"الكمية غير متوفرة للمقاس {group.Key.Size}. حدّث السلة وحاول مجدداً.");
             }
-        }
-
-        var order = new Order
-        {
-            Id = Guid.NewGuid(),
-            OrderNumber = $"ORD-{DateTime.Now:yyyyMMddHHmmss}",
-            Customer = customer,
-            Status = OrderStatus.New,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now,
-            OriginalTotal = discountResult.OriginalTotal,
-            DiscountAmount = discountResult.DiscountAmount,
-            DiscountName = discountResult.DiscountName,
-            FinalTotal = discountResult.FinalTotal,
-            IsSandbox = isSandboxOrder,
-            Items = cartItems.Select(item => new OrderItem
+            var orderId = Guid.NewGuid();
+            for (var retry = 0; await db.OrderNumberReservations.AnyAsync(x => x.OrderId == orderId); retry++)
             {
-                Id = Guid.NewGuid(),
-                ProductId = item.ProductId,
-                ProductName = item.ProductName,
-                ProductSerialNumber = item.ProductSerialNumber,
-                ProductImageUrl = item.ProductImageUrl,
-                Size = item.Size,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice
-            }).ToList()
-        };
-
-        _db.Orders.Add(order);
-
-        if (!order.IsSandbox)
-        {
-            _db.SalesHistory.Add(new SalesHistory
+                if (retry == 8) throw new InvalidOperationException("تعذر تخصيص هوية الطلب. حاول مجدداً.");
+                orderId = Guid.NewGuid();
+            }
+            var number = $"ORD-{orderId:N}".ToUpperInvariant();
+            // A manual edit may have reserved a future generated number. Never overwrite it.
+            for (var retry = 0; await db.OrderNumberReservations.AnyAsync(x => x.Number == number); retry++)
             {
-                Id = Guid.NewGuid(),
-                OriginalOrderId = order.Id,
-                OrderNumber = order.OrderNumber,
-                CreatedAtUtc = order.CreatedAt.ToUniversalTime(),
-                CustomerName = customer.FullName,
-                PhoneNumber = customer.PhoneNumber,
-                TotalQuantity = cartItems.Sum(x => x.Quantity),
+                if (retry == 8) throw new InvalidOperationException("تعذر تخصيص رقم الطلب. حاول مجدداً.");
+                number = $"ORD-{Guid.NewGuid():N}".ToUpperInvariant();
+            }
+            db.OrderNumberReservations.Add(new() { Number = number, OrderId = orderId });
+            await db.SaveChangesAsync();
+            var order = new Order
+            {
+                Id = orderId,
+                OrderNumber = number,
+                Customer = new CustomerInfo
+                {
+                    Id = Guid.NewGuid(),
+                    FullName = customer.FullName,
+                    PhoneNumber = customer.PhoneNumber,
+                    City = customer.City,
+                    Street = customer.Street,
+                    HouseNumber = customer.HouseNumber
+                },
+                Status = OrderStatus.New,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                OriginalTotal = discountResult.OriginalTotal,
+                DiscountAmount = discountResult.DiscountAmount,
+                DiscountName = discountResult.DiscountName,
                 FinalTotal = discountResult.FinalTotal,
-                LastStatus = order.Status,
-                StatusUpdatedAtUtc = order.UpdatedAt.ToUniversalTime()
-            });
-        }
+                IsSandbox = isSandboxOrder,
+                Items = cartItems.Select(item => new OrderItem
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    ProductSerialNumber = item.ProductSerialNumber,
+                    ProductImageUrl = item.ProductImageUrl,
+                    Size = item.Size,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice
+                }).ToList()
+            };
 
-        foreach (var item in cartItems)
-        {
-            var size = await _db.ProductSizes
-                .FirstAsync(x =>
-                    x.ProductId == item.ProductId &&
-                    x.SizeName == item.Size);
+            db.Orders.Add(order);
 
-            size.Quantity -= item.Quantity;
-        }
+            if (!order.IsSandbox)
+            {
+                db.SalesHistory.Add(new SalesHistory
+                {
+                    Id = Guid.NewGuid(),
+                    OriginalOrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    CreatedAtUtc = order.CreatedAt.ToUniversalTime(),
+                    CustomerName = customer.FullName,
+                    PhoneNumber = customer.PhoneNumber,
+                    TotalQuantity = cartItems.Sum(x => x.Quantity),
+                    FinalTotal = discountResult.FinalTotal,
+                    LastStatus = order.Status,
+                    StatusUpdatedAtUtc = order.UpdatedAt.ToUniversalTime()
+                });
+            }
 
-        await _db.SaveChangesAsync();
-
-        return order;
+            if (checkoutAttemptId.HasValue)
+                db.CheckoutAttempts.Add(new() { Id = checkoutAttemptId.Value, OrderId = order.Id, RequestHash = requestHash });
+            return order;
+        });
     }
 
     public async Task<Order?> GetOrderAsync(Guid id)
     {
-        return await _db.Orders
+        await using var db = await _factory.CreateDbContextAsync();
+        return await db.Orders
+            .AsNoTracking()
             .Include(x => x.Customer)
             .Include(x => x.Items)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -154,11 +212,12 @@ public class OrderService
 
     public async Task<PublicOrderLookupResult> LookupPublicOrdersByPhoneAsync(string phoneNumber)
     {
+        await using var db = await _factory.CreateDbContextAsync();
         var normalized = PhoneNumberNormalizer.Normalize(phoneNumber);
         if (normalized is null)
             return new([], null, null);
 
-        var phoneCandidates = await _db.Orders.AsNoTracking()
+        var phoneCandidates = await db.Orders.AsNoTracking()
             .Where(x => !x.IsSandbox)
             .Select(x => new { x.Id, x.Customer.PhoneNumber })
             .ToListAsync();
@@ -167,7 +226,7 @@ public class OrderService
             .Select(x => x.Id)
             .ToList();
 
-        var matches = await _db.Orders.AsNoTracking()
+        var matches = await db.Orders.AsNoTracking()
             .AsSplitQuery()
             .Include(x => x.Customer)
             .Include(x => x.Items)
@@ -187,7 +246,7 @@ public class OrderService
         if (closedOrder is not null)
             return new([], closedOrder, null);
 
-        var historyCandidates = await _db.SalesHistory.AsNoTracking()
+        var historyCandidates = await db.SalesHistory.AsNoTracking()
             .Where(x => x.LastStatus == OrderStatus.Ready || x.LastStatus == OrderStatus.Cancelled)
             .Select(x => new { x.Id, x.PhoneNumber })
             .ToListAsync();
@@ -195,7 +254,7 @@ public class OrderService
             .Where(x => PhoneNumberNormalizer.Normalize(x.PhoneNumber) == normalized)
             .Select(x => x.Id)
             .ToList();
-        var history = await _db.SalesHistory.AsNoTracking()
+        var history = await db.SalesHistory.AsNoTracking()
             .Where(x => matchingHistoryIds.Contains(x.Id))
             .OrderByDescending(x => x.StatusUpdatedAtUtc)
             .FirstOrDefaultAsync();
@@ -208,6 +267,7 @@ public class OrderService
         string? adminToken = null,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await _factory.CreateDbContextAsync();
         if (includeSandbox)
             EnsureAdmin(adminToken ?? string.Empty);
 
@@ -215,7 +275,7 @@ public class OrderService
         if (normalized is null)
             return new(false, string.Empty, null);
 
-        var orderCandidates = await _db.Orders.AsNoTracking()
+        var orderCandidates = await db.Orders.AsNoTracking()
             .Where(x => includeSandbox || !x.IsSandbox)
             .Select(x => new
             {
@@ -225,7 +285,7 @@ public class OrderService
             })
             .ToListAsync(cancellationToken);
 
-        var historyCandidates = await _db.SalesHistory.AsNoTracking()
+        var historyCandidates = await db.SalesHistory.AsNoTracking()
             .Select(x => new
             {
                 x.PhoneNumber,
@@ -256,13 +316,14 @@ public class OrderService
         string? adminToken = null,
         CancellationToken cancellationToken = default)
     {
+        await using var db = await _factory.CreateDbContextAsync();
         if (includeSandbox)
             EnsureAdmin(adminToken ?? string.Empty);
 
         var normalized = PhoneNumberNormalizer.Normalize(phoneNumber)
             ?? throw new ArgumentException("رقم الهاتف غير صالح.", nameof(phoneNumber));
 
-        var phoneCandidates = await _db.Orders.AsNoTracking()
+        var phoneCandidates = await db.Orders.AsNoTracking()
             .Where(x => includeSandbox || !x.IsSandbox)
             .Select(x => new { x.Id, x.Customer.PhoneNumber })
             .ToListAsync(cancellationToken);
@@ -273,14 +334,14 @@ public class OrderService
 
         var liveOrders = matchingOrderIds.Count == 0
             ? []
-            : await _db.Orders.AsNoTracking()
+            : await db.Orders.AsNoTracking()
                 .AsSplitQuery()
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                 .Where(x => matchingOrderIds.Contains(x.Id))
                 .ToListAsync(cancellationToken);
 
-        var historyPhoneCandidates = await _db.SalesHistory.AsNoTracking()
+        var historyPhoneCandidates = await db.SalesHistory.AsNoTracking()
             .Select(x => new { x.Id, x.PhoneNumber })
             .ToListAsync(cancellationToken);
         var matchingHistoryIds = historyPhoneCandidates
@@ -289,7 +350,7 @@ public class OrderService
             .ToList();
         var histories = matchingHistoryIds.Count == 0
             ? []
-            : await _db.SalesHistory.AsNoTracking()
+            : await db.SalesHistory.AsNoTracking()
                 .Where(x => matchingHistoryIds.Contains(x.Id))
                 .ToListAsync(cancellationToken);
 
@@ -306,21 +367,8 @@ public class OrderService
         return new(customerName, normalized, orders);
     }
 
-    public async Task UpdateStatusAsync(Guid orderId, OrderStatus status)
-    {
-        var order = await _db.Orders
-            .Include(x => x.Items)
-            .FirstOrDefaultAsync(x => x.Id == orderId);
-
-        if (order is null)
-            return;
-
-        var sizes = await LoadProductSizeLookupAsync([order]);
-        var histories = await LoadHistoryLookupAsync([order]);
-        ApplyStatusChange(order, status, DateTime.Now, sizes, histories);
-
-        await _db.SaveChangesAsync();
-    }
+    public Task UpdateStatusAsync(Guid orderId, OrderStatus status) =>
+        ChangeStatusesAsync([orderId], status);
 
     public async Task<BulkOrderStatusResult> UpdateStatusesAsync(
         IEnumerable<Guid> orderIds,
@@ -333,35 +381,80 @@ public class OrderService
         if (ids.Count == 0)
             throw new InvalidOperationException("لم يتم تحديد أي طلبية.");
 
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-        try
+        return new BulkOrderStatusResult(await ChangeStatusesAsync(ids, status));
+    }
+
+    private Task<int> ChangeStatusesAsync(List<Guid> ids, OrderStatus status) =>
+        SqliteWork.WriteAsync(_factory, async db =>
         {
-            var orders = await _db.Orders
-                .Include(x => x.Items)
-                .Where(x => ids.Contains(x.Id))
-                .ToListAsync();
-
-            if (orders.Count != ids.Count)
-                throw new InvalidOperationException("تعذر العثور على إحدى الطلبيات المحددة. حدّث الصفحة وحاول مجدداً.");
-
-            var sizes = await LoadProductSizeLookupAsync(orders);
-            var histories = await LoadHistoryLookupAsync(orders);
-            var updatedAt = DateTime.Now;
-
+            if (!Enum.IsDefined(status)) throw new InvalidOperationException("حالة الطلب غير صالحة.");
+            var orders = await db.Orders.Include(x => x.Items).Where(x => ids.Contains(x.Id)).ToListAsync();
+            if (orders.Count != ids.Count) throw new InvalidOperationException("تعذر العثور على إحدى الطلبيات. حدّث الصفحة.");
+            var updated = 0;
             foreach (var order in orders)
-                ApplyStatusChange(order, status, updatedAt, sizes, histories);
+            {
+                if (order.Status == status) continue;
+                foreach (var group in order.Items.GroupBy(x => (x.ProductId, x.Size)))
+                {
+                    var quantity = group.Sum(x => x.Quantity);
+                    var sizes = db.ProductSizes.Where(x => x.ProductId == group.Key.ProductId && x.SizeName == group.Key.Size);
+                    if (order.Status != OrderStatus.Cancelled && status == OrderStatus.Cancelled)
+                        await sizes.ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity + quantity));
+                    else if (order.Status == OrderStatus.Cancelled && status != OrderStatus.Cancelled)
+                    {
+                        if (await sizes.Where(x => x.Quantity >= quantity).ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity - quantity)) != 1)
+                            throw new InvalidOperationException("لا يمكن تغيير حالة الطلبية، الكمية غير متوفرة. حدّث الصفحة.");
+                    }
+                }
+                order.Status = status;
+                order.UpdatedAt = DateTime.Now;
+                if (!order.IsSandbox)
+                    await db.SalesHistory.Where(x => x.OriginalOrderId == order.Id).ExecuteUpdateAsync(s =>
+                        s.SetProperty(x => x.LastStatus, status).SetProperty(x => x.StatusUpdatedAtUtc, order.UpdatedAt.ToUniversalTime()));
+                updated++;
+            }
+            return updated;
+        });
 
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
-            return new BulkOrderStatusResult(orders.Count);
-        }
-        catch (Exception ex)
+    public Task<bool> EditOrderNumberAsync(Guid orderId, string newNumber, int expectedRevision, string reason, string adminToken)
+    {
+        var admin = _adminAuthService.GetAdminIdentity(adminToken)
+            ?? throw new UnauthorizedAccessException("انتهت صلاحية جلسة الإدارة.");
+        var normalized = OrderNumberPolicy.Normalize(newNumber);
+        reason = (reason ?? string.Empty).Trim();
+        if (reason.Length is < 1 or > 500) throw new InvalidOperationException("سبب التعديل مطلوب، بحد أقصى 500 حرف.");
+        return SqliteWork.WriteAsync(_factory, async db =>
         {
-            await transaction.RollbackAsync();
-            _db.ChangeTracker.Clear();
-            _logger.LogError(ex, "Bulk order status update failed for {OrderCount} orders.", ids.Count);
-            throw;
-        }
+            var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == orderId)
+                ?? throw new InvalidOperationException("الطلب لم يعد موجوداً. حدّث الصفحة.");
+            if (order.NumberRevision != expectedRevision)
+                throw new InvalidOperationException("تغير رقم الطلب أثناء فتح النافذة. أغلقها وافتح الطلب مجدداً.");
+            if (OrderNumberPolicy.Normalize(order.OrderNumber) == normalized) return false;
+            var reservation = await db.OrderNumberReservations.FindAsync(normalized);
+            if (reservation is not null && reservation.OrderId != order.Id)
+                throw new InvalidOperationException("رقم الطلب محجوز لطلب آخر، حالي أو تاريخي أو تجريبي.");
+            if (reservation is null)
+            {
+                db.OrderNumberReservations.Add(new() { Number = normalized, OrderId = order.Id });
+                await db.SaveChangesAsync();
+            }
+            db.OrderNumberAudits.Add(new()
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                PreviousNumber = order.OrderNumber,
+                NewNumber = normalized,
+                AdminIdentity = admin,
+                ChangedAtUtc = DateTime.UtcNow,
+                Reason = reason
+            });
+            order.OrderNumber = normalized;
+            order.NumberRevision++;
+            // Only the display field changes. Financial snapshots and cleanup timestamps stay intact.
+            await db.SalesHistory.Where(x => x.OriginalOrderId == order.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.OrderNumber, normalized));
+            return true;
+        });
     }
 
     public async Task<OrderCleanupResult> CleanOldOrdersAsync(string adminToken)
@@ -373,51 +466,40 @@ public class OrderService
         {
             var executedAt = DateTime.Now;
             var cutoff = executedAt.AddDays(-30);
-            var eligibleQuery = _db.Orders.Where(x =>
-                x.UpdatedAt <= cutoff &&
-                (x.Status == OrderStatus.Ready || x.Status == OrderStatus.Cancelled));
-
-            var orders = await eligibleQuery
-                .Include(x => x.Customer)
-                .Include(x => x.Items)
-                .ToListAsync();
-
-            var officialCount = orders.Count(x => !x.IsSandbox);
-            var sandboxCount = orders.Count(x => x.IsSandbox);
-            var readyCount = orders.Count(x => x.Status == OrderStatus.Ready);
-            var cancelledCount = orders.Count(x => x.Status == OrderStatus.Cancelled);
-
-            if (orders.Count == 0)
+            return await SqliteWork.WriteAsync(_factory, async db =>
             {
-                return new OrderCleanupResult(0, 0, 0, 0, 0, 0, executedAt);
-            }
+                var eligibleQuery = db.Orders.Where(x =>
+                    x.UpdatedAt <= cutoff &&
+                    (x.Status == OrderStatus.Ready || x.Status == OrderStatus.Cancelled));
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
-            try
-            {
-                _db.OrderItems.RemoveRange(orders.SelectMany(x => x.Items));
-                _db.Customers.RemoveRange(orders.Select(x => x.Customer));
-                _db.Orders.RemoveRange(orders);
+                var orders = await eligibleQuery
+                    .Include(x => x.Customer)
+                    .Include(x => x.Items)
+                    .ToListAsync();
 
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _db.ChangeTracker.Clear();
-                _logger.LogError(ex, "Old order cleanup failed for {OrderCount} eligible orders.", orders.Count);
-                throw;
-            }
+                var officialCount = orders.Count(x => !x.IsSandbox);
+                var sandboxCount = orders.Count(x => x.IsSandbox);
+                var readyCount = orders.Count(x => x.Status == OrderStatus.Ready);
+                var cancelledCount = orders.Count(x => x.Status == OrderStatus.Cancelled);
 
-            return new OrderCleanupResult(
-                orders.Count,
-                orders.Count,
-                officialCount,
-                sandboxCount,
-                readyCount,
-                cancelledCount,
-                executedAt);
+                if (orders.Count == 0)
+                {
+                    return new OrderCleanupResult(0, 0, 0, 0, 0, 0, executedAt);
+                }
+
+                db.OrderItems.RemoveRange(orders.SelectMany(x => x.Items));
+                db.Customers.RemoveRange(orders.Select(x => x.Customer));
+                db.Orders.RemoveRange(orders);
+
+                return new OrderCleanupResult(
+                    orders.Count,
+                    orders.Count,
+                    officialCount,
+                    sandboxCount,
+                    readyCount,
+                    cancelledCount,
+                    executedAt);
+            });
         }
         finally
         {
@@ -427,109 +509,36 @@ public class OrderService
 
     public async Task DeleteOrderAsync(Guid orderId)
     {
-        var order = await _db.Orders
-            .Include(x => x.Customer)
-            .Include(x => x.Items)
-            .FirstOrDefaultAsync(x => x.Id == orderId);
-
-        if (order is null)
-            return;
-
-        if (order.Status != OrderStatus.Cancelled && order.Status != OrderStatus.Ready)
+        var imageUrls = await SqliteWork.WriteAsync(_factory, async db =>
         {
-            throw new InvalidOperationException("يمكن حذف الطلبية فقط إذا كانت بحالة ملغاة أو جاهز.");
-        }
+            var order = await db.Orders
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                .FirstOrDefaultAsync(x => x.Id == orderId);
 
-        var imageUrls = order.Items
-            .Select(x => x.ProductImageUrl)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .ToList();
+            if (order is null)
+                return new List<string>();
 
-        _db.OrderItems.RemoveRange(order.Items);
-        _db.Customers.Remove(order.Customer);
-        _db.Orders.Remove(order);
+            if (order.Status != OrderStatus.Cancelled && order.Status != OrderStatus.Ready)
+            {
+                throw new InvalidOperationException("يمكن حذف الطلبية فقط إذا كانت بحالة ملغاة أو جاهز.");
+            }
 
-        await _db.SaveChangesAsync();
+            var imageUrls = order.Items
+                .Select(x => x.ProductImageUrl)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
+            db.OrderItems.RemoveRange(order.Items);
+            db.Customers.Remove(order.Customer);
+            db.Orders.Remove(order);
+            return imageUrls;
+        });
 
         foreach (var imageUrl in imageUrls)
         {
             await DeleteImageIfUnusedAsync(imageUrl);
-        }
-    }
-
-    private async Task<Dictionary<(Guid ProductId, string Size), ProductSize>> LoadProductSizeLookupAsync(
-        IReadOnlyCollection<Order> orders)
-    {
-        var productIds = orders
-            .SelectMany(x => x.Items)
-            .Select(x => x.ProductId)
-            .Distinct()
-            .ToList();
-
-        if (productIds.Count == 0)
-            return new Dictionary<(Guid, string), ProductSize>();
-
-        return (await _db.ProductSizes
-                .Where(x => productIds.Contains(x.ProductId))
-                .ToListAsync())
-            .ToDictionary(x => (x.ProductId, x.SizeName));
-    }
-
-    private async Task<Dictionary<Guid, SalesHistory>> LoadHistoryLookupAsync(IReadOnlyCollection<Order> orders)
-    {
-        var orderIds = orders
-            .Where(x => !x.IsSandbox)
-            .Select(x => x.Id)
-            .ToList();
-
-        if (orderIds.Count == 0)
-            return new Dictionary<Guid, SalesHistory>();
-
-        return (await _db.SalesHistory
-                .Where(x => x.OriginalOrderId.HasValue && orderIds.Contains(x.OriginalOrderId.Value))
-                .ToListAsync())
-            .Where(x => x.OriginalOrderId.HasValue)
-            .ToDictionary(x => x.OriginalOrderId!.Value);
-    }
-
-    private static void ApplyStatusChange(
-        Order order,
-        OrderStatus status,
-        DateTime updatedAt,
-        IReadOnlyDictionary<(Guid ProductId, string Size), ProductSize> sizes,
-        IReadOnlyDictionary<Guid, SalesHistory> histories)
-    {
-        var oldStatus = order.Status;
-
-        foreach (var item in order.Items)
-        {
-            sizes.TryGetValue((item.ProductId, item.Size), out var size);
-
-            if (oldStatus != OrderStatus.Cancelled && status == OrderStatus.Cancelled)
-            {
-                if (size is not null)
-                    size.Quantity += item.Quantity;
-            }
-            else if (oldStatus == OrderStatus.Cancelled && status != OrderStatus.Cancelled)
-            {
-                if (size is null || size.Quantity < item.Quantity)
-                {
-                    throw new InvalidOperationException(
-                        $"لا يمكن تغيير حالة الطلبية، الكمية غير متوفرة للمنتج {item.ProductName}، المقاس {item.Size}.");
-                }
-
-                size.Quantity -= item.Quantity;
-            }
-        }
-
-        order.Status = status;
-        order.UpdatedAt = updatedAt;
-
-        if (!order.IsSandbox && histories.TryGetValue(order.Id, out var history))
-        {
-            history.LastStatus = status;
-            history.StatusUpdatedAtUtc = updatedAt.ToUniversalTime();
         }
     }
 
@@ -541,12 +550,13 @@ public class OrderService
 
     private async Task DeleteImageIfUnusedAsync(string? imageUrl)
     {
+        await using var db = await _factory.CreateDbContextAsync();
         if (string.IsNullOrWhiteSpace(imageUrl) || !imageUrl.StartsWith("/uploads/"))
             return;
 
-        var usedByProduct = await _db.Products.AnyAsync(x => x.ImageUrl == imageUrl);
-        var usedByProductImage = await _db.ProductImages.AnyAsync(x => x.ImageUrl == imageUrl);
-        var usedByOrder = await _db.OrderItems.AnyAsync(x => x.ProductImageUrl == imageUrl);
+        var usedByProduct = await db.Products.AnyAsync(x => x.ImageUrl == imageUrl);
+        var usedByProductImage = await db.ProductImages.AnyAsync(x => x.ImageUrl == imageUrl);
+        var usedByOrder = await db.OrderItems.AnyAsync(x => x.ProductImageUrl == imageUrl);
 
         if (usedByProduct || usedByProductImage || usedByOrder)
             return;
@@ -558,11 +568,6 @@ public class OrderService
         {
             File.Delete(filePath);
         }
-    }
-
-    private static string GenerateOrderNumber()
-    {
-        return $"LF-{DateTime.Now:yyyyMMddHHmmss}";
     }
 
     private static CustomerOrderSummary ToCustomerOrderSummary(Order order)

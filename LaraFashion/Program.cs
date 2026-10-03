@@ -34,7 +34,7 @@ var dbFolder = Path.GetDirectoryName(storagePaths.DatabasePath)
 Directory.CreateDirectory(dbFolder);
 Directory.CreateDirectory(storagePaths.UploadsPath);
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite($"Data Source={storagePaths.DatabasePath}"));
 builder.Services.AddSingleton(storagePaths);
 

@@ -36,6 +36,9 @@ public class Product
 
     public List<ProductSize> Sizes { get; set; } = new();
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public Dictionary<Guid, int>? InventorySnapshot { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public DateTime UpdatedAt { get; set; } = DateTime.Now;

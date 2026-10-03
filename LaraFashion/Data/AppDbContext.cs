@@ -34,6 +34,10 @@ public class AppDbContext : DbContext
 
     public DbSet<SalesHistory> SalesHistory => Set<SalesHistory>();
 
+    public DbSet<OrderNumberReservation> OrderNumberReservations => Set<OrderNumberReservation>();
+    public DbSet<CheckoutAttempt> CheckoutAttempts => Set<CheckoutAttempt>();
+    public DbSet<OrderNumberAudit> OrderNumberAudits => Set<OrderNumberAudit>();
+
     public DbSet<StoreVisit> StoreVisits => Set<StoreVisit>();
 
     public DbSet<StoreChatSession> StoreChatSessions => Set<StoreChatSession>();
@@ -45,6 +49,13 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<OrderNumberReservation>().HasKey(x => x.Number);
+        modelBuilder.Entity<OrderNumberReservation>().HasIndex(x => x.OrderId);
+        modelBuilder.Entity<CheckoutAttempt>().HasIndex(x => x.OrderId).IsUnique();
+        modelBuilder.Entity<OrderNumberAudit>().HasIndex(x => x.OrderId);
+        modelBuilder.Entity<Order>().Property(x => x.NumberRevision).IsConcurrencyToken();
+        modelBuilder.Entity<ProductSize>().Property(x => x.Quantity).IsConcurrencyToken();
 
         modelBuilder.Entity<ProductDiscount>()
             .HasKey(x => new { x.ProductId, x.DiscountId });
