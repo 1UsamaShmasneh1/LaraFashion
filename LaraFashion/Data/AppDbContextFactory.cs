@@ -8,7 +8,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
     public AppDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("LARAFASHION_EF_CONNECTION");
-        if (string.IsNullOrWhiteSpace(connectionString))
+        if (string.IsNullOrWhiteSpace(connectionString))//u
         {
             throw new InvalidOperationException(
                 "LARAFASHION_EF_CONNECTION must be set explicitly for EF Core design-time commands.");
