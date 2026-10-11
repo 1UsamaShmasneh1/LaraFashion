@@ -17,6 +17,7 @@ set -Eeuo pipefail
 [[ -z "${SSH_KEY+x}" ]]
 "$REAL_SSH" -G -F "$2" "$3" >"$SSH_FIXTURE/effective-config"
 printf '%s\n' "$2" >"$SSH_FIXTURE/config-path"
+cp -- "$2" "$SSH_FIXTURE/generated-config"
 identity="$(dirname -- "$2")/identity"
 [[ "$(stat -c %a -- "$identity")" == 600 ]]
 [[ "$(stat -c %a -- "$(dirname -- "$2")")" == 700 ]]
@@ -48,7 +49,10 @@ for key in ('stricthostkeychecking','batchmode','identitiesonly'):
  assert effective[key] in ('yes','true'),(key,effective[key])
 for key in ('updatehostkeys','forwardagent','forwardx11','passwordauthentication','kbdinteractiveauthentication','gssapiauthentication','hostbasedauthentication','controlmaster','permitlocalcommand'):
  if key in effective: assert effective[key] in ('no','false'),(key,effective[key])
-for key in ('identityagent','controlpath'):assert effective[key]=='none'
+assert effective['identityagent']=='none'
+# OpenSSH omits a disabled ControlPath from -G instead of printing "none".
+assert effective.get('controlpath','none')=='none'
+assert '    ControlPath none\n' in (r/'generated-config').read_text()
 assert effective['controlpersist'] in ('no','0')
 assert effective['globalknownhostsfile']=='/dev/null'
 assert effective['preferredauthentications']=='publickey'
