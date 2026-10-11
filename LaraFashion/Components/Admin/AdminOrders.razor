@@ -37,6 +37,18 @@
     <div class="lf-orders-success">@SuccessMessage</div>
 }
 
+@if (BulkReviewNeeds.Count > 0)
+{
+    <div class="checkout-error" dir="rtl">
+        <p>لم تُحدّث أي طلبية من المجموعة. هذه الطلبات تحتاج مراجعة فردية:</p>
+        @foreach (var need in BulkReviewNeeds)
+        {
+            <p><button type="button" class="continue-shopping-button" @onclick="() => OpenReviewOrder(need)">مراجعة الطلب @need.OrderNumber</button>
+                @string.Join(" ", need.Items.Where(i => i.BlockedReason is not null).Select(i => i.BlockedReason).Distinct())</p>
+        }
+    </div>
+}
+
 <div class="lf-orders-toolbar" dir="rtl">
     <div class="lf-orders-view-switch" aria-label="طريقة عرض الطلبات">
         <button type="button"
@@ -310,6 +322,27 @@ else
             }
 
             <div><strong>المجموع النهائي: ₪@selectedOrder.FinalTotal</strong></div>
+            @if (InventoryAudit.Count > 0)
+            {
+                <hr />
+                <h3>تدقيق تسويات المخزون الإدارية</h3>
+                @foreach (var audit in InventoryAudit)
+                {
+                    <div class="lf-order-status-card lf-inventory-audit" dir="rtl" @key="audit.OperationId">
+                        <p>تسوية إدارية: @GetStatusText(audit.PreviousStatus) ← @GetStatusText(audit.NewStatus)</p>
+                        <p>المدير: @audit.AdminIdentity — @audit.ExecutedAtUtc.ToString("dd/MM/yyyy HH:mm") UTC</p>
+                        <p>السبب: @audit.Reason</p>
+                        <p>العملية: <span dir="ltr">@audit.OperationId</span></p>
+                        @if (audit.PreviousOperationId.HasValue)
+                        { <p>عكس أثر العملية السابقة: <span dir="ltr">@audit.PreviousOperationId</span></p> }
+                        @foreach (var movement in audit.Movements)
+                        {
+                            <p>@movement.TargetSizeName (@ShortId(movement.TargetSizeId)): @(movement.Direction == 1 ? "إعادة" : "خصم") @movement.Quantity؛
+                                المخزون <span dir="ltr">@movement.StockBefore → @movement.StockAfter</span></p>
+                        }
+                    </div>
+                }
+            }
         </div>
     </div>
 }
@@ -341,6 +374,65 @@ else
     </div>
 }
 
+@if (ReviewNeed is not null)
+{
+    <div class="modal-overlay lf-orders-confirm-overlay">
+        <div class="order-modal lf-orders-confirm-modal lf-inventory-review" role="dialog" aria-modal="true" aria-labelledby="inventory-review-title" dir="rtl">
+            <h2 id="inventory-review-title">مراجعة مخزون الطلب القديم</h2>
+            <p>الطلب: <strong dir="ltr">@ReviewNeed.OrderNumber</strong></p>
+            <p>الحالة الحالية: @GetStatusText(ReviewNeed.CurrentStatus)؛ المطلوبة: @GetStatusText(ReviewNeed.RequestedStatus)</p>
+            <p>نوع الحركة: @(ReviewNeed.RequestedStatus == OrderStatus.Cancelled ? "إعادة مخزون" : "خصم مخزون")</p>
+            <p>هوية المقاس الأصلية لهذا السطر غير محفوظة. اختيارك يحدد مخزون المقاس الذي ستُطبق عليه هذه العملية، ولا يغيّر بيانات الشراء الأصلية.</p>
+            @if (!string.IsNullOrWhiteSpace(ReviewError))
+            { <div class="checkout-error" role="alert">@ReviewError</div> }
+            @foreach (var item in ReviewNeed.Items)
+            {
+                <div class="form-group" @key="item.OrderItemId">
+                    <p><strong>@item.ProductName</strong> — المقاس الأصلي: @item.HistoricalSize؛ الكمية: @item.Quantity</p>
+                    <p>هوية تاريخية غير معروفة — السطر @ShortId(item.OrderItemId)</p>
+                    @if (item.BlockedReason is not null)
+                    { <div class="checkout-error">@item.BlockedReason</div> }
+                    else
+                    {
+                        <label for="review-size-@item.OrderItemId">مقصد الحركة لهذا السطر</label>
+                        <select id="review-size-@item.OrderItemId" class="lf-modern-select" disabled="@IsReviewWorking"
+                                value="@ReviewChoices.GetValueOrDefault(item.OrderItemId)" @onchange="e => SelectReviewTarget(item.OrderItemId, e)">
+                            <option value="@Guid.Empty">اختر المقاس صراحة</option>
+                            @foreach (var candidate in item.Candidates)
+                            { <option value="@candidate.Id">@candidate.Name — @CandidateId(item, candidate.Id) — المخزون @candidate.Quantity</option> }
+                        </select>
+                        @if (item.Candidates.SingleOrDefault(c => c.Id == ReviewChoices.GetValueOrDefault(item.OrderItemId)) is { } chosen)
+                        { <p>المقصد المختار: @chosen.Name (@CandidateId(item, chosen.Id))؛ المخزون الحالي: <strong>@chosen.Quantity</strong></p> }
+                        @if (item.PreviousTargetId.HasValue)
+                        { <p>المقصد السابق @ShortId(item.PreviousTargetId.Value)؛ يلزم اختياره وتأكيد الحركة الحالية. لا يمكن نقل الأثر إلى مقاس آخر.</p> }
+                    }
+                </div>
+            }
+            <div class="form-group">
+                <label for="inventory-review-reason">سبب المراجعة</label>
+                <input id="inventory-review-reason" maxlength="500" disabled="@IsReviewWorking" @bind="ReviewReason" />
+            </div>
+            @if (ReviewPreview is not null)
+            {
+                <h3>الأثر المجمع الموافق عليه</h3>
+                @foreach (var movement in ReviewPreview.Movements)
+                {
+                    <p>@movement.TargetSizeName (@ShortId(movement.TargetSizeId)): @(movement.Direction == 1 ? "إضافة" : "خصم") @movement.Quantity؛
+                        المخزون <strong dir="ltr">@movement.StockBefore → @movement.StockAfter</strong><br />
+                        الأسطر: @string.Join("، ", ReviewPreview.Lines.Where(l => l.TargetSizeId == movement.TargetSizeId).Select(l => ShortId(l.OrderItemId)))</p>
+                }
+                <p class="lf-orders-confirm-warning">الحركة ستُنفذ الآن. تأكد أنها لم تُطبق يدوياً خارج النظام مسبقاً. كل تأكيد يخص هذه العملية فقط.</p>
+            }
+            <div class="lf-orders-confirm-actions">
+                <button type="button" class="lf-orders-confirm-button" disabled="@(IsReviewWorking || ReviewNeed.Items.Any(i => i.BlockedReason is not null))" @onclick="PreviewReview">عرض أثر المخزون</button>
+                @if (ReviewPreview is not null)
+                { <button type="button" class="lf-orders-confirm-button" disabled="@IsReviewWorking" @onclick="ConfirmReview">تأكيد التسوية وتغيير الحالة</button> }
+                <button type="button" disabled="@IsReviewWorking" @onclick="CloseReview">إلغاء المراجعة</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private const string ViewModeStorageKey = "larafashion.admin.orders.viewMode";
     private bool IsCheckingAuth = true;
@@ -356,6 +448,22 @@ else
     private string NumberEditError = string.Empty;
     private string OriginalOrderNumber = string.Empty;
     private int ExpectedNumberRevision;
+    private bool IsSavingStatus;
+    private bool IsReviewWorking;
+    private OrderInventoryReviewNeed? ReviewNeed;
+    private InventoryReviewPreview? ReviewPreview;
+    private readonly Dictionary<Guid, Guid> ReviewChoices = new();
+    private string ReviewReason = "";
+    private string ReviewError = "";
+    private List<OrderInventoryReviewNeed> BulkReviewNeeds = [];
+    private List<OrderInventoryReview> InventoryAudit = [];
+    private static string ShortId(Guid id) => id.ToString("N")[..12];
+    private static string CandidateId(InventoryReviewItem item, Guid id)
+    {
+        var length = 8;
+        while (length < 32 && item.Candidates.Any(c => c.Id != id && c.Id.ToString("N")[..length] == id.ToString("N")[..length])) length++;
+        return id.ToString("N")[..length];
+    }
 
     private List<Order> orders = new();
     private List<Order> displayedOrders = new();
@@ -380,7 +488,10 @@ else
         selectedOrder = await OrderService.GetOrderAsync(id);
 
         if (selectedOrder is not null)
+        {
             selectedStatus = selectedOrder.Status;
+            InventoryAudit = await OrderService.GetInventoryReviewAuditAsync(id, adminToken);
+        }
     }
 
     private Task HandleOrderKeyDown(KeyboardEventArgs e, Guid id)
@@ -390,7 +501,7 @@ else
 
     private void CloseModal()
     {
-        if (IsSavingNumber) return;
+        if (IsSavingNumber || IsSavingStatus || IsReviewWorking) return;
         IsNumberEditorOpen = false;
         selectedOrder = null;
     }
@@ -442,21 +553,85 @@ else
 
     private async Task SaveStatus()
     {
-        if (selectedOrder is null)
+        if (selectedOrder is null || IsSavingStatus)
             return;
 
         try
         {
+            IsSavingStatus = true;
             ClearMessages();
-            await OrderService.UpdateStatusAsync(selectedOrder.Id, selectedStatus);
+            await OrderService.UpdateStatusAsync(selectedOrder.Id, selectedStatus, adminToken, selectedOrder.InventoryRevision);
             await LoadOrdersAsync();
             selectedOrder = await OrderService.GetOrderAsync(selectedOrder.Id);
             SuccessMessage = "تم حفظ حالة الطلبية.";
+        }
+        catch (InventoryReviewRequiredException ex)
+        {
+            ReviewNeed = ex.Orders.Single();
+            ReviewChoices.Clear(); ReviewPreview = null; ReviewReason = ReviewError = "";
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
         }
+        finally { IsSavingStatus = false; }
+    }
+
+    private async Task OpenReviewOrder(OrderInventoryReviewNeed need)
+    {
+        await OpenOrder(need.OrderId);
+        selectedStatus = need.RequestedStatus;
+        ReviewNeed = await OrderService.GetInventoryReviewAsync(need.OrderId, need.RequestedStatus, adminToken);
+        ReviewChoices.Clear(); ReviewPreview = null; ReviewReason = ReviewError = "";
+    }
+
+    private void SelectReviewTarget(Guid itemId, ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var target) && target != Guid.Empty) ReviewChoices[itemId] = target;
+        else ReviewChoices.Remove(itemId);
+        ReviewPreview = null; ReviewError = "";
+    }
+
+    private void CloseReview()
+    {
+        if (IsReviewWorking) return;
+        ReviewNeed = null; ReviewPreview = null; ReviewChoices.Clear(); ReviewReason = ReviewError = "";
+    }
+
+    private async Task PreviewReview()
+    {
+        if (ReviewNeed is null || IsReviewWorking) return;
+        IsReviewWorking = true; ReviewError = ""; ReviewPreview = null;
+        try
+        {
+            var id = ReviewNeed.OrderId; var status = ReviewNeed.RequestedStatus;
+            ReviewPreview = await OrderService.PreviewInventoryReviewAsync(id, status, ReviewChoices, adminToken);
+            ReviewNeed = await OrderService.GetInventoryReviewAsync(id, status, adminToken);
+        }
+        catch (InvalidOperationException ex) { ReviewError = ex.Message; }
+        catch (UnauthorizedAccessException ex) { ReviewError = ex.Message; }
+        catch { ReviewError = "تعذر إعداد المعاينة. حاول مجدداً."; }
+        finally { IsReviewWorking = false; }
+    }
+
+    private async Task ConfirmReview()
+    {
+        if (ReviewPreview is null || IsReviewWorking) return;
+        IsReviewWorking = true; ReviewError = "";
+        try
+        {
+            var id = ReviewPreview.OrderId;
+            await OrderService.ConfirmInventoryReviewAsync(new(ReviewPreview.OperationId, id, ReviewPreview.ProtectedTicket, ReviewReason), adminToken);
+            await LoadOrdersAsync(); selectedOrder = await OrderService.GetOrderAsync(id);
+            InventoryAudit = await OrderService.GetInventoryReviewAuditAsync(id, adminToken);
+            if (selectedOrder is not null) selectedStatus = selectedOrder.Status;
+            ReviewNeed = null; ReviewPreview = null;
+            SuccessMessage = "تمت التسوية الإدارية وتغيير الحالة وحفظ التدقيق.";
+        }
+        catch (InvalidOperationException ex) { ReviewError = ex.Message; ReviewPreview = null; }
+        catch (UnauthorizedAccessException ex) { ReviewError = ex.Message; ReviewPreview = null; }
+        catch { ReviewError = "تعذر استلام نتيجة التنفيذ. أعد التأكيد بنفس المعاينة للتحقق من العملية دون تكرار الحركة."; }
+        finally { IsReviewWorking = false; }
     }
 
     private async Task DeleteSelectedOrder()
@@ -650,11 +825,17 @@ else
         {
             IsBulkUpdating = true;
             ClearMessages();
-            var result = await OrderService.UpdateStatusesAsync(selectedOrderIds, bulkStatus, adminToken);
+            var revisions = orders.Where(o => selectedOrderIds.Contains(o.Id)).ToDictionary(o => o.Id, o => o.InventoryRevision);
+            var result = await OrderService.UpdateStatusesAsync(selectedOrderIds, bulkStatus, adminToken, revisions);
             IsBulkConfirmationVisible = false;
             selectedOrderIds.Clear();
             await LoadOrdersAsync();
             SuccessMessage = $"تم تحديث حالة {result.UpdatedOrders} طلبيات بنجاح.";
+        }
+        catch (InventoryReviewRequiredException ex)
+        {
+            IsBulkConfirmationVisible = false;
+            BulkReviewNeeds = ex.Orders.ToList(); ErrorMessage = ex.Message;
         }
         catch (Exception ex)
         {
@@ -677,6 +858,7 @@ else
     {
         ErrorMessage = string.Empty;
         SuccessMessage = string.Empty;
+        BulkReviewNeeds.Clear();
     }
 
     private static decimal GetOrderTotal(Order order) =>

@@ -1,0 +1,120 @@
+PASS 01 S exhausted leaves M=3 L=4 visible with original size IDs
+PASS 02-03 partial sequential sizes; sold out hidden and retained for admin
+PASS 04 concurrent last piece: one order and no negative stock
+PASS 05 concurrent different sizes preserve both decrements
+PASS 06 duplicate lines aggregate and invalid quantities rejected
+PASS 07 rollback on later-line and history insert failure
+PASS 08 concurrent cancellation and revival once; failed bulk atomic
+PASS 09 stale cleanup cannot delete restored stock; admin deletion and open order rules
+PASS 09b old order cleanup retains product stock history and reservations
+PASS 10 fresh current and other circuit queries; restart; preserve unpublished intent
+PASS positive quantity with invalid empty size is hidden without changing data
+PASS 11 concurrent independent checkouts distinct GUID and display number
+PASS 12 concurrent same attempt; retry; independent attempts allowed
+PASS 13 deleted identities and previous numbers never reallocated
+PASS 14 orders and snapshots merge by GUID with sandbox isolation
+PASS 15 edit normalizes, validates, no-op; current historical sandbox numbers blocked
+PASS 16 concurrent same number and stale editors; edit alongside checkout
+PASS 17 unauthorized rejected; audit failure rolls back all changes
+PASS 18 edit preserves identity relationships amounts timestamps stock history reports
+PASS inventory admin edit versus checkout detects stale snapshot without lost sizes
+PASS SQLite quantity concurrency token rejects stale direct EF writes
+PASS SQLite guards reject bypass collisions and reservation deletion
+PASS multiple categories images and fixed sale price preserved during stock edit
+PASS migration preserves prior official sandbox history products images and restart
+{"Section":"size_identity_preflight","CanUpgradeSizes":true,"CollisionGroups":0,"InvalidRows":0,"AffectedProducts":0,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[]}
+{"Section":"order_items_without_provable_size_identity","Rows":[{"ItemId":"51E8C841-9F3C-4335-B3BF-7C106BF3CAFE","OrderId":"3B7F6DCA-27C1-4651-8AD7-E9A12DFA78D1","ProductId":"0887D825-0930-463C-B092-93DA54E84A46","ProductSizeId":null,"SizeSnapshot":"S","Reason":"historical-or-missing-identity-needs-evidence-no-label-backfill"},{"ItemId":"53D1D037-D275-4933-AC8F-181D0069A174","OrderId":"BA5F4893-A199-4D4D-8D02-6459D2F738DD","ProductId":"AE25E210-1A22-4EBD-A610-5997C9EAD4B4","ProductSizeId":null,"SizeSnapshot":"S","Reason":"historical-or-missing-identity-needs-evidence-no-label-backfill"}]}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20260825203549_AddStoreChatSettings"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[{"Number":"DUPLICATE","LogicalOwners":2,"InternalIdentities":"3B7F6DCA-27C1-4651-8AD7-E9A12DFA78D1,BA5F4893-A199-4D4D-8D02-6459D2F738DD"}]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[{"OrderId":"3B7F6DCA-27C1-4651-8AD7-E9A12DFA78D1","HistoryId":"A22CB8CA-DB43-47B3-9734-96AAFE18C249","OrderNumber":"DUPLICATE"}]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+PASS migration ambiguous legacy duplicate refuses atomically with diagnostic dry-run
+PASS migration rejects mismatched linked history and malformed numbers
+PASS migration Down preserves prior data on isolated fixture
+PASS migration never infers unlinked history ownership from equal GUID
+PASS size 01 reference add publish restore checkout 3->2 others 2/4/4; exhaustion
+PASS size 02 add/edit validation duplicates invalid quantities owner/id; preserve input
+PASS size 03 single/bulk publish validates all; no partial publish; zero permitted
+PASS size 04 normalization SQLite parity whitespace ASCII case invisibles distinct semantics
+PASS size 05 legacy duplicate positive+positive and zero+positive reject checkout/cancel atomically
+PASS size 06 old cart unique upgrades ID; ambiguous/missing stays review; quantities retained
+PASS size 07 rename same ID requires review and prevents checkout/cancellation
+PASS size 08 delete/recreate size and product never rebind stable cart; ledger prevents reused ID
+PASS size 09 reorder remove middle append keeps original IDs; repeated save no duplicate
+PASS size 10 failed graph add retry fresh context; duplicate save guard; stale edit cannot reset stock
+PASS size 11 wrong owner ID, grouped overflow and later line failures roll back
+PASS size 12 old completed attempt accepts new identity contract and cannot create another order
+PASS size 13 cancellation/reactivation/bulk exact identity once; historical null blocks without guessing
+PASS size 14 migration previous data/triggers audit reservations; null history retained; Down/Up
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":1,"InvalidRows":0,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[{"ProductId":"1FDE801E-486C-44D2-934F-13B2EFC7FDFE","NormalizedKey":"S","Rows":[{"SizeId":"0F89A3F4-6F3E-4E02-910D-2DE505E532B7","RawName":"S","Quantity":3,"QuantityType":"integer","CodePoints":"U\u002B0053"},{"SizeId":"E76CC436-CA2A-4817-98FC-A8ECB50D26DB","RawName":"  s\u00A0","Quantity":0,"QuantityType":"integer","CodePoints":"U\u002B0020 U\u002B0020 U\u002B0073 U\u002B00A0"}]}]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":0,"InvalidRows":1,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[{"Id":"8BA7E99A-09AA-42E2-AADB-305EA99FF33D","ProductId":"3BAE4659-8302-4339-9DEE-5F0E8FBDA4CA","RawName":"\u200B","Quantity":0,"QuantityType":"integer","Key":"","Valid":false}]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":0,"InvalidRows":1,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[{"Id":"2EA50A24-285D-4A98-BE06-B1FDF350AE70","ProductId":"C7D02063-AD7F-46ED-BFDF-5425AF917269","RawName":"S","Quantity":-1,"QuantityType":"integer","Key":"S","Valid":false}]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[{"ProductId":"C7D02063-AD7F-46ED-BFDF-5425AF917269","SizeId":"2EA50A24-285D-4A98-BE06-B1FDF350AE70","Quantity":-1,"Reason":"invalid-quantity-or-label"}]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":0,"InvalidRows":1,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[{"Id":"unmappable-id","ProductId":"51CA5011-7FD1-4FF6-A70A-D0C8C37D19A4","RawName":"S","Quantity":3,"QuantityType":"integer","Key":"S","Valid":false}]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+PASS size 15 migration conflicts stop before schema/data change; read-only diagnostic hash unchanged
+PASS size 16 DB bypass duplicate wrong key negative overlarge; safe diagnostics no customer/recovery secrets
+RESULT: 44/44 passed; isolated fixtures retained in C:\Users\us050\AppData\Local\Temp\LaraFashionTests\e161d9d2e0534111a681827046890877

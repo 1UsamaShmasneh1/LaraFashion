@@ -1,5 +1,6 @@
 using LaraFashion.Models;
 using Microsoft.EntityFrameworkCore;
+using LaraFashion.Services;
 
 namespace LaraFashion.Data;
 
@@ -37,6 +38,10 @@ public class AppDbContext : DbContext
     public DbSet<OrderNumberReservation> OrderNumberReservations => Set<OrderNumberReservation>();
     public DbSet<CheckoutAttempt> CheckoutAttempts => Set<CheckoutAttempt>();
     public DbSet<OrderNumberAudit> OrderNumberAudits => Set<OrderNumberAudit>();
+    public DbSet<HistoricalOrderItemEvidence> HistoricalOrderItemEvidence => Set<HistoricalOrderItemEvidence>();
+    public DbSet<OrderInventoryReview> OrderInventoryReviews => Set<OrderInventoryReview>();
+    public DbSet<OrderInventoryReviewLine> OrderInventoryReviewLines => Set<OrderInventoryReviewLine>();
+    public DbSet<OrderInventoryReviewMovement> OrderInventoryReviewMovements => Set<OrderInventoryReviewMovement>();
 
     public DbSet<StoreVisit> StoreVisits => Set<StoreVisit>();
 
@@ -45,6 +50,16 @@ public class AppDbContext : DbContext
     public DbSet<StoreChatMessage> StoreChatMessages => Set<StoreChatMessage>();
 
     public DbSet<StoreChatSettings> StoreChatSettings => Set<StoreChatSettings>();
+
+    private void PrepareSizeKeys()
+    {
+        foreach (var entry in ChangeTracker.Entries<ProductSize>().Where(e => e.State is EntityState.Added or EntityState.Modified))
+            entry.Entity.NormalizedName = SizeNamePolicy.Key(entry.Entity.SizeName);
+    }
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    { PrepareSizeKeys(); return base.SaveChanges(acceptAllChangesOnSuccess); }
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    { PrepareSizeKeys(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,7 +70,21 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<CheckoutAttempt>().HasIndex(x => x.OrderId).IsUnique();
         modelBuilder.Entity<OrderNumberAudit>().HasIndex(x => x.OrderId);
         modelBuilder.Entity<Order>().Property(x => x.NumberRevision).IsConcurrencyToken();
+        modelBuilder.Entity<Order>().Property(x => x.InventoryRevision).IsConcurrencyToken();
+        modelBuilder.Entity<HistoricalOrderItemEvidence>().HasKey(x => x.OrderItemId);
+        modelBuilder.Entity<HistoricalOrderItemEvidence>().HasIndex(x => x.OrderId);
+        modelBuilder.Entity<OrderInventoryReview>().HasKey(x => x.OperationId);
+        modelBuilder.Entity<OrderInventoryReview>().HasIndex(x => new { x.OrderId, x.NewRevision }).IsUnique();
+        modelBuilder.Entity<OrderInventoryReviewLine>().HasKey(x => new { x.OperationId, x.OrderItemId });
+        modelBuilder.Entity<OrderInventoryReviewLine>().HasOne<OrderInventoryReview>().WithMany(x => x.Lines)
+            .HasForeignKey(x => x.OperationId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<OrderInventoryReviewMovement>().HasKey(x => new { x.OperationId, x.TargetSizeId });
+        modelBuilder.Entity<OrderInventoryReviewMovement>().HasOne<OrderInventoryReview>().WithMany(x => x.Movements)
+            .HasForeignKey(x => x.OperationId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<ProductSize>().Property(x => x.Quantity).IsConcurrencyToken();
+        modelBuilder.Entity<ProductSize>().Property(x => x.ReviewRevision).IsConcurrencyToken();
+        modelBuilder.Entity<ProductSize>().HasIndex(x => new { x.ProductId, x.NormalizedName }).IsUnique();
+        modelBuilder.Entity<ProductSize>().Property(x => x.NormalizedName).UseCollation("BINARY");
 
         modelBuilder.Entity<ProductDiscount>()
             .HasKey(x => new { x.ProductId, x.DiscountId });

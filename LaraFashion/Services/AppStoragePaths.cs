@@ -8,7 +8,9 @@ public sealed record AppStoragePaths(string DatabasePath, string UploadsPath)
     public static AppStoragePaths Resolve(IWebHostEnvironment environment)
     {
         if (!environment.IsDevelopment())
-            return new AppStoragePaths(ProductionDatabasePath, ProductionUploadsPath);
+            return new AppStoragePaths(
+                Environment.GetEnvironmentVariable("LARAFASHION_DATABASE_PATH") ?? ProductionDatabasePath,
+                Environment.GetEnvironmentVariable("LARAFASHION_UPLOADS_PATH") ?? ProductionUploadsPath);
 
         var webRootPath = environment.WebRootPath
             ?? Path.Combine(environment.ContentRootPath, "wwwroot");

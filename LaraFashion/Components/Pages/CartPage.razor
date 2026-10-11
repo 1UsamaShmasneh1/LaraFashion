@@ -3,6 +3,7 @@
 @using LaraFashion.Models.Enums
 
 @page "/cart"
+@implements IDisposable
 
 @inject LaraFashion.Services.CartService CartService
 @inject LaraFashion.Services.OrderService OrderService
@@ -68,6 +69,11 @@ else
                     <div class="cart-item-size">
                         المقاس: @item.Size
                     </div>
+
+                    @if (item.ReviewMessage is not null)
+                    {
+                        <div class="error-message" dir="rtl">@item.ReviewMessage</div>
+                    }
 
                     <div class="cart-item-size">
                         الكمية المتوفرة: @item.MaxAvailableQuantity
@@ -211,17 +217,24 @@ else
 }
 
 @code {
+    protected override void OnInitialized() => CartService.OnChange += CartChanged;
+    private void CartChanged() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => CartService.OnChange -= CartChanged;
     private bool IsOrderSuccess;
     private bool IsCheckoutOpen;
     private bool IsSubmittingOrder;
     private string ErrorMessage = string.Empty;
     private string SuccessfulOrderNumber = string.Empty;
     private const string AttemptStorageKey = "larafashion.checkout.attempt";
-    private sealed record PendingCheckout(Guid Id, string CartHash);
+    private sealed record PendingCheckout(Guid Id, string CartHash, int Version = 0);
 
-    private string CartHash() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+    private string LegacyCartHash() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
         System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(CartService.Items
             .OrderBy(x => x.ProductId).ThenBy(x => x.Size).Select(x => new { x.ProductId, x.Size, x.Quantity })))));
+    private string CartHash() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(CartService.Items
+            .OrderBy(x => x.ProductId).ThenBy(x => x.ProductSizeId).ThenBy(x => x.Size)
+            .Select(x => new { x.ProductId, x.ProductSizeId, x.Size, x.Quantity })))));
 
     private async Task<PendingCheckout?> ReadPendingCheckout()
     {
@@ -236,7 +249,7 @@ else
         if (pending is null) return false;
         var receipt = await OrderService.GetCheckoutReceiptAsync(pending.Id);
         if (receipt is null) return false;
-        if (pending.CartHash == CartHash()) CartService.Clear();
+        if (pending.CartHash == (pending.Version >= 2 ? CartHash() : LegacyCartHash())) CartService.Clear();
         SuccessfulOrderNumber = receipt.OrderNumber;
         IsCheckoutOpen = false;
         IsOrderSuccess = true;
@@ -276,6 +289,9 @@ else
             return;
         }
 
+        if (CartService.Items.Any(i => i.ReviewMessage is not null))
+        { ErrorMessage = "راجع العناصر المحددة في السلة قبل إرسال الطلب."; return; }
+
         IsCheckoutOpen = true;
     }
 
@@ -287,17 +303,14 @@ else
 
     private async Task RefreshCartQuantitiesAsync()
     {
-        var beforeCount = CartService.Items.Count;
         var validItems = await ProductService.BuildValidCartItemsAsync(
             CartService.ToPersistedItems(),
             await IsAdminSessionValidAsync());
 
         CartService.ReplaceItems(validItems);
 
-        if (beforeCount > validItems.Count)
-        {
-            ErrorMessage = "تم تحديث السلة وإزالة منتجات لم تعد متاحة لهذا المستخدم.";
-        }
+        if (validItems.Any(i => i.ReviewMessage is not null))
+            ErrorMessage = "راجع العناصر المحددة في السلة قبل إرسال الطلب.";
     }
 
     private async Task ConfirmOrder(CustomerInfo customer)
@@ -320,9 +333,10 @@ else
                 return;
             }
 
+            if (CartService.Items.Any(i => i.ReviewMessage is not null)) return;
             var discountResult = CartService.CalculateBestDiscount();
-            var pending = await ReadPendingCheckout() ?? new PendingCheckout(Guid.NewGuid(), CartHash());
-            pending = pending with { CartHash = CartHash() };
+            var pending = await ReadPendingCheckout() ?? new PendingCheckout(Guid.NewGuid(), CartHash(), 2);
+            pending = pending with { CartHash = CartHash(), Version = 2 };
             await JS.InvokeVoidAsync("sessionStorage.setItem", AttemptStorageKey, System.Text.Json.JsonSerializer.Serialize(pending));
 
             var savedOrder = await OrderService.CreateOrderAsync(
@@ -344,6 +358,10 @@ else
         {
             ErrorMessage = ex.Message;
             return;
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "تعذر تأكيد الطلب الآن. أعد المحاولة؛ سيتم التحقق من المحاولة السابقة قبل إنشاء طلب آخر.";
         }
         finally
         {

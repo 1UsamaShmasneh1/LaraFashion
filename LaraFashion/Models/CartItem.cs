@@ -4,6 +4,10 @@ public class CartItem
 {
     public Guid ProductId { get; set; }
 
+    public Guid? ProductSizeId { get; set; }
+
+    public string? ReviewMessage { get; set; }
+
     public string ProductName { get; set; } = string.Empty;
 
     public string ProductSerialNumber { get; set; } = string.Empty;

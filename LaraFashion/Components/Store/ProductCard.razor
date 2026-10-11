@@ -1,5 +1,6 @@
 ﻿@using LaraFashion.Models
 @using LaraFashion.Models.Enums
+@using LaraFashion.Services
 
 <div class="product-card">
 
@@ -76,12 +77,12 @@
             </div>
         }
 
-        @if (Product.Sizes.Any(s => s.Quantity > 0))
+        @if (Product.Sizes.Any(s => SizeNamePolicy.IsSelectable(Product, s)))
         {
             <div class="product-available-sizes" dir="rtl">
                 <span class="available-sizes-label">المقاسات المتاحة:</span>
                 <div class="available-sizes-list">
-                    @foreach (var size in Product.Sizes.Where(s => s.Quantity > 0).Select(s => s.SizeName).Distinct())
+                    @foreach (var size in Product.Sizes.Where(s => SizeNamePolicy.IsSelectable(Product, s)).Select(s => s.SizeName))
                     {
                         <span class="available-size-chip">@size</span>
                     }

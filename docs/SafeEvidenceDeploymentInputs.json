@@ -1,0 +1,638 @@
+{
+  "ContractVersion": 1,
+  "Branch": "main",
+  "Head": "b196d7268e2b5a5b73b207d963255d5d6a7c0129",
+  "DirtyWorkingTree": true,
+  "BaselineInputManifestSha256": "27808859BC6868568B91DE24973F0307033F32646D6147635C33BA9CA1B16C9A",
+  "BaselineFiles": 150,
+  "BaselineFilesChangedByThisTask": [
+    ".github\\workflows\\deploy.yml",
+    "deploy\\deploy-production.sh",
+    "docs\\HistoricalOrderInventoryReview.ar.md",
+    "docs\\OrderInventoryRepair.ar.md",
+    "docs\\ProductSizeIdentityRepair.ar.md",
+    "LaraFashion.IntegrationTests\\LegacyReviewEvidence.cs",
+    "LaraFashion.IntegrationTests\\Program.cs",
+    "LaraFashion.IntegrationTests\\ReviewUpgradeVerification.cs",
+    "LaraFashion\\LaraFashion.csproj",
+    "LaraFashion\\Program.cs",
+    "LaraFashion\\Services\\AppStoragePaths.cs"
+  ],
+  "FinalToolSha256": "F23108828C6C07BB0089B2F374E55776DC609F28F62FFFECEE40F62CF706EA61",
+  "ApplicationSha256": "6105643BD05FC25F2CD251FF9BEA030DAAAC146D3A6FF3E3D30469162ED07CD7",
+  "ReferenceSha256": "675B33E415BCB3BC1916C49C07681AE32A54C54D31E232388EA75797AFD0537D",
+  "Files": [
+    {
+      "Path": ".config\\dotnet-tools.json",
+      "SHA256": "0C15EC0803EFE7FE21B93F180A4E735EFE66368AD7576A282A5307C9E21938D4"
+    },
+    {
+      "Path": ".github\\workflows\\deploy.yml",
+      "SHA256": "2DF8AE4799A8246E0C1093E24619CF9D4379600FC6F6A3A2E01B3B5ABE8BB408"
+    },
+    {
+      "Path": "AGENTS.md",
+      "SHA256": "BCDFED52039C26D8CB0DF31EC921FD19352B4A0DDA574288593DCB837AA1D6BF"
+    },
+    {
+      "Path": "deploy\\deploy-production.sh",
+      "SHA256": "F1B423F43074C137A9D94F907B2A8D1EE477DD262627794CD9B5EEAA4AF1BF12"
+    },
+    {
+      "Path": "deploy\\tests\\harness.py",
+      "SHA256": "A10666C17D29B7BE7A7872060FF4217810C852A5AB3144DEECD6CD2D71C3B8B8"
+    },
+    {
+      "Path": "deploy\\tests\\run-harness.sh",
+      "SHA256": "D92C66AD508D6297D725DD4C6120FC922D2FB01405C936EB7413A9F6A4330889"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\DeploymentDatabase.cs",
+      "SHA256": "1B46E1528AF8E8DD96A959CA8B659BED0E0C612472575B7B17FDD5DF1C84F92A"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\DeploymentHarness.cs",
+      "SHA256": "C1F4B00A0A7B92CA2D7322396B90BA0BBD4D5CBDDBE53E8C48AF7AD756ED9E74"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\DeploymentMaintenance.cs",
+      "SHA256": "CA045AB442B1372782FA8FC318D3AE7D423F549E75667911568C3AB73F7973D0"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\DeploymentSafetyTests.cs",
+      "SHA256": "FF263F4A139A028DE02FC02913682F22E796F7E743E060D9620EEE8ABA5B399D"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\Diagnostics.cs",
+      "SHA256": "355CD6032A47D6EE47500DA296284E911C483906DA7406F42629CB144B7CC2CF"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\Fixture.cs",
+      "SHA256": "D0702D2039EAA697586A92CAC06F4F71CEEEB62A0F1632E7E6E2E49B9D0CFD0E"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\HistoricalInventoryReviewTests.cs",
+      "SHA256": "200E498D5D169E8169C51A9D765F92BF27CB56F87742A0589AD3A99D77C05368"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\LaraFashion.IntegrationTests.csproj",
+      "SHA256": "231A3DC8015C5B62170DC0D315A026DAB8BC57AE9E36537AD68C664FF8F71029"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\LegacyReviewEvidence.cs",
+      "SHA256": "830C558318ED69849F3B3FD82A16B05AA5D79D7679B6B3AD20BCD0067A93855A"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\NuGet.Offline.config",
+      "SHA256": "D240B9AFFA63E3D05D49F0463BC05947ED2FF1D6C97159E1A4CE73FEC946D5EF"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\Program.cs",
+      "SHA256": "27D7745ABA74937B134877F917A0A9EB3EF5A1F412FDB3E1528500E663D0E072"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\ReviewDiagnostics.cs",
+      "SHA256": "39ACEAE1D96B608830E09570A9FB544E3EF7744E1648A70A5082CE1AE60C3745"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\ReviewUpgradeVerification.cs",
+      "SHA256": "49051B478E57EF4A9D275EBD6A75F2002B2A876214BD71B513A84AB501E3A3BB"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\SizeIdentityTests.cs",
+      "SHA256": "AA0C2A4096F73A584C5A761FEACF4908B037A143F8721C20C957CC025BED93D7"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\SizeReproduction.cs",
+      "SHA256": "294515219A3D2B7BEAC9694DAC01623A1057940C2AE785715EE11F5DBE0E4E9B"
+    },
+    {
+      "Path": "LaraFashion.IntegrationTests\\UiHost.cs",
+      "SHA256": "1126E4140EAB84FAB8A7800C72DFEE7F3D582B4E2CAB79336EB8AF5A3F19A340"
+    },
+    {
+      "Path": "LaraFashion\\Components\\_Imports.razor",
+      "SHA256": "9DEF67FCC6E8305622043227B3FF1930227DA17B99A377B863B3CDF1548CD7C7"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminCategories.razor",
+      "SHA256": "9DDCC83BE4E2B84BF48C43015287DF020A75356BEE57226B82AE0E5A9CB8F246"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminChats.razor",
+      "SHA256": "3D95AEDE31C570B1F55BF683D03FDED87373605330B5808250ACAB1A0F2C2D07"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminChats.razor.css",
+      "SHA256": "6560A8B8D7EBF03F43D6D8A63CA05EAD2EACD5A6DD6EC601453487F3CB8D3D03"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminDiscounts.razor",
+      "SHA256": "F62378FAC107A17CD109F2C3CF29C28C55714DE209F9CE05CA6DAB7E53CC8224"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminLogin.razor",
+      "SHA256": "D87696BEBB868D3477C26343B952AF138AE05657B81EC124075AD83A028C1DEC"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminNav.razor",
+      "SHA256": "B59D5E40576C4620235F985FA75F03EF9C5C12AB810CDD1E40B84F18923FA8FB"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminOrders.razor",
+      "SHA256": "662ECE90590F343E48E79CD64883ACE570841028D92EACD50DC66B440046FDDA"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminOrders.razor.css",
+      "SHA256": "2F0A6E9BB166FA3FE21B4C807D2124970B0FB65A8E5B393BA71557A74E554923"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminProducts.razor",
+      "SHA256": "93B6AF5FECBEC22DB4BEED2C827891E0DE7DD8AE0BA0647CFD7C346204CFA94F"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminReports.razor",
+      "SHA256": "AE639232705A87E323B40D66DCD6BBCF28DC19680D650B4E6C198462CF8DB47F"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminReports.razor.css",
+      "SHA256": "B3FEC88FC90F810DCD773C43A3A8B556FA5A33A273C1E7D88FE594F1A2EF7C24"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminSandbox.razor",
+      "SHA256": "07214E1D40670FC70515ED56B86FB41FE418A7FC9E38B4A44C94370EB3BEBA51"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\AdminSettings.razor",
+      "SHA256": "97AC6BED9E783D34683F54060001FB347027DD54B702EBD77C11489A786416DC"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\ReportAnalyticsChart.razor",
+      "SHA256": "F7E93736FEFFD12D443BC2C7CA18535AE1CE83C12CCD064EEBE171F3F09FC9FA"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Admin\\ReportAnalyticsChart.razor.css",
+      "SHA256": "FB7E3C05B438BE9F2F70AF4B8EA98AB8E6874FF43C1782E8C1977E8276E190ED"
+    },
+    {
+      "Path": "LaraFashion\\Components\\App.razor",
+      "SHA256": "EDA98C957C181FE4F6EFD90A0E6010318197AF03E40AB699C87C3630D86EB6D9"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Cart\\CartButton.razor",
+      "SHA256": "48C7BF7F78D8337FFA8AE846790272356B54EDD5F234D4E1A27E79AA405FA9E0"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Cart\\CartPersistence.razor",
+      "SHA256": "ADF1526EEA19BED0381F13A33E68DE81A5BB8D5AD2C9BD6B9492104D8CFF5204"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Chat\\StoreChatWidget.razor",
+      "SHA256": "3970A8D66D4A6E1BDD42BC877C67776A64BC413FE48F19602D8043D1EBB02FA3"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Chat\\StoreChatWidget.razor.css",
+      "SHA256": "13296F38549EDD54FF3D2D1C4E1527B5F370C0F2E6CE54D3685DB5E9666DC6EC"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Layout\\MainLayout.razor",
+      "SHA256": "BE22DEFF36D00D70409BB7570EF8EBD6A6DA8698E7F33296B54EFB2115FBDA4F"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Layout\\MainLayout.razor.css",
+      "SHA256": "3843531EA35440D59B5E688B5AC3FEAAED91F760DA8940B662531C49F4DE66B5"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Modals\\CheckoutModal.razor",
+      "SHA256": "31553928F81E939DD6160A54A7A3F5C68F9C528FE333D59159955C16BA0B4140"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Modals\\ProductModal.razor",
+      "SHA256": "67FF5094494902320049135E3284E386F5DBAA8C48E2CC370AC0B27CC9F7431A"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Orders\\MyOrdersButton.razor",
+      "SHA256": "5901AF3F90041A56ECD3F4CAE6EE5BF2DBF3FB32658D3E4ACF9723485E15FD9A"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Orders\\MyOrdersButton.razor.css",
+      "SHA256": "CB734F4CC810DF7EE0960520E078C6DE7B44AD86552CF81F4546A6C2AFBE6980"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Pages\\CartPage.razor",
+      "SHA256": "AC41B15D1258A4104EB4C073FD07C06178F2B5DF7918598FEA2A8C09A8D465B1"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Pages\\Error.razor",
+      "SHA256": "E77473780E53F2BA6D42105B745D3ECA7CDBDAEC1D407BC46A8CE9338B43EB29"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Pages\\Home.razor",
+      "SHA256": "5DAD4CD8739B653C7BA04CE7A0BED5554159D785404F9453EDE59F836EB230B0"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Pages\\Home.razor.css",
+      "SHA256": "CEEB2A0F636FE3EE2BBAA12A2BFEE957BC6444A258F2CDCF9E5C8D0E6894E94A"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Routes.razor",
+      "SHA256": "B401F54B7848A5A7288F5B3435A1616D80EB4F68A64AAA592024FE3FCD2BEC56"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Shared\\PageLoader.razor",
+      "SHA256": "B10444B9AA415FF455A6C7729B2F5E2AD14C711B40B2C5FDC30B3F00644C0729"
+    },
+    {
+      "Path": "LaraFashion\\Components\\Store\\ProductCard.razor",
+      "SHA256": "5E07D6723B1A0629CBFC9D91FF467EB33B5B3FEF3DFAF8F84D9EA78869E30F5D"
+    },
+    {
+      "Path": "LaraFashion\\Data\\AppDbContext.cs",
+      "SHA256": "E99B3F530B4E8E5508E96A72F7BA540856C89895F3D9FD03C6F150A9BCFB9632"
+    },
+    {
+      "Path": "LaraFashion\\Data\\AppDbContextFactory.cs",
+      "SHA256": "EB19957956581ED9FC77F12659BB31BBC0AE5B5A43FD3EEAE694AA4A08AEEF5E"
+    },
+    {
+      "Path": "LaraFashion\\Data\\DeploymentReadiness.cs",
+      "SHA256": "07E8584AFDD4A9ACE1B67BFAAC3E1A84558C25921983EC969ECB04F745F1FD97"
+    },
+    {
+      "Path": "LaraFashion\\Data\\DummyData.cs",
+      "SHA256": "F8AF8F357DDD805E8389C0AE8F9C27D6A6AB73420AADE2D4D51D4D3AAC65BA49"
+    },
+    {
+      "Path": "LaraFashion\\LaraFashion.csproj",
+      "SHA256": "534B01B779357B91D53B3FB3BAA4A45954ED09A587F3A17E3B0A8D1FFD53442F"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260524133650_InitialCreate.cs",
+      "SHA256": "682FC7CA0D68D820B3436FE927F15239472222B9403AFC97B9E891B6E1542FC1"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260524133650_InitialCreate.Designer.cs",
+      "SHA256": "E2A5AB98F7AC2CED7BB008C0182ED3FCD6BE7D8B1CCB3CE09813EFBBCE67628A"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260524143208_AddAdmin.cs",
+      "SHA256": "5374103859A7506B28240D02B3EC87D3B70891B6536FA95DAA809E10E23B162D"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260524143208_AddAdmin.Designer.cs",
+      "SHA256": "76A84A8BF96976C5A26AE213821657DD461C7F4F47766CA03FC05703D07CBE2E"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260526120819_RenameImageFields.cs",
+      "SHA256": "76D530ED535B4CC6E1D86125402EC5C349CCF3793E714E1C0C8D1F984B7B83FD"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260526120819_RenameImageFields.Designer.cs",
+      "SHA256": "BA000DB874A4DDA90A5D02B8D378A98D487C909908E8C460888372204AB0AA82"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530130008_AddDiscountManagement.cs",
+      "SHA256": "9C6A89F124D89AB9741142335A857378F136544392CECF0199E215FE9241E192"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530130008_AddDiscountManagement.Designer.cs",
+      "SHA256": "1C0F1A6738004FFD409E0B0F3B1D8A957778AC7949BC75C1C64FF7C042D403B0"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530185921_AddBundleDiscounts.cs",
+      "SHA256": "B71F91643C46D9124AAEE28763E878F2BE1F73967A283933863741FDC8286815"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530185921_AddBundleDiscounts.Designer.cs",
+      "SHA256": "618D0F55F0F58E1A01C3CB03A446EB6F6DF14090821FAC9F09F0EDE4BDC4B9E6"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530194618_AddOrderDiscountFields.cs",
+      "SHA256": "C6821A0F364D2810FF56F067674C95176D68ECDA45A9B2E42272A38AA9D6F444"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530194618_AddOrderDiscountFields.Designer.cs",
+      "SHA256": "6FD4E13D6FD289E696A063F7D7D4FEC4F41F48E11E6FB11B08834030C090521B"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530201753_AddDiscountSystem.cs",
+      "SHA256": "A6E174D83325B9F31B7A8EC9BCEAE1E431F5D731A9A9989171770AE80512EF3B"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260530201753_AddDiscountSystem.Designer.cs",
+      "SHA256": "464E7A1D05905ACBB671655CAD770B1FBA4D3E8D90D0F6640F0272AF592475CE"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260710094029_AddProductPublishingState.cs",
+      "SHA256": "0E498ED43FD5D29AE926DA4B08408951EAB2786BB94B471F7FCB899628A6E9F3"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260710094029_AddProductPublishingState.Designer.cs",
+      "SHA256": "8AF96846A3210A562849D803A28CA4500BAFE6367A8C889B55D30D8F95DE4863"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260711120000_AddStoreReports.cs",
+      "SHA256": "37761F2309D864FDE55804C9DCA516085323251BEB412EE94B917E064BDF487D"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260821085216_AddMultipleProductImages.cs",
+      "SHA256": "4B441FBCAC6B1DDFC3957973671F0FC4C78B29960B5E59CABE49DD26F30CE34A"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260821085216_AddMultipleProductImages.Designer.cs",
+      "SHA256": "432ACB3141E95B970200F342AFAF93EB51F58F52FF41270D9793F1F290DBDB9B"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260824141208_NormalizeProductImageGuidFormat.cs",
+      "SHA256": "6BF17610A804080005D315276BAB4342B31DEA0DADE70F8F3A0B53EC01EC39DB"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260824141208_NormalizeProductImageGuidFormat.Designer.cs",
+      "SHA256": "702255C92CA0E0E238E27ECCFC2B5CDEF9566D70BCB6DB8F13D18C8F40781009"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260824182219_AddStoreChat.cs",
+      "SHA256": "0CEA6CC5B811A9B63F983006724B883B9D14BA9C77368FABC6B14B5776A9FABF"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260824182219_AddStoreChat.Designer.cs",
+      "SHA256": "7043D8C9AFE636384797B2C19E9A8FC7D74EF45710EDBE5C88C4A9282E9F6F9A"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260825203549_AddStoreChatSettings.cs",
+      "SHA256": "C2AAE16E9C5B94F107E14EAAA3B48E347F9388ADCC9D331C280712467FC84D47"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20260825203549_AddStoreChatSettings.Designer.cs",
+      "SHA256": "E4114A136620CFDC979E5E209D0E7A82C5F5D0E39C647C7673DD43AFD83C57FB"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20261003154113_AddSafeOrderNumbers.cs",
+      "SHA256": "F0283BC2A932F2F50C77615CFAB604B3E4BB28BE009DD5DAB54D8B5DE8212424"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20261003154113_AddSafeOrderNumbers.Designer.cs",
+      "SHA256": "8A8BA68DFEB27F8B6EF77B6D8EB48DDDA2C50931CA458C38BAEC182BF8DE2209"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20261005162501_AddStableProductSizeIdentity.cs",
+      "SHA256": "BFC8D54110FE7B6618D94A7A44ACDB57B10611F556DF374156B4489A230E40A6"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20261005162501_AddStableProductSizeIdentity.Designer.cs",
+      "SHA256": "683B1B71E38507E840BC98CE02A52805167E51C29B727ADA23D4FD35F6FEBA4E"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20261005191438_AddHistoricalOrderInventoryReview.cs",
+      "SHA256": "B9E3593F0EBFAE29EACB7819250C82C66595F3A0883D2D8BA3426C1558C6F9DD"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\20261005191438_AddHistoricalOrderInventoryReview.Designer.cs",
+      "SHA256": "E78C6C54E0AD8DFF00F65D79A99E064684C52C44BD42D365B95163E02013C15A"
+    },
+    {
+      "Path": "LaraFashion\\Migrations\\AppDbContextModelSnapshot.cs",
+      "SHA256": "B98708870B5307467988738B7017059191375D3264F94B4B271AD70441875A97"
+    },
+    {
+      "Path": "LaraFashion\\Models\\AdminUser.cs",
+      "SHA256": "AFBB0F40BDE995A27282E5AE89A0060D442808F5E83015128805F7F44E87D5E7"
+    },
+    {
+      "Path": "LaraFashion\\Models\\CartDiscountResult.cs",
+      "SHA256": "89D5D80037A216698811850233144F9B30C0F3ABE153E7609CCA461577C66FD2"
+    },
+    {
+      "Path": "LaraFashion\\Models\\CartItem.cs",
+      "SHA256": "61C2B7F7C3F593FE235A7E4B87600E7343CFFF79286C468B128B7B165313556D"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Category.cs",
+      "SHA256": "CB0B9A199E2543BE1AF6089913425DC12F66B5FAAF6419A9ED87A481A834BA67"
+    },
+    {
+      "Path": "LaraFashion\\Models\\CustomerInfo.cs",
+      "SHA256": "E91850968FF1EB28FDED7D531C89C774C7ABD6BB839B17BA38A073190EDFB281"
+    },
+    {
+      "Path": "LaraFashion\\Models\\CustomerOrders.cs",
+      "SHA256": "A68C293111935EFC59159BA0B887600627C8A48020085A7C3B2E028734A74C2F"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Discount.cs",
+      "SHA256": "06ECC2B1852D704389754FB2DA5AB588778C2EC5025ACD7BC4986BC6D6EE5ABE"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Enums\\DiscountRuleType.cs",
+      "SHA256": "38F2815BD1530920023A0284FE52C2B49CFF4E4F042CB9624FB7A41EBE4F1A94"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Enums\\DiscountType.cs",
+      "SHA256": "005FA017C62A1D5046C03B6704BD6123A944A07AF5B998ADF3670EAC02C1100F"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Enums\\DiscountValueType.cs",
+      "SHA256": "A083B73FAEA0A4F7E9BC58F67E86943B4309AACCCC96CAE09A9B128D0CA3C544"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Enums\\OrderStatus.cs",
+      "SHA256": "68D062AD9412995412EF5E5180BB3C74530F3243F37DCBC5D9E18265E2A0A667"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Order.cs",
+      "SHA256": "7B5164F4F4C17A69690483A095A5829A5662A56E5D2F44EC991F95F51D3A72BB"
+    },
+    {
+      "Path": "LaraFashion\\Models\\OrderInventoryReview.cs",
+      "SHA256": "053496F4665BDD059CE91F42F3DF09BAFE2AD66D520743C6D1E9364C3FD9AA06"
+    },
+    {
+      "Path": "LaraFashion\\Models\\OrderItem.cs",
+      "SHA256": "BCE2D056EAA3EB398521E0C86D7A1F6EB0267C867B5233225CFD4FE29019B954"
+    },
+    {
+      "Path": "LaraFashion\\Models\\OrderNumberReservation.cs",
+      "SHA256": "45D30788AA9CB8D01B91D807B1CF3442D4CAF86F79A5317A845B227B57C8911A"
+    },
+    {
+      "Path": "LaraFashion\\Models\\PersistedCartItem.cs",
+      "SHA256": "4384630CEF342903845C3D23872751E3AD40EB41A2CF62B2EB9E48C66B655867"
+    },
+    {
+      "Path": "LaraFashion\\Models\\PersistedCartState.cs",
+      "SHA256": "8D2528B7D32099318251F842B3739F3DB07192548C29944FDC4A3FB20A7E799D"
+    },
+    {
+      "Path": "LaraFashion\\Models\\Product.cs",
+      "SHA256": "351B3DFD6817F9A5868705FA44D32FB246C25D869F7DADB04EC68BF8B80412B2"
+    },
+    {
+      "Path": "LaraFashion\\Models\\ProductCategory.cs",
+      "SHA256": "65DD2AA8EF3E8328AF9072AF430B1BC7B9621FD1FACA4DBB98480C7AE97EAD20"
+    },
+    {
+      "Path": "LaraFashion\\Models\\ProductDiscount.cs",
+      "SHA256": "CB22FC3ADC687CD6B82471B7CE2D399E986DB83A7C5D908BF6FDE26651A3D2C6"
+    },
+    {
+      "Path": "LaraFashion\\Models\\ProductImage.cs",
+      "SHA256": "324A3E27CE2AB5300611CD142AB5895F33CD1E8062A3C91FDE1F2EC9D87908B3"
+    },
+    {
+      "Path": "LaraFashion\\Models\\ProductSize.cs",
+      "SHA256": "9B18731B03841EA403309BFB76C4F262247CEBD5ACAA0A520A657F048B3EDB81"
+    },
+    {
+      "Path": "LaraFashion\\Models\\SalesHistory.cs",
+      "SHA256": "225A5A8D94928D651D2B1377DA4CE2DBCE3D7CA9E895A5A594367D3846034C2B"
+    },
+    {
+      "Path": "LaraFashion\\Models\\StoreChatMessage.cs",
+      "SHA256": "6FD08ECBB5864DDADA551064906CBCCFD2C316AE6458C6B66A8553DCB89EF936"
+    },
+    {
+      "Path": "LaraFashion\\Models\\StoreChatSession.cs",
+      "SHA256": "D27F74FFCBF8777632B7EDCC1C0E21F93DB670109730F27224D6984C41CCC3CA"
+    },
+    {
+      "Path": "LaraFashion\\Models\\StoreChatSettings.cs",
+      "SHA256": "A423C3EF0A0A4B103C427B20FB4C9AC74CA153BDC92A430822A7E004B6C0DC2F"
+    },
+    {
+      "Path": "LaraFashion\\Models\\StoreVisit.cs",
+      "SHA256": "000C3010286189DC7AD0BFA69D184EB0C20BFA0D2B19B82DDB089958CCE21175"
+    },
+    {
+      "Path": "LaraFashion\\Program.cs",
+      "SHA256": "26AC9F899F727F849C67CEFAB8B73A6536C502981589D40C3456FA2147BF2586"
+    },
+    {
+      "Path": "LaraFashion\\Services\\AdminAuthService.cs",
+      "SHA256": "3CF3AA1250C9DEC0B888A4157F01D709690061795DF8974AC511438260F1DFD6"
+    },
+    {
+      "Path": "LaraFashion\\Services\\AppStoragePaths.cs",
+      "SHA256": "D8B8D0D7DDD44685C320BEF810AA6EDF7D86FDF1CFB34D5974BF73C962D95A08"
+    },
+    {
+      "Path": "LaraFashion\\Services\\BrowserStorageService.cs",
+      "SHA256": "AB5AF2AAC4456898FF60103396A9156A04A5B33B457BC2E19107F0C445880CD6"
+    },
+    {
+      "Path": "LaraFashion\\Services\\CartService.cs",
+      "SHA256": "B70DE83C34CFC3985E63D646DB6841E3472A1E350F29FA9F52D30A4FB5C9149D"
+    },
+    {
+      "Path": "LaraFashion\\Services\\CategoryService.cs",
+      "SHA256": "DCC690BE69BC4368B4F3034A88E669587F8A4E555E5648F4B5E39F665D311C78"
+    },
+    {
+      "Path": "LaraFashion\\Services\\DatabaseSeeder.cs",
+      "SHA256": "C73E2C2ED9C686B879C0DAEFA9ADD5D142A72FCBC26B19CA1A3DE7DD8005D6FA"
+    },
+    {
+      "Path": "LaraFashion\\Services\\DiscountService.cs",
+      "SHA256": "F19A6A669434C67ABCC7C2F4947923AD095044DA3C0C0F2787F6DA2F99088B58"
+    },
+    {
+      "Path": "LaraFashion\\Services\\ImageMaintenanceService.cs",
+      "SHA256": "573A9D0757A105471C2D4571D5DA28CBB8458E51E1F5D5780173D9EB73D468C6"
+    },
+    {
+      "Path": "LaraFashion\\Services\\InventoryException.cs",
+      "SHA256": "09DDC1197C5E879F3D4933CE96066F634A6D37767B8DC59BA9F7B8B598405BBF"
+    },
+    {
+      "Path": "LaraFashion\\Services\\InventorySelection.cs",
+      "SHA256": "7B86278267812EE154E4A7E1931257CC4D1111521A1E0A545DF0AFC0729A0585"
+    },
+    {
+      "Path": "LaraFashion\\Services\\JwtService.cs",
+      "SHA256": "CA9BB412024C648AAF7E30B082A802B66D2D748F4E2CC0D13B19CC289600C826"
+    },
+    {
+      "Path": "LaraFashion\\Services\\OrderInventoryReviewContracts.cs",
+      "SHA256": "B63D993749CE55059D330BF9BB97B1FE95486BDFAC016F65DD5A3279175428CC"
+    },
+    {
+      "Path": "LaraFashion\\Services\\OrderInventoryReviewService.cs",
+      "SHA256": "3E877A762A6230EB11C5D8F4F85064ABF506092627EEF56667952EAC58D8D443"
+    },
+    {
+      "Path": "LaraFashion\\Services\\OrderNumberPolicy.cs",
+      "SHA256": "0F1CD4FF317B184A62B86AE68F288E766608F780F533A5963281CE756A701631"
+    },
+    {
+      "Path": "LaraFashion\\Services\\OrderService.cs",
+      "SHA256": "508051520AD272DF78A7DCFEF884B4A4EE0A06E9CE587A8D19A728F7A8D4E30F"
+    },
+    {
+      "Path": "LaraFashion\\Services\\PasswordHasherService.cs",
+      "SHA256": "28AFD774170061AAA970207A3E9921713C097CE7506434A6664E7022DA8F97C6"
+    },
+    {
+      "Path": "LaraFashion\\Services\\PhoneNumberNormalizer.cs",
+      "SHA256": "96701271E744CEDCE571D895506122C96E2E48A15541380918C64F96B4EEC097"
+    },
+    {
+      "Path": "LaraFashion\\Services\\ProductService.cs",
+      "SHA256": "106D5FFADE4B3B9707CBD95B60BC233E752CB7E5CAB18AC41B8A1E0ACAA3C773"
+    },
+    {
+      "Path": "LaraFashion\\Services\\ReportsService.cs",
+      "SHA256": "E34E08882816FB713D30DB39B2CBB7C18A458FE47D0538E607063CA5429E9EF8"
+    },
+    {
+      "Path": "LaraFashion\\Services\\SandboxFilterState.cs",
+      "SHA256": "6DCA22141EA8DB6058C2B4DBE069F2EC872575784BAD1B8EC76F360E21634F31"
+    },
+    {
+      "Path": "LaraFashion\\Services\\SizeLabelParser.cs",
+      "SHA256": "C63E775506AED7B76CEDA525798BEF10D242C5DDED16E463A80E5B134D48F20B"
+    },
+    {
+      "Path": "LaraFashion\\Services\\SizeNamePolicy.cs",
+      "SHA256": "9D1D675B1C2C36597B51B103EBA251F8080F3AF7D10AD50047FA19C4E9580DB6"
+    },
+    {
+      "Path": "LaraFashion\\Services\\SqliteWork.cs",
+      "SHA256": "CB40410B22BA9E7019AC5068C92A17B41FE8BC29D4BF511CC5FE823CECBC4D36"
+    },
+    {
+      "Path": "LaraFashion\\Services\\StoreChatAgentService.cs",
+      "SHA256": "E4BE8D93E32DB0C3C9315FBDECFCF6EDD1BE9132EB8E8B41381F72EC574BDAF6"
+    },
+    {
+      "Path": "LaraFashion\\Services\\StoreChatMode.cs",
+      "SHA256": "2B4255A17BBF74E1F80BF462F0080D6DAAB348065BFD6AB3D08EA3FBBF3FDE53"
+    },
+    {
+      "Path": "LaraFashion\\Services\\StoreChatService.cs",
+      "SHA256": "4A36B3A4BEFFE9EE228E3B5C62A107CF3A92F5DA472826E2127E8B6BCCFA6697"
+    },
+    {
+      "Path": "LaraFashion\\Services\\StoreChatSettingsService.cs",
+      "SHA256": "D429A2745B2A11269E32FF40FD66BF48B1C47BD3F8D3D47D4585582B17F0A5CD"
+    },
+    {
+      "Path": "LaraFashion\\Services\\StorefrontFilterState.cs",
+      "SHA256": "3251CEC521B3CEF60FFBDE40B3D549B9A4E55BF9547351F7459F9AEC1EF485FE"
+    },
+    {
+      "Path": "LaraFashion\\wwwroot\\app.css",
+      "SHA256": "F434788EA7A9188A3D0A3ED50982AE66D66A5C02D7D635AAF14A67B85DEECF7D"
+    },
+    {
+      "Path": "LaraFashion\\wwwroot\\css\\modern-controls.css",
+      "SHA256": "D2179F2DC11BE6E8471FAA0CF9A9F2F2CAAB5D2B830924DDC42F33A911C30A9B"
+    },
+    {
+      "Path": "LaraFashion\\wwwroot\\css\\site.css",
+      "SHA256": "E1E50AD75A9A9E9CC063B79D693B1E7EC3C13B58C18415AF81E221E6443E473B"
+    },
+    {
+      "Path": "New Text Document.txt",
+      "SHA256": "E0EC03301A24923122D48B695B14D247D0589600FD9BA54CE01B3CBCD904950F"
+    }
+  ]
+}

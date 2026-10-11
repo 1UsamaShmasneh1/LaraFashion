@@ -21,6 +21,7 @@ public sealed record CatalogOverview(int ProductCount, decimal MinimumPrice, dec
 
 public class ProductService
 {
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Product, SemaphoreSlim> CreationGates = new();
     private readonly AppDbContext _db;
     private readonly AppStoragePaths _storagePaths;
     private readonly IDbContextFactory<AppDbContext> _factory;
@@ -38,7 +39,7 @@ public class ProductService
         var query = db.Products
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(x => x.Sizes)
+            .Include(x => x.Sizes.OrderBy(s => s.Id))
             .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
@@ -51,16 +52,11 @@ public class ProductService
             query = query.Where(x => x.ProductCategories.Any(pc => pc.CategoryId == categoryId.Value));
         }
 
-        if (!string.IsNullOrWhiteSpace(size))
-        {
-            var normalizedSize = size.Trim().ToUpperInvariant();
-            query = query.Where(x => x.Sizes.Any(s =>
-                s.Quantity > 0 && s.SizeName.Trim().ToUpper() == normalizedSize));
-        }
-
-        return await query
+        var products = await query
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
+        return products.Where(p => p.Sizes.Any(s => SizeNamePolicy.IsSelectable(p, s)
+            && (string.IsNullOrWhiteSpace(size) || SizeNamePolicy.Key(s.SizeName) == SizeNamePolicy.Key(size)))).ToList();
     }
 
     public async Task<CatalogOverview> GetCatalogOverviewAsync(StoreChatMode mode = StoreChatMode.Customer)
@@ -80,18 +76,8 @@ public class ProductService
 
     public async Task<IReadOnlyList<string>> GetAvailableSizesAsync(StoreChatMode mode = StoreChatMode.Customer)
     {
-        var productQuery = _db.Products
-            .AsNoTracking()
-            .AsQueryable();
-
-        productQuery = mode == StoreChatMode.Sandbox
-            ? productQuery.Where(product => !product.IsPublished)
-            : productQuery.Where(product => product.IsActive && product.IsPublished);
-
-        var sizeNames = await productQuery
-            .SelectMany(product => product.Sizes.Where(size => size.Quantity > 0))
-            .Select(size => size.SizeName)
-            .ToListAsync();
+        var products = mode == StoreChatMode.Sandbox ? await GetUnpublishedProductsAsync() : await GetActiveProductsAsync();
+        var sizeNames = products.SelectMany(p => p.Sizes.Where(s => SizeNamePolicy.IsSelectable(p, s))).Select(s => s.SizeName);
 
         var availableSizes = sizeNames
             .Where(size => !string.IsNullOrWhiteSpace(size))
@@ -107,7 +93,7 @@ public class ProductService
         var query = _db.Products
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(x => x.Sizes)
+            .Include(x => x.Sizes.OrderBy(s => s.Id))
             .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
@@ -130,7 +116,7 @@ public class ProductService
         var query = _db.Products
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(x => x.Sizes)
+            .Include(x => x.Sizes.OrderBy(s => s.Id))
             .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
@@ -146,9 +132,9 @@ public class ProductService
 
         if (!string.IsNullOrWhiteSpace(size))
         {
-            var normalizedSize = size.Trim().ToUpperInvariant();
+            var normalizedSize = SizeNamePolicy.Key(size);
             query = query.Where(x => x.Sizes.Any(s =>
-                s.Quantity > 0 && s.SizeName.Trim().ToUpper() == normalizedSize));
+                s.Quantity > 0 && s.NormalizedName == normalizedSize));
         }
 
         return await query
@@ -162,7 +148,7 @@ public class ProductService
         var query = db.Products
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(x => x.Sizes)
+            .Include(x => x.Sizes.OrderBy(s => s.Id))
             .Include(x => x.Images.OrderBy(image => image.SortOrder).ThenBy(image => image.Id))
             .Include(x => x.ProductDiscounts)
                 .ThenInclude(x => x.Discount)
@@ -187,31 +173,46 @@ public class ProductService
 
         foreach (var persistedItem in persistedItems)
         {
-            if (persistedItem.ProductId == Guid.Empty || string.IsNullOrWhiteSpace(persistedItem.Size))
-                continue;
-
             var product = await GetProductAsync(persistedItem.ProductId, includeUnpublished);
 
             if (product is null || !product.IsActive || (!product.IsPublished && !includeUnpublished))
+            {
+                result.Add(new CartItem { ProductId = persistedItem.ProductId, ProductSizeId = persistedItem.ProductSizeId,
+                    ProductName = string.IsNullOrEmpty(persistedItem.ProductName) ? "منتج غير متاح" : persistedItem.ProductName,
+                    ProductSerialNumber = persistedItem.ProductSerialNumber, ProductImageUrl = persistedItem.ProductImageUrl,
+                    Size = persistedItem.Size, Quantity = persistedItem.Quantity, UnitPrice = persistedItem.UnitPrice,
+                    OriginalUnitPrice = persistedItem.UnitPrice, ReviewMessage = "هذا المنتج لم يعد متاحاً. احذف هذا العنصر؛ بقية السلة محفوظة." });
                 continue;
+            }
 
-            var productSize = product.Sizes
-                .FirstOrDefault(x => x.SizeName == persistedItem.Size);
-
-            if (productSize is null || productSize.Quantity <= 0)
-                continue;
-
-            var quantity = Math.Min(Math.Max(persistedItem.Quantity, 1), productSize.Quantity);
-
+            ProductSize? productSize = null;
+            string? review = null;
+            var matches = product.Sizes.Where(s => SizeNamePolicy.Key(s.SizeName) == SizeNamePolicy.Key(persistedItem.Size)).ToList();
+            if (persistedItem.ProductSizeId.HasValue)
+            {
+                productSize = product.Sizes.SingleOrDefault(s => s.Id == persistedItem.ProductSizeId);
+                if (productSize is null) review = "المقاس المختار حُذف أو استُبدل. احذف هذا العنصر واختر المقاس من المنتج مجدداً.";
+                else if (SizeNamePolicy.Key(productSize.SizeName) != SizeNamePolicy.Key(persistedItem.Size))
+                    review = "تغير المقاس المختار. احذف هذا العنصر وأعد اختيار المقاس.";
+            }
+            else if (matches.Count == 1) productSize = matches[0];
+            else review = "تعذر تحديد المقاس القديم بأمان. احذف هذا العنصر وأعد اختياره؛ بقية السلة محفوظة.";
+            if (review is null && (productSize is null || !SizeNamePolicy.IsValid(productSize.SizeName) || matches.Count != 1))
+                review = "بيانات هذا المقاس غير صالحة أو مكررة. اختر مقاساً آخر أو تواصل مع المتجر.";
+            if (review is null && (persistedItem.Quantity <= 0 || persistedItem.Quantity > productSize!.Quantity))
+                review = $"الكمية المطلوبة غير متاحة للمقاس {persistedItem.Size}. المتاح: {productSize!.Quantity}. راجع الكمية في السلة.";
             result.Add(new CartItem
             {
                 ProductId = product.Id,
+                ProductSizeId = persistedItem.ProductSizeId ?? productSize?.Id,
+                ReviewMessage = review,
                 ProductName = product.Name,
                 ProductSerialNumber = product.SerialNumber,
                 ProductImageUrl = product.PrimaryImageUrl,
                 Size = persistedItem.Size,
-                Quantity = quantity,
-                MaxAvailableQuantity = productSize.Quantity,
+                Quantity = persistedItem.Quantity,
+                MaxAvailableQuantity = productSize is not null && matches.Count == 1
+                    && SizeNamePolicy.Key(productSize.SizeName) == SizeNamePolicy.Key(persistedItem.Size) ? productSize.Quantity : 0,
                 UnitPrice = product.StorePrice,
                 OriginalUnitPrice = product.StoreOriginalPrice,
                 ProductDiscounts = product.ProductDiscounts
@@ -229,29 +230,7 @@ public class ProductService
 
     public async Task AddProductAsync(Product product)
     {
-        if (string.IsNullOrWhiteSpace(product.Name))
-            throw new InvalidOperationException("اسم المنتج مطلوب.");
-
-        product.Id = Guid.NewGuid();
-        product.CreatedAt = DateTime.Now;
-        product.UpdatedAt = DateTime.Now;
-        product.IsPublished = false;
-
-        product.DiscountType = LaraFashion.Models.Enums.DiscountType.None;
-        product.DiscountValue = 0;
-        product.ProductDiscounts = new();
-        product.ProductCategories = new();
-
-        NormalizeProductImages(product);
-
-        foreach (var size in product.Sizes)
-        {
-            size.Id = Guid.NewGuid();
-            size.ProductId = product.Id;
-        }
-
-        _db.Products.Add(product);
-        await _db.SaveChangesAsync();
+        await AddProductWithRelationsAsync(product, [], []);
     }
 
     public async Task AddProductWithRelationsAsync(
@@ -259,18 +238,45 @@ public class ProductService
         List<Guid> discountIds,
         List<Guid> categoryIds)
     {
+        var gate = CreationGates.GetValue(product, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try { await AddProductCoreAsync(product, discountIds, categoryIds); }
+        finally { gate.Release(); }
+    }
+
+    private async Task AddProductCoreAsync(Product product, List<Guid> discountIds, List<Guid> categoryIds)
+    {
         if (string.IsNullOrWhiteSpace(product.Name))
             throw new InvalidOperationException("اسم المنتج مطلوب.");
 
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-
-        await AddProductAsync(product);
-        await ReplaceProductDiscountsAsync(product.Id, discountIds);
-        await ReplaceProductCategoriesAsync(product.Id, categoryIds);
-
-        await _db.SaveChangesAsync();
-
-        await transaction.CommitAsync();
+        if (product.Id != Guid.Empty) throw new InvalidOperationException("هذا المنتج له هوية بالفعل. استخدم تعديل المنتج؛ لن يُنشأ منتج آخر.");
+        var originalRows = product.Sizes.ToList();
+        var input = SnapshotForWrite(product);
+        discountIds = discountIds.ToList(); categoryIds = categoryIds.ToList();
+        SizeNamePolicy.Validate(input.Sizes, Guid.Empty);
+        var saved = await SqliteWork.WriteAsync(_factory, async db =>
+        {
+            var ids = input.Sizes.Where(s => s.Id != Guid.Empty).Select(s => s.Id).ToList();
+            if (await db.ProductSizes.AnyAsync(s => ids.Contains(s.Id)))
+                throw new InvalidOperationException("هوية أحد المقاسات مستخدمة بالفعل. أعد فتح الإضافة.");
+            var created = new Product { Id = Guid.NewGuid(), Name = input.Name, SerialNumber = input.SerialNumber,
+                Description = input.Description, OriginalPrice = input.OriginalPrice, IsActive = input.IsActive,
+                IsPublished = false, ImageUrl = input.ImageUrl,
+                Sizes = input.Sizes.Select(s => new ProductSize { Id = s.Id == Guid.Empty ? Guid.NewGuid() : s.Id,
+                    SizeName = s.SizeName, Quantity = s.Quantity }).ToList(),
+                Images = input.Images.Select(i => new ProductImage { Id = Guid.NewGuid(), ImageUrl = i.ImageUrl,
+                    SortOrder = i.SortOrder, IsPrimary = i.IsPrimary }).ToList() };
+            NormalizeProductImages(created);
+            foreach (var s in created.Sizes) s.ProductId = created.Id;
+            db.Products.Add(created);
+            await ReplaceProductDiscountsAsync(created.Id, discountIds, db);
+            await ReplaceProductCategoriesAsync(created.Id, categoryIds, db);
+            return created;
+        });
+        // Only publish generated identities to the caller after the transaction commits.
+        product.Id = saved.Id; product.IsPublished = false; product.CreatedAt = saved.CreatedAt; product.UpdatedAt = saved.UpdatedAt;
+        for (var i = 0; i < originalRows.Count; i++)
+        { originalRows[i].Id = saved.Sizes[i].Id; originalRows[i].ProductId = saved.Id; }
     }
 
     public async Task UpdateProductWithRelationsAsync(
@@ -285,6 +291,8 @@ public class ProductService
         if (string.IsNullOrWhiteSpace(product.Name))
             throw new InvalidOperationException("اسم المنتج مطلوب.");
 
+        product = SnapshotForWrite(product);
+        discountIds = discountIds.ToList(); categoryIds = categoryIds.ToList();
         var removedImageUrls = await SqliteWork.WriteAsync(_factory, async db =>
         {
             var removed = await UpdateProductWithSizesCoreAsync(product, db);
@@ -350,6 +358,7 @@ public class ProductService
         if (string.IsNullOrWhiteSpace(product.Name))
             throw new InvalidOperationException("اسم المنتج مطلوب.");
 
+        product = SnapshotForWrite(product);
         var removedImageUrls = await SqliteWork.WriteAsync(_factory, db => UpdateProductWithSizesCoreAsync(product, db));
 
         foreach (var imageUrl in removedImageUrls)
@@ -369,9 +378,11 @@ public class ProductService
         if (product.InventorySnapshot is null || product.InventorySnapshot.Count != existingProduct.Sizes.Count
             || existingProduct.Sizes.Any(x => !product.InventorySnapshot.TryGetValue(x.Id, out var q) || q != x.Quantity))
             throw new InvalidOperationException("تغير مخزون المنتج أو مقاساته منذ فتح التعديل. أعد فتح المنتج ثم احفظ.");
-        if (product.Sizes.Any(x => x.Quantity < 0 || string.IsNullOrWhiteSpace(x.SizeName))
-            || product.Sizes.Select(x => x.SizeName).Distinct().Count() != product.Sizes.Count)
-            throw new InvalidOperationException("المقاسات والكميات غير صالحة أو مكررة.");
+        SizeNamePolicy.Validate(product.Sizes, product.Id);
+        var submittedIds = product.Sizes.Where(s => s.Id != Guid.Empty).Select(s => s.Id).ToList();
+        if (await db.ProductSizes.AnyAsync(s => submittedIds.Contains(s.Id) && s.ProductId != product.Id)
+            || product.Sizes.Any(s => s.ProductId == product.Id && !existingProduct.Sizes.Any(e => e.Id == s.Id)))
+            throw new InvalidOperationException("أحد صفوف المقاسات حُذف أو ينتمي لمنتج آخر. أعد فتح التعديل.");
 
         var oldImageUrls = existingProduct.Images
             .Select(x => x.ImageUrl)
@@ -402,7 +413,7 @@ public class ProductService
             .Where(x => !existingProduct.Sizes.Any(s => s.Id == x.Id))
             .Select(x => new ProductSize
             {
-                Id = Guid.NewGuid(),
+                Id = x.Id == Guid.Empty ? Guid.NewGuid() : x.Id,
                 ProductId = existingProduct.Id,
                 SizeName = x.SizeName,
                 Quantity = x.Quantity
@@ -713,35 +724,25 @@ public class ProductService
         if (productId == Guid.Empty)
             return;
 
-        var product = await _db.Products.FirstOrDefaultAsync(x => x.Id == productId);
-
-        if (product is null || product.IsPublished)
-            return;
-
-        product.IsPublished = true;
-        product.UpdatedAt = DateTime.Now;
-
-        await _db.SaveChangesAsync();
+        await SqliteWork.WriteAsync(_factory, async db =>
+        {
+            var product = await db.Products.Include(p => p.Sizes).SingleOrDefaultAsync(p => p.Id == productId);
+            if (product is null) throw new InvalidOperationException("المنتج غير موجود. حدّث الصفحة.");
+            SizeNamePolicy.Validate(product.Sizes, product.Id);
+            product.IsPublished = true; product.UpdatedAt = DateTime.Now;
+            return true;
+        });
     }
 
     public async Task<int> PublishAllUnpublishedProductsAsync()
     {
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-
-        var products = await _db.Products
-            .Where(x => !x.IsPublished)
-            .ToListAsync();
-
-        foreach (var product in products)
+        return await SqliteWork.WriteAsync(_factory, async db =>
         {
-            product.IsPublished = true;
-            product.UpdatedAt = DateTime.Now;
-        }
-
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return products.Count;
+            var products = await db.Products.Include(p => p.Sizes).Where(p => !p.IsPublished).ToListAsync();
+            foreach (var product in products) SizeNamePolicy.Validate(product.Sizes, product.Id);
+            foreach (var product in products) { product.IsPublished = true; product.UpdatedAt = DateTime.Now; }
+            return products.Count;
+        });
     }
 
     public async Task DeleteImageIfUnusedAsync(string? imageUrl)
@@ -764,6 +765,16 @@ public class ProductService
             File.Delete(filePath);
         }
     }
+
+    private static Product SnapshotForWrite(Product p) => new()
+    {
+        Id = p.Id, Name = p.Name, SerialNumber = p.SerialNumber, Description = p.Description,
+        OriginalPrice = p.OriginalPrice, ImageUrl = p.ImageUrl, IsActive = p.IsActive, IsPublished = p.IsPublished,
+        InventorySnapshot = p.InventorySnapshot?.ToDictionary(x => x.Key, x => x.Value),
+        Sizes = p.Sizes.Select(s => new ProductSize { Id = s.Id, ProductId = s.ProductId, SizeName = s.SizeName, Quantity = s.Quantity }).ToList(),
+        Images = p.Images.Select(i => new ProductImage { Id = i.Id, ProductId = i.ProductId, ImageUrl = i.ImageUrl,
+            SortOrder = i.SortOrder, IsPrimary = i.IsPrimary }).ToList()
+    };
 
     private static void NormalizeProductImages(Product product)
     {

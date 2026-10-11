@@ -8,5 +8,8 @@ public class ProductSize
 
     public string SizeName { get; set; } = string.Empty;
 
+    public string NormalizedName { get; set; } = string.Empty;
+
     public int Quantity { get; set; }
+    public long ReviewRevision { get; set; }
 }

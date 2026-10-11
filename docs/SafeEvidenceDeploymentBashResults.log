@@ -1,0 +1,35 @@
+Environment: Windows / MSYS Git Bash. Actual file SQLite and published Release maintenance tool.
+Production-facing service, network, git and repeated build/publish commands are root-confined mocks.
+Full run:
+PASS bash zero; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-7ulfds7i
+PASS bash complete; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-g283pk99
+PASS bash over-2730; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-yctf8rih
+PASS bash missing-tool; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-tbdqzea9
+PASS bash outside-write; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-p427ace5
+PASS bash zero-result; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-7wwotc99
+PASS bash arrival-before-stop; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-0f8nv7mb
+PASS bash missing-evidence; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-9yzicj_a
+PASS bash identity-only; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-sksaepxo
+PASS bash review-redeploy; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-laouhno5
+PASS bash staging-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-hc0cxp5w
+PASS bash identity-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-ude6obch
+PASS bash review-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-xos_9w80
+PASS bash schema-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-toadnxc5
+PASS bash backup-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-ym7qtpcm
+PASS bash start-write-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-8am_44kl
+PASS bash health-write; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-a3tadhaz
+PASS bash build-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-sehz4jhi
+PASS bash bad-runtime-config; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-up3px3z8
+PASS bash start-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-dzih1ul7
+PASS bash recovery-start-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-8yaunsc_
+PASS bash stop-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-wbo7rud9
+PASS bash restore-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-by793x9k
+PASS bash kill-identity; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-xig2u3ce
+PASS bash wrong-health; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-5qw7m7u5
+PASS bash lock-flag-without-descriptor; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-67yim1a2
+LIMITATION: MSYS Bash with mocked flock; actual Linux kernel locks/inherited descriptor remain unverified.
+BASH_HARNESS_RESULT: all executed scenarios passed
+Scoped permission checks after final Bash change:
+PASS bash candidate-permission-failure; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-_bju1f6n
+PASS bash complete-with-permission-checks; C:\Users\us050\AppData\Local\Temp\LaraFashionDeployHarness-dej_rp7a
+SCOPED_PERMISSION_RESULT: 2/2 passed

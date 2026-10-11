@@ -1,0 +1,165 @@
+Local baseline and final verification; synthetic runner only.
+--- baseline ---
+PASS 01 S exhausted leaves M=3 L=4 visible with original size IDs
+PASS 02-03 partial sequential sizes; sold out hidden and retained for admin
+PASS 04 concurrent last piece: one order and no negative stock
+PASS 05 concurrent different sizes preserve both decrements
+PASS 06 duplicate lines aggregate and invalid quantities rejected
+PASS 07 rollback on later-line and history insert failure
+PASS 08 concurrent cancellation and revival once; failed bulk atomic
+PASS 09 stale cleanup cannot delete restored stock; admin deletion and open order rules
+PASS 09b old order cleanup retains product stock history and reservations
+PASS 10 fresh current and other circuit queries; restart; preserve unpublished intent
+PASS positive quantity with invalid empty size is hidden without changing data
+PASS 11 concurrent independent checkouts distinct GUID and display number
+PASS 12 concurrent same attempt; retry; independent attempts allowed
+PASS 13 deleted identities and previous numbers never reallocated
+PASS 14 orders and snapshots merge by GUID with sandbox isolation
+PASS 15 edit normalizes, validates, no-op; current historical sandbox numbers blocked
+PASS 16 concurrent same number and stale editors; edit alongside checkout
+PASS 17 unauthorized rejected; audit failure rolls back all changes
+PASS 18 edit preserves identity relationships amounts timestamps stock history reports
+PASS inventory admin edit versus checkout detects stale snapshot without lost sizes
+PASS SQLite quantity concurrency token rejects stale direct EF writes
+PASS SQLite guards reject bypass collisions and reservation deletion
+PASS multiple categories images and fixed sale price preserved during stock edit
+PASS migration preserves prior official sandbox history products images and restart
+PASS migration ambiguous legacy duplicate refuses atomically with diagnostic dry-run
+PASS migration rejects mismatched linked history and malformed numbers
+PASS migration Down preserves prior data on isolated fixture
+PASS migration never infers unlinked history ownership from equal GUID
+PASS size 01 reference add publish restore checkout 3->2 others 2/4/4; exhaustion
+PASS size 02 add/edit validation duplicates invalid quantities owner/id; preserve input
+PASS size 03 single/bulk publish validates all; no partial publish; zero permitted
+PASS size 04 normalization SQLite parity whitespace ASCII case invisibles distinct semantics
+PASS size 05 legacy duplicate positive+positive and zero+positive reject checkout/cancel atomically
+PASS size 06 old cart unique upgrades ID; ambiguous/missing stays review; quantities retained
+PASS size 07 rename same ID requires review and prevents checkout/cancellation
+PASS size 08 delete/recreate size and product never rebind stable cart; ledger prevents reused ID
+PASS size 09 reorder remove middle append keeps original IDs; repeated save no duplicate
+PASS size 10 failed graph add retry fresh context; duplicate save guard; stale edit cannot reset stock
+PASS size 11 wrong owner ID, grouped overflow and later line failures roll back
+PASS size 12 old completed attempt accepts new identity contract and cannot create another order
+PASS size 13 cancellation/reactivation/bulk exact identity once; historical null blocks without guessing
+PASS size 14 migration previous data/triggers audit reservations; null history retained; Down/Up
+PASS size 15 migration conflicts stop before schema/data change; read-only diagnostic hash unchanged
+PASS size 16 DB bypass duplicate wrong key negative overlarge; safe diagnostics no customer/recovery secrets
+PASS review 01 migration evidence preserves original rows null identities finances stock and source hash
+PASS review 02 preview then close makes no movement mapping status or success audit
+PASS review 03 confirmed cancellation restores explicit zero/unpublished target once and keeps purchase snapshots
+PASS review 04 pre-upgrade cancelled revival 3->1; insufficient and overflow reject atomically
+PASS review 05 one matching candidate never substitutes for explicit selection and confirmation
+PASS review 06 foreign product/line extra choices ticket operation/order tampering and unauthorized entries reject
+PASS review 07 several historical and modern lines sharing target aggregate once; no double restore
+PASS review 08 incomplete choice and later target failure have no partial effects; grouped overflow rejects
+PASS review 09 double confirm lost-response replay fresh services durable keys same ID changed content rejects
+PASS review 10 distinct concurrent confirmations and ordinary/bulk contenders cannot apply same source twice
+PASS review 11 stock purchase/admin edit or rename/delete after preview invalidates confirmation
+PASS review 12 status ABA invalidates old preview even when source status returns; revision separate from number
+PASS review 13 cancel revive cancel links operations and locks same target; replay never rolls current state back
+PASS review 14 failure saving header detail movement or status rolls back inventory history revision audit
+PASS review 15 missing product replacement same name or no size blocks; never creates alternative
+PASS review 16 no-inventory transitions and current state no-op need no review and update revisions correctly
+PASS review 17 mixed bulk refuses all and returns structured needs; later no-op and individual review work
+PASS review 18 cleanup delete destinations preserve audit evidence replay and immutable DB guards
+PASS review 19 sandbox isolation and official financial snapshot order number and original timestamps preserved
+PASS review 20 blank reason never executes and closing/reopening has no saved selection; server protection has no editable quantity/admin
+PASS review 21 new null corruption and damaged modern IDs cannot use historical bypass; original evidence mutations block
+PASS review 22 deleted or semantically renamed prior destination blocks next cycle rather than transferring stock
+PASS review 23 already identity-upgraded environment requires hash verified pre-identity proof; wrong hash/source reject
+PASS review 24 stock/name ABA invalidates preview by persistent destination revision
+RESULT: 68/68 passed; isolated fixtures retained in C:\Users\us050\AppData\Local\Temp\LaraFashionTests\cf74dc48e31849c0a946b80b47d068bd
+--- final Release runner ---
+PASS 01 S exhausted leaves M=3 L=4 visible with original size IDs
+PASS 02-03 partial sequential sizes; sold out hidden and retained for admin
+PASS 04 concurrent last piece: one order and no negative stock
+PASS 05 concurrent different sizes preserve both decrements
+PASS 06 duplicate lines aggregate and invalid quantities rejected
+PASS 07 rollback on later-line and history insert failure
+PASS 08 concurrent cancellation and revival once; failed bulk atomic
+PASS 09 stale cleanup cannot delete restored stock; admin deletion and open order rules
+PASS 09b old order cleanup retains product stock history and reservations
+PASS 10 fresh current and other circuit queries; restart; preserve unpublished intent
+PASS positive quantity with invalid empty size is hidden without changing data
+PASS 11 concurrent independent checkouts distinct GUID and display number
+PASS 12 concurrent same attempt; retry; independent attempts allowed
+PASS 13 deleted identities and previous numbers never reallocated
+PASS 14 orders and snapshots merge by GUID with sandbox isolation
+PASS 15 edit normalizes, validates, no-op; current historical sandbox numbers blocked
+PASS 16 concurrent same number and stale editors; edit alongside checkout
+PASS 17 unauthorized rejected; audit failure rolls back all changes
+PASS 18 edit preserves identity relationships amounts timestamps stock history reports
+PASS inventory admin edit versus checkout detects stale snapshot without lost sizes
+PASS SQLite quantity concurrency token rejects stale direct EF writes
+PASS SQLite guards reject bypass collisions and reservation deletion
+PASS multiple categories images and fixed sale price preserved during stock edit
+PASS migration preserves prior official sandbox history products images and restart
+PASS migration ambiguous legacy duplicate refuses atomically with diagnostic dry-run
+PASS migration rejects mismatched linked history and malformed numbers
+PASS migration Down preserves prior data on isolated fixture
+PASS migration never infers unlinked history ownership from equal GUID
+PASS size 01 reference add publish restore checkout 3->2 others 2/4/4; exhaustion
+PASS size 02 add/edit validation duplicates invalid quantities owner/id; preserve input
+PASS size 03 single/bulk publish validates all; no partial publish; zero permitted
+PASS size 04 normalization SQLite parity whitespace ASCII case invisibles distinct semantics
+PASS size 05 legacy duplicate positive+positive and zero+positive reject checkout/cancel atomically
+PASS size 06 old cart unique upgrades ID; ambiguous/missing stays review; quantities retained
+PASS size 07 rename same ID requires review and prevents checkout/cancellation
+PASS size 08 delete/recreate size and product never rebind stable cart; ledger prevents reused ID
+PASS size 09 reorder remove middle append keeps original IDs; repeated save no duplicate
+PASS size 10 failed graph add retry fresh context; duplicate save guard; stale edit cannot reset stock
+PASS size 11 wrong owner ID, grouped overflow and later line failures roll back
+PASS size 12 old completed attempt accepts new identity contract and cannot create another order
+PASS size 13 cancellation/reactivation/bulk exact identity once; historical null blocks without guessing
+PASS size 14 migration previous data/triggers audit reservations; null history retained; Down/Up
+PASS size 15 migration conflicts stop before schema/data change; read-only diagnostic hash unchanged
+PASS size 16 DB bypass duplicate wrong key negative overlarge; safe diagnostics no customer/recovery secrets
+PASS review 01 migration evidence preserves original rows null identities finances stock and source hash
+PASS review 02 preview then close makes no movement mapping status or success audit
+PASS review 03 confirmed cancellation restores explicit zero/unpublished target once and keeps purchase snapshots
+PASS review 04 pre-upgrade cancelled revival 3->1; insufficient and overflow reject atomically
+PASS review 05 one matching candidate never substitutes for explicit selection and confirmation
+PASS review 06 foreign product/line extra choices ticket operation/order tampering and unauthorized entries reject
+PASS review 07 several historical and modern lines sharing target aggregate once; no double restore
+PASS review 08 incomplete choice and later target failure have no partial effects; grouped overflow rejects
+PASS review 09 double confirm lost-response replay fresh services durable keys same ID changed content rejects
+PASS review 10 distinct concurrent confirmations and ordinary/bulk contenders cannot apply same source twice
+PASS review 11 stock purchase/admin edit or rename/delete after preview invalidates confirmation
+PASS review 12 status ABA invalidates old preview even when source status returns; revision separate from number
+PASS review 13 cancel revive cancel links operations and locks same target; replay never rolls current state back
+PASS review 14 failure saving header detail movement or status rolls back inventory history revision audit
+PASS review 15 missing product replacement same name or no size blocks; never creates alternative
+PASS review 16 no-inventory transitions and current state no-op need no review and update revisions correctly
+PASS review 17 mixed bulk refuses all and returns structured needs; later no-op and individual review work
+PASS review 18 cleanup delete destinations preserve audit evidence replay and immutable DB guards
+PASS review 19 sandbox isolation and official financial snapshot order number and original timestamps preserved
+PASS review 20 blank reason never executes and closing/reopening has no saved selection; server protection has no editable quantity/admin
+PASS review 21 new null corruption and damaged modern IDs cannot use historical bypass; original evidence mutations block
+PASS review 22 deleted or semantically renamed prior destination blocks next cycle rather than transferring stock
+PASS review 23 already identity-upgraded environment requires hash verified pre-identity proof; wrong hash/source reject
+PASS review 24 stock/name ABA invalidates preview by persistent destination revision
+PASS deployment 01 complete safe-numbers evidence identity review preserves every original table
+PASS deployment 02 dynamic zero few and over-2730 required evidence sets
+PASS deployment 03 pre-stop arrival included and later external write refuses target preparation
+PASS deployment 04 malformed arguments and zero-exit incomplete machine reports never run fixtures or overwrite DB
+PASS deployment 05 missing hash wrong schema and same physical file aliases leave source untouched
+PASS deployment 06 missing extra wrong fingerprint same-count replacement and source binding reject before sealing
+PASS deployment 07 identity-only needs real pre-identity source and excludes modern null and changed snapshot
+PASS deployment 08 review-applied redeploy preserves retained audit/evidence after order cleanup without reimport
+PASS deployment 09 partial newer conflicting and closed-without-evidence databases refuse without repair
+PASS deployment 10 failure after staging and identity restores only unchanged business pair; after review verifies
+PASS deployment 11 later order or stock/other write forbids backup restore even with zero review operations
+PASS deployment 12 backup path failure restore failure and machine failure cannot announce completion
+PASS deployment 13 interrupted persisted start intent blocks automatic retry and stage skipping
+PASS deployment 14 exact guard definition required even with correct trigger name and count
+PASS deployment 15 protected source stays unchanged and logical comparison covers unlisted extra business tables
+PASS deployment 16 health must match release schema and physical DB; GET response has no business writes
+PASS deployment 17 missing explicit result contract is refused despite successful remaining fields
+PASS deployment 18 external runtime settings and release manifest mismatch fail without leaking secrets
+PASS deployment 19 persisted start attempt forbids CLI restore even if no business write is visible
+PASS deployment 20 SQLite engine backup includes committed WAL without altering source journal or losing rows
+RESULT: 88/88 passed; isolated fixtures retained in C:\Users\us050\AppData\Local\Temp\LaraFashionTests\10dcebec1b50461abb31e05efe0583be
+--- protected reference preservation ---
+{"ContractVersion":1,"Section":"reference_upgrade_preservation","Success":true,"SchemaState":"BeforeIdentity","BusinessTablesCompared":21,"AllOriginalColumnsAndRowsIdentical":true,"PreviousTriggersPreserved":12,"HistoricalEvidence":2730,"ExpectedEvidenceDigest":"6249D7EA4BFBAD3922B00E7449B1469B89ECFEBD748090DC3FFEA6BA59A32ADE","RehearsalVerified":true,"BusinessPreserved":true,"IntegrityCheck":"ok","ForeignKeyViolations":0,"GuardsVerified":true,"EvidenceVerified":true,"SourceSha256":"675B33E415BCB3BC1916C49C07681AE32A54C54D31E232388EA75797AFD0537D","WorkingDirectory":"C:\\Users\\us050\\AppData\\Local\\Temp\\LaraFashionReviewUpgrade\\15499096b58c4df2b2bb5a7f7bfe4c25","Conclusion":"Working copy verified; no manager decisions executed. Production needs a fresh snapshot."}
+{"Section":"inventory_review_feature_readiness","SchemaPresent":true,"RequiredGuardsPresent":true,"SchemaReadyForReview":true,"ExecutedAdministrativeOperations":0,"EvidenceVerifiedEligibleLines":2730,"UnknownWithoutVerifiedEvidence":0,"ValidDestinationLines":1074,"MissingProductLines":1656,"Conclusion":"NULL is expected for history, not proof of eligibility or a deployment failure. Schema/guards/evidence are distinct from behavioral tests and case-specific manager decisions. Name matches are candidates only; deployment needs a fresh snapshot and review."}
+{"Test":"actual-published-GET-health","HttpStatus":200,"Redirect":false,"CandidateAndPhysicalDatabaseAndListeningPidVerified":true,"Success":true}

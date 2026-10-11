@@ -7,8 +7,28 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using System.Text.Json;
 
+if (args.Length > 0 && args[0] == "--test-linux-acceptance")
+    return await LinuxAcceptance.Run(args);
+if (args.Length>0 && args[0]=="--test-deployment-harness")
+{ try { return await DeploymentHarness.Run(args); } catch (Exception ex) { Console.WriteLine(JsonSerializer.Serialize(new { Success=false,FailureCode=ex is DeploymentFailure failure ? failure.Code : ex.GetType().Name })); return 2; } }
+if (DeploymentMaintenance.Handles(args)) return await DeploymentMaintenance.Run(args);
 if (args.Length == 2 && args[0] == "--diagnose") return await Diagnostics.Run(args[1]);
 if (args.Length == 1 && args[0] == "--ui") return await UiHost.Run();
+if (args.Length == 1 && args[0] == "--reproduce-sizes") return await SizeReproduction.Run();
+if (args.Length == 4 && args[0] == "--prepare-legacy-review")
+{ await LegacyReviewEvidence.Prepare(args[1], args[2], args[3]); return 0; }
+if (args.Length == 3 && args[0] == "--verify-review-upgrade") return await ReviewUpgradeVerification.Run(args[1], args[2]);
+if (args.Length == 3 && args[0] == "--retry-review-fixture")
+{
+    var replayFixture = Fixture.OpenExistingSynthetic(args[1]);
+    if (Path.GetDirectoryName(Path.GetFullPath(args[2])) != Path.GetDirectoryName(replayFixture.Paths.DatabasePath)) throw new InvalidOperationException("Fixture request path mismatch.");
+    var request = JsonSerializer.Deserialize<ConfirmInventoryReview>(await File.ReadAllTextAsync(args[2]))!;
+    await using var replayDb = replayFixture.Db();
+    var result = await replayFixture.Orders(replayDb).ConfirmInventoryReviewAsync(request, replayFixture.Token);
+    return result.Replayed ? 0 : 1;
+}
+if (args.Length != 0)
+{ Console.WriteLine("{\"ContractVersion\":1,\"Success\":false,\"FailureCode\":\"InvalidArguments\"}"); return 2; }
 var tests = new List<(string Name, Func<Task> Run)>();
 void Test(string name, Func<Fixture, Task> run) => tests.Add((name, async () => { var f = await Fixture.Create(); await run(f); }));
 void Check(bool condition, string message = "Assertion failed") { if (!condition) throw new Exception(message); }
@@ -65,13 +85,13 @@ Test("07 rollback on later-line and history insert failure", async f =>
     await Reject<InvalidOperationException>(() => f.Orders(db).CreateOrderAsync(f.Customer(), [f.Item(p), f.Item(p, "M")], f.Total(2)));
     Check(await f.Quantity(p) == 2);
     await db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FailHistory BEFORE INSERT ON SalesHistory BEGIN SELECT RAISE(ABORT, 'test failure'); END;");
-    await Reject<DbUpdateException>(async () => await f.Buy(p));
+    await Reject<InvalidOperationException>(async () => await f.Buy(p));
     Check(await f.Quantity(p) == 2 && await db.Orders.CountAsync() == 0 && await db.OrderNumberReservations.CountAsync() == 0);
 });
 Test("08 concurrent cancellation and revival once; failed bulk atomic", async f =>
 {
     var p = await f.Product(2); var o = await f.Buy(p, q: 2);
-    async Task Status(OrderStatus s) { await using var db = f.Db(); await f.Orders(db).UpdateStatusAsync(o.Id, s); }
+    async Task Status(OrderStatus s) { await using var db = f.Db(); await f.Orders(db).UpdateStatusAsync(o.Id, s, f.Token); }
     Check(await Race(() => Status(OrderStatus.Cancelled), () => Status(OrderStatus.Cancelled)) == 2 && await f.Quantity(p) == 2);
     Check(await Race(() => Status(OrderStatus.New), () => Status(OrderStatus.New)) == 2 && await f.Quantity(p) == 0);
     await Status(OrderStatus.Cancelled); var other = await f.Buy(p, q: 2); await using var db = f.Db();
@@ -84,12 +104,12 @@ Test("09 stale cleanup cannot delete restored stock; admin deletion and open ord
     await using (var other = f.Db()) await other.ProductSizes.Where(x => x.ProductId == p.Id && x.SizeName == "M").ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, 3));
     Check((await f.Products(stale).CleanDeletableProductsAsync()).DeletedProducts == 0 && await f.Quantity(p, "M") == 3);
     var o = await f.Buy(p, "M"); await Reject<InvalidOperationException>(() => f.Products(stale).DeleteProductAsync(p.Id));
-    await f.Orders(stale).UpdateStatusAsync(o.Id, OrderStatus.Ready); await f.Products(stale).DeleteProductAsync(p.Id);
+    await f.Orders(stale).UpdateStatusAsync(o.Id, OrderStatus.Ready, f.Token); await f.Products(stale).DeleteProductAsync(p.Id);
     Check(!await stale.Products.AsNoTracking().AnyAsync(x => x.Id == p.Id));
 });
 Test("09b old order cleanup retains product stock history and reservations", async f =>
 {
-    var p = await f.Product(3); var o = await f.Buy(p); await using var db = f.Db(); await f.Orders(db).UpdateStatusAsync(o.Id, OrderStatus.Ready);
+    var p = await f.Product(3); var o = await f.Buy(p); await using var db = f.Db(); await f.Orders(db).UpdateStatusAsync(o.Id, OrderStatus.Ready, f.Token);
     await db.Orders.Where(x => x.Id == o.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.UpdatedAt, DateTime.Now.AddDays(-31)));
     Check((await f.Orders(db).CleanOldOrdersAsync(f.Token)).DeletedOrders == 1);
     Check(await f.Quantity(p) == 2 && await db.Products.CountAsync() == 1 && await db.SalesHistory.CountAsync() == 1 && await db.OrderNumberReservations.CountAsync() == 1);
@@ -106,6 +126,9 @@ Test("10 fresh current and other circuit queries; restart; preserve unpublished 
 Test("positive quantity with invalid empty size is hidden without changing data", async f =>
 {
     await f.Product(3); await using var db = f.Db();
+    await Reject<SqliteException>(() => db.ProductSizes.ExecuteUpdateAsync(s => s.SetProperty(x => x.SizeName, " ")));
+    // Simulate pre-existing corruption solely on this disposable fixture to retain the read-path check.
+    await db.Database.ExecuteSqlRawAsync("DROP TRIGGER ProductSizeValidBeforeUPDATE");
     await db.ProductSizes.ExecuteUpdateAsync(s => s.SetProperty(x => x.SizeName, " "));
     Check((await f.Products(db).GetActiveProductsAsync()).Count == 0
         && (await f.Products(db).GetAllProductsAsync()).Single().IsPublished
@@ -129,7 +152,7 @@ Test("12 concurrent same attempt; retry; independent attempts allowed", async f 
 Test("13 deleted identities and previous numbers never reallocated", async f =>
 {
     var p = await f.Product(8); var attempt = Guid.NewGuid(); var o = await f.Buy(p, attempt: attempt); await using var db = f.Db(); var service = f.Orders(db);
-    await service.EditOrderNumberAsync(o.Id, "CUSTOM-13", 0, "Test", f.Token); await service.UpdateStatusAsync(o.Id, OrderStatus.Ready); await service.DeleteOrderAsync(o.Id);
+    await service.EditOrderNumberAsync(o.Id, "CUSTOM-13", 0, "Test", f.Token); await service.UpdateStatusAsync(o.Id, OrderStatus.Ready, f.Token); await service.DeleteOrderAsync(o.Id);
     var next = await f.Buy(p); Check(next.Id != o.Id && next.OrderNumber != o.OrderNumber);
     await Reject<InvalidOperationException>(() => service.EditOrderNumberAsync(next.Id, o.OrderNumber, 0, "Test", f.Token));
     await Reject<InvalidOperationException>(() => service.EditOrderNumberAsync(next.Id, "CUSTOM-13", 0, "Test", f.Token));
@@ -141,7 +164,7 @@ Test("14 orders and snapshots merge by GUID with sandbox isolation", async f =>
 {
     var p = await f.Product(4); var a = await f.Buy(p); var b = await f.Buy(p); await using var db = f.Db(); var service = f.Orders(db);
     Check((await service.GetCustomerOrdersByPhoneAsync("0501234567", false)).Orders.Count == 2);
-    await service.UpdateStatusAsync(a.Id, OrderStatus.Ready); await service.DeleteOrderAsync(a.Id);
+    await service.UpdateStatusAsync(a.Id, OrderStatus.Ready, f.Token); await service.DeleteOrderAsync(a.Id);
     var merged = (await service.GetCustomerOrdersByPhoneAsync("0501234567", false)).Orders;
     Check(merged.Count == 2 && merged.Any(x => x.OrderId == a.Id && x.IsHistorical) && merged.Any(x => x.OrderId == b.Id && !x.IsHistorical));
     await db.Products.Where(x => x.Id == p.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsPublished, false)); var sandbox = await f.Buy(p, sandbox: true);
@@ -158,7 +181,7 @@ Test("15 edit normalizes, validates, no-op; current historical sandbox numbers b
     await Reject<InvalidOperationException>(() => service.EditOrderNumberAsync(a.Id, "OK", 1, " ", f.Token));
     await db.Products.Where(x => x.Id == p.Id).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsPublished, false)); var sandbox = await f.Buy(p, sandbox: true);
     await Reject<InvalidOperationException>(() => service.EditOrderNumberAsync(a.Id, sandbox.OrderNumber, 1, "Test", f.Token));
-    await service.UpdateStatusAsync(b.Id, OrderStatus.Ready); await service.DeleteOrderAsync(b.Id);
+    await service.UpdateStatusAsync(b.Id, OrderStatus.Ready, f.Token); await service.DeleteOrderAsync(b.Id);
     await Reject<InvalidOperationException>(() => service.EditOrderNumberAsync(a.Id, b.OrderNumber, 1, "Test", f.Token));
 });
 Test("16 concurrent same number and stale editors; edit alongside checkout", async f =>
@@ -175,7 +198,7 @@ Test("17 unauthorized rejected; audit failure rolls back all changes", async f =
     var p = await f.Product(2); var o = await f.Buy(p); await using var db = f.Db(); var service = f.Orders(db);
     await Reject<UnauthorizedAccessException>(() => service.EditOrderNumberAsync(o.Id, "AUTH-17", 0, "Test", "invalid"));
     await db.Database.ExecuteSqlRawAsync("CREATE TRIGGER FailAudit BEFORE INSERT ON OrderNumberAudits BEGIN SELECT RAISE(ABORT, 'test failure'); END;");
-    await Reject<DbUpdateException>(() => service.EditOrderNumberAsync(o.Id, "FAIL-17", 0, "Test", f.Token));
+    await Reject<InvalidOperationException>(() => service.EditOrderNumberAsync(o.Id, "FAIL-17", 0, "Test", f.Token));
     Check((await service.GetOrderAsync(o.Id))!.OrderNumber == o.OrderNumber && await db.OrderNumberAudits.CountAsync() == 0
         && !await db.OrderNumberReservations.AnyAsync(x => x.Number == "FAIL-17") && (await db.SalesHistory.SingleAsync()).OrderNumber == o.OrderNumber);
 });
@@ -282,6 +305,9 @@ tests.Add(("migration never infers unlinked history ownership from equal GUID", 
     await Reject<SqliteException>(() => db.Database.MigrateAsync());
     Check(!(await db.Database.GetAppliedMigrationsAsync()).Any(x => x.EndsWith("AddSafeOrderNumbers")));
 }));
+SizeIdentityTests.Register(tests);
+HistoricalInventoryReviewTests.Register(tests);
+DeploymentSafetyTests.Register(tests);
 var failures = 0;
 foreach (var (name, run) in tests)
 { try { await run(); Console.WriteLine($"PASS {name}"); } catch (Exception ex) { failures++; Console.WriteLine($"FAIL {name}: {ex}"); } }

@@ -53,10 +53,15 @@
                 await IsAdminSessionValidAsync());
             CartService.ReplaceItems(validItems);
         }
+        catch (JsonException)
+        {
+            // Preserve the stored payload for recovery; do not erase the entire cart.
+            return;
+        }
         catch
         {
-            await BrowserStorageService.RemoveItemAsync(CartStorageKey);
-            CartService.ReplaceItems(new List<CartItem>());
+            // A transient database/storage failure must not overwrite the saved cart.
+            return;
         }
         finally
         {

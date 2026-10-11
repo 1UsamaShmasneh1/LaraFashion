@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,29 @@ builder.Services.AddHttpClient("Groq", client =>
 });
 
 var storagePaths = AppStoragePaths.Resolve(builder.Environment);
+if (!Path.IsPathFullyQualified(storagePaths.DatabasePath) || !Path.IsPathFullyQualified(storagePaths.UploadsPath))
+    throw new InvalidOperationException("Absolute persistent storage paths are required.");
+var deploymentCommit = "development";
+if (!builder.Environment.IsDevelopment())
+{
+    if (new[] { "SecretKey", "Issuer", "Audience" }.Any(k => string.IsNullOrWhiteSpace(builder.Configuration[$"JwtSettings:{k}"]))
+        || !int.TryParse(builder.Configuration["JwtSettings:ExpiryMinutes"], out var expiry) || expiry <= 0)
+        throw new InvalidOperationException("External runtime authentication configuration is required.");
+    var release = JsonDocument.Parse(File.ReadAllText(Path.Combine(builder.Environment.ContentRootPath, "release-version.json")));
+    deploymentCommit = release.RootElement.GetProperty("Commit").GetString() ?? "";
+    if (!System.Text.RegularExpressions.Regex.IsMatch(deploymentCommit, "^[0-9a-f]{40}$"))
+        throw new InvalidOperationException("A valid release manifest is required.");
+    if (typeof(AppDbContext).Assembly.GetCustomAttributes(false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().Single().InformationalVersion.Split('+').Last() != deploymentCommit)
+        throw new InvalidOperationException("Release manifest and application binary differ.");
+    using (var binary=File.OpenRead(typeof(AppDbContext).Assembly.Location))
+        if (Convert.ToHexString(await SHA256.HashDataAsync(binary)) != release.RootElement.GetProperty("ApplicationSha256").GetString())
+            throw new InvalidOperationException("Release binary hash differs from its manifest.");
+    var keyPath = Environment.GetEnvironmentVariable("LARAFASHION_DATA_PROTECTION_PATH");
+    if (string.IsNullOrWhiteSpace(keyPath) || !Path.IsPathFullyQualified(keyPath) || !Directory.Exists(keyPath)
+        || Path.GetFullPath(keyPath).StartsWith(Path.GetFullPath(builder.Environment.ContentRootPath) + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        throw new InvalidOperationException("A persistent Data Protection directory outside the release is required.");
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+}
 var dbFolder = Path.GetDirectoryName(storagePaths.DatabasePath)
     ?? throw new InvalidOperationException("The database directory could not be resolved.");
 
@@ -35,7 +60,8 @@ Directory.CreateDirectory(dbFolder);
 Directory.CreateDirectory(storagePaths.UploadsPath);
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlite($"Data Source={storagePaths.DatabasePath}"));
+    options.UseSqlite(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+    { DataSource = storagePaths.DatabasePath, Mode = Microsoft.Data.Sqlite.SqliteOpenMode.ReadWrite }.ToString()));
 builder.Services.AddSingleton(storagePaths);
 
 builder.Services.AddScoped<JwtService>();
@@ -52,11 +78,14 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (app.Environment.IsDevelopment())
-        await db.Database.MigrateAsync();
+    // The maintenance path verifies evidence before closing the review migration.
+    // Startup must not bypass that sequence, including in Development.
+    await DeploymentReadiness.CheckAsync(storagePaths.DatabasePath, deploymentCommit);
 
-    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
-    await seeder.SeedAsync();
+    if (app.Environment.IsDevelopment())
+        await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
+    else if (!await db.AdminUsers.AnyAsync())
+        throw new InvalidOperationException("An existing production administrator is required; startup cannot create business data.");
 }
 
 // Configure the HTTP request pipeline.
@@ -67,7 +96,23 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// The explicit GET readiness probe must return its JSON contract, without redirects.
+app.UseWhen(context => context.Request.Path != "/health", branch => branch.UseHttpsRedirection());
+
+// The first transition keeps customer traffic closed until preservation and health checks finish.
+var maintenanceFile = Environment.GetEnvironmentVariable("LARAFASHION_MAINTENANCE_FILE");
+if (!string.IsNullOrEmpty(maintenanceFile))
+{
+    if (!Path.IsPathFullyQualified(maintenanceFile)
+        || !Path.GetFullPath(maintenanceFile).StartsWith(Path.GetDirectoryName(storagePaths.DatabasePath)! + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        throw new InvalidOperationException("The maintenance marker must be outside the release in the persistent data directory.");
+    app.Use(async (context, next) =>
+    {
+        if (File.Exists(maintenanceFile) && context.Request.Path != "/health")
+        { context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable; return; }
+        await next(context);
+    });
+}
 
 app.UseStaticFiles();
 
@@ -79,7 +124,11 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAntiforgery();
 
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/health", async () =>
+{
+    try { return Results.Ok(await DeploymentReadiness.CheckAsync(storagePaths.DatabasePath, deploymentCommit)); }
+    catch { return Results.Json(new { ContractVersion = DeploymentReadiness.ContractVersion, Status = "unhealthy" }, statusCode: 503); }
+});
 
 app.MapPost("/api/store/visit", async (HttpContext context, ReportsService reports, CancellationToken cancellationToken) =>
 {

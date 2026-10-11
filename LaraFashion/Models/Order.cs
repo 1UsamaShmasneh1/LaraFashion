@@ -10,6 +10,8 @@ public class Order
 
     public int NumberRevision { get; set; }
 
+    public long InventoryRevision { get; set; }
+
     public CustomerInfo Customer { get; set; } = new();
 
     public List<OrderItem> Items { get; set; } = new();

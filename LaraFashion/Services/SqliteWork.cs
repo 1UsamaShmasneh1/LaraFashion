@@ -21,11 +21,19 @@ internal static class SqliteWork
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode is 5 or 6)
         {
-            throw new InvalidOperationException("البيانات مشغولة بتحديث آخر. حاول مجدداً بعد لحظات.", ex);
+            throw new InventoryException(InventoryFailureReason.ConcurrentChange, "البيانات مشغولة بتحديث آخر. حاول مجدداً بعد لحظات.");
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateConcurrencyException)
         {
-            throw new InvalidOperationException("تغيرت البيانات أثناء الحفظ. حدّث الصفحة وحاول مجدداً.", ex);
+            throw new InventoryException(InventoryFailureReason.ConcurrentChange, "تغيرت البيانات أثناء الحفظ. حدّث الصفحة وحاول مجدداً.");
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqliteException { SqliteErrorCode: 19 })
+        {
+            throw new InvalidOperationException("تعذر الحفظ بسبب بيانات مكررة أو علاقة لم تعد متاحة. راجع الإدخال ثم احفظ مجدداً.");
+        }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+        {
+            throw new InvalidOperationException("تعذر الحفظ بسبب قيد حماية البيانات. لم تُحفظ تغييرات العملية.");
         }
     }
 }

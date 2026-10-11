@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.DataProtection;
 
 sealed class Fixture : IDbContextFactory<AppDbContext>
 {
@@ -15,16 +16,25 @@ sealed class Fixture : IDbContextFactory<AppDbContext>
     public AppStoragePaths Paths { get; }
     public string Token => new JwtService(config).GenerateAdminToken("test-admin");
     public IConfiguration Configuration => config;
-    private Fixture()
+    private Fixture(string? existingTestPath = null)
     {
-        var root = Path.Combine(TestRoot, Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
-        Paths = new(Path.Combine(root, "test.db"), Path.Combine(root, "uploads")); Directory.CreateDirectory(Paths.UploadsPath);
+        var root = existingTestPath is null ? Path.Combine(TestRoot, Guid.NewGuid().ToString("N")) : Path.GetDirectoryName(existingTestPath)!;
+        Directory.CreateDirectory(root);
+        Paths = new(existingTestPath ?? Path.Combine(root, "test.db"), Path.Combine(root, "uploads")); Directory.CreateDirectory(Paths.UploadsPath);
         options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={Paths.DatabasePath};Pooling=False;Default Timeout=10").Options;
         config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["JwtSettings:SecretKey"] = "integration-test-only-key-012345678901234567890", ["JwtSettings:Issuer"] = "tests",
             ["JwtSettings:Audience"] = "tests", ["JwtSettings:ExpiryMinutes"] = "60"
         }).Build();
+    }
+    internal static Fixture OpenExistingSynthetic(string path)
+    {
+        path = Path.GetFullPath(path);
+        var allowedRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "LaraFashionTests")) + Path.DirectorySeparatorChar;
+        if (!path.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase) || Path.GetFileName(path) != "test.db" || !File.Exists(path))
+            throw new InvalidOperationException("Only the isolated synthetic fixture database is permitted.");
+        return new Fixture(path);
     }
     public static async Task<Fixture> Create(bool previous = false)
     {
@@ -37,7 +47,8 @@ sealed class Fixture : IDbContextFactory<AppDbContext>
     public LaraFashion.Data.AppDbContext Db() => new(options);
     public AppDbContext CreateDbContext() => Db();
     public AdminAuthService Auth(AppDbContext db) => new(db, new JwtService(config), new PasswordHasherService());
-    public OrderService Orders(AppDbContext db) => new(Auth(db), Paths, this);
+    public OrderService Orders(AppDbContext db) => new(Auth(db), Paths, this,
+        dataProtection: DataProtectionProvider.Create(new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Paths.DatabasePath)!, "review-test-keys"))));
     public ProductService Products(AppDbContext db) => new(db, Paths, this);
     public CustomerInfo Customer() => new() { Id = Guid.NewGuid(), FullName = "Test", PhoneNumber = "0501234567", City = "Test" };
     public CartItem Item(Product p, string size = "S", int q = 1) => new() { ProductId = p.Id, ProductName = "Test", Size = size, Quantity = q, UnitPrice = 10 };
@@ -48,7 +59,17 @@ sealed class Fixture : IDbContextFactory<AppDbContext>
         var p = new Product { Id = Guid.NewGuid(), Name = "Test", OriginalPrice = 10,
             Sizes = quantities.Select((q, i) => new ProductSize { Id = Guid.NewGuid(), SizeName = new[] { "S", "M", "L" }[i], Quantity = q }).ToList(),
             Images = [new() { Id = Guid.NewGuid(), ImageUrl = "/test-one.webp", IsPrimary = true }, new() { Id = Guid.NewGuid(), ImageUrl = "/test-two.webp", SortOrder = 1 }] };
-        db.Products.Add(p); await db.SaveChangesAsync(); return p;
+        if ((await db.Database.GetAppliedMigrationsAsync()).Any(m => m.EndsWith("AddStableProductSizeIdentity")))
+        { db.Products.Add(p); await db.SaveChangesAsync(); }
+        else
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Products (Id, Name, SerialNumber, Description, OriginalPrice, DiscountType, DiscountValue, ImageUrl, IsActive, IsPublished, CreatedAt, UpdatedAt) VALUES ({p.Id}, {p.Name}, {p.SerialNumber}, {p.Description}, {p.OriginalPrice}, {0}, {0m}, {p.ImageUrl}, {p.IsActive}, {p.IsPublished}, {p.CreatedAt}, {p.UpdatedAt})");
+            foreach (var s in p.Sizes)
+            { s.ProductId = p.Id; await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO ProductSizes (Id, ProductId, SizeName, Quantity) VALUES ({s.Id}, {p.Id}, {s.SizeName}, {s.Quantity})"); }
+            foreach (var image in p.Images) image.ProductId = p.Id;
+            db.ProductImages.AddRange(p.Images); await db.SaveChangesAsync();
+        }
+        return p;
     }
     public async Task<Order> Buy(Product p, string size = "S", int q = 1, Guid? attempt = null, bool sandbox = false)
     { await using var db = Db(); return await Orders(db).CreateOrderAsync(Customer(), [Item(p, size, q)], Total(q), sandbox, attempt); }

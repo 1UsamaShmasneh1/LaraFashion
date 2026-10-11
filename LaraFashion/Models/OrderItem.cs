@@ -8,6 +8,9 @@ public class OrderItem
 
     public Guid ProductId { get; set; }
 
+    // Historical rows remain null: a current label cannot prove original identity.
+    public Guid? ProductSizeId { get; set; }
+
     public string ProductName { get; set; } = string.Empty;
 
     public string ProductSerialNumber { get; set; } = string.Empty;

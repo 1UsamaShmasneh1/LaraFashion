@@ -1,0 +1,201 @@
+PASS 01 S exhausted leaves M=3 L=4 visible with original size IDs
+PASS 02-03 partial sequential sizes; sold out hidden and retained for admin
+PASS 04 concurrent last piece: one order and no negative stock
+PASS 05 concurrent different sizes preserve both decrements
+PASS 06 duplicate lines aggregate and invalid quantities rejected
+PASS 07 rollback on later-line and history insert failure
+PASS 08 concurrent cancellation and revival once; failed bulk atomic
+PASS 09 stale cleanup cannot delete restored stock; admin deletion and open order rules
+PASS 09b old order cleanup retains product stock history and reservations
+PASS 10 fresh current and other circuit queries; restart; preserve unpublished intent
+PASS positive quantity with invalid empty size is hidden without changing data
+PASS 11 concurrent independent checkouts distinct GUID and display number
+PASS 12 concurrent same attempt; retry; independent attempts allowed
+PASS 13 deleted identities and previous numbers never reallocated
+PASS 14 orders and snapshots merge by GUID with sandbox isolation
+PASS 15 edit normalizes, validates, no-op; current historical sandbox numbers blocked
+PASS 16 concurrent same number and stale editors; edit alongside checkout
+PASS 17 unauthorized rejected; audit failure rolls back all changes
+PASS 18 edit preserves identity relationships amounts timestamps stock history reports
+PASS inventory admin edit versus checkout detects stale snapshot without lost sizes
+PASS SQLite quantity concurrency token rejects stale direct EF writes
+PASS SQLite guards reject bypass collisions and reservation deletion
+PASS multiple categories images and fixed sale price preserved during stock edit
+PASS migration preserves prior official sandbox history products images and restart
+{"Section":"size_identity_preflight","CanUpgradeSizes":true,"CollisionGroups":0,"InvalidRows":0,"AffectedProducts":0,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[]}
+{"Section":"order_items_without_provable_size_identity","Rows":[{"ItemId":"511F65FD-EBD1-4894-BF5D-A13210438307","OrderId":"45524CB2-A6B5-4F90-B2D0-68333374EB4A","ProductId":"82C56EA3-08EE-4420-BCF5-E6E7A5CAECDF","ProductSizeId":null,"SizeSnapshot":"S","Reason":"historical-or-missing-identity-needs-evidence-no-label-backfill"},{"ItemId":"09831DE4-6C1D-4F7A-B330-E13D282F3EEA","OrderId":"E2C9182E-7000-4B01-A799-90A0A4B0E8F3","ProductId":"D1D56BDD-78D1-4E21-BA5A-230FBB7ACBBB","ProductSizeId":null,"SizeSnapshot":"S","Reason":"historical-or-missing-identity-needs-evidence-no-label-backfill"}]}
+{"Section":"order_status_sandbox_counts","Rows":[{"Status":"New","IsSandbox":false,"Orders":1,"IsOpen":true},{"Status":"New","IsSandbox":true,"Orders":1,"IsOpen":true}]}
+{"Section":"historical_inventory_review_counts","Rows":[{"Status":"New","IsSandbox":false,"Orders":1,"Lines":1,"UnknownHistoricalIdentityLines":1,"EvidenceVerifiedEligibleLines":0,"NoVerifiedEvidenceLines":1,"ExistingProduct":0,"MissingProduct":1,"WithDestination":0,"NoValidDestination":0,"OrdersWithUnavailableDestination":1,"MatchingNameCandidateOnly":0,"PreviouslyReviewed":0,"UnreviewedEligibleLines":0},{"Status":"New","IsSandbox":true,"Orders":1,"Lines":1,"UnknownHistoricalIdentityLines":1,"EvidenceVerifiedEligibleLines":0,"NoVerifiedEvidenceLines":1,"ExistingProduct":0,"MissingProduct":1,"WithDestination":0,"NoValidDestination":0,"OrdersWithUnavailableDestination":1,"MatchingNameCandidateOnly":0,"PreviouslyReviewed":0,"UnreviewedEligibleLines":0}]}
+{"Section":"inventory_review_feature_readiness","SchemaPresent":false,"RequiredGuardsPresent":false,"SchemaReadyForReview":false,"ExecutedAdministrativeOperations":0,"EvidenceVerifiedEligibleLines":0,"UnknownWithoutVerifiedEvidence":2,"ValidDestinationLines":0,"MissingProductLines":2,"Conclusion":"NULL is expected for history, not proof of eligibility or a deployment failure. Schema/guards/evidence are distinct from behavioral tests and case-specific manager decisions. Name matches are candidates only; deployment needs a fresh snapshot and review."}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20260825203549_AddStoreChatSettings"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[{"Number":"DUPLICATE","LogicalOwners":2,"InternalIdentities":"45524CB2-A6B5-4F90-B2D0-68333374EB4A,E2C9182E-7000-4B01-A799-90A0A4B0E8F3"}]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[{"OrderId":"45524CB2-A6B5-4F90-B2D0-68333374EB4A","HistoryId":"CF59A563-6791-4FA3-B9E6-0F9D79DFE489","OrderNumber":"DUPLICATE"}]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+PASS migration ambiguous legacy duplicate refuses atomically with diagnostic dry-run
+PASS migration rejects mismatched linked history and malformed numbers
+PASS migration Down preserves prior data on isolated fixture
+PASS migration never infers unlinked history ownership from equal GUID
+PASS size 01 reference add publish restore checkout 3->2 others 2/4/4; exhaustion
+PASS size 02 add/edit validation duplicates invalid quantities owner/id; preserve input
+PASS size 03 single/bulk publish validates all; no partial publish; zero permitted
+PASS size 04 normalization SQLite parity whitespace ASCII case invisibles distinct semantics
+PASS size 05 legacy duplicate positive+positive and zero+positive reject checkout/cancel atomically
+PASS size 06 old cart unique upgrades ID; ambiguous/missing stays review; quantities retained
+PASS size 07 rename same ID requires review and prevents checkout/cancellation
+PASS size 08 delete/recreate size and product never rebind stable cart; ledger prevents reused ID
+PASS size 09 reorder remove middle append keeps original IDs; repeated save no duplicate
+PASS size 10 failed graph add retry fresh context; duplicate save guard; stale edit cannot reset stock
+PASS size 11 wrong owner ID, grouped overflow and later line failures roll back
+PASS size 12 old completed attempt accepts new identity contract and cannot create another order
+PASS size 13 cancellation/reactivation/bulk exact identity once; historical null blocks without guessing
+PASS size 14 migration previous data/triggers audit reservations; null history retained; Down/Up
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":1,"InvalidRows":0,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[{"ProductId":"9B1A5D79-B440-4BF4-B887-5D5BD73E9E38","NormalizedKey":"S","Rows":[{"SizeId":"2A0EF394-B942-4E40-93B0-1CF5CB42786B","RawName":"S","Quantity":3,"QuantityType":"integer","CodePoints":"U\u002B0053"},{"SizeId":"7D1DA761-665D-4C23-A874-89BD336B98BC","RawName":"  s\u00A0","Quantity":0,"QuantityType":"integer","CodePoints":"U\u002B0020 U\u002B0020 U\u002B0073 U\u002B00A0"}]}]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"order_status_sandbox_counts","Rows":[]}
+{"Section":"historical_inventory_review_counts","Rows":[]}
+{"Section":"inventory_review_feature_readiness","SchemaPresent":false,"RequiredGuardsPresent":false,"SchemaReadyForReview":false,"ExecutedAdministrativeOperations":0,"EvidenceVerifiedEligibleLines":0,"UnknownWithoutVerifiedEvidence":0,"ValidDestinationLines":0,"MissingProductLines":0,"Conclusion":"NULL is expected for history, not proof of eligibility or a deployment failure. Schema/guards/evidence are distinct from behavioral tests and case-specific manager decisions. Name matches are candidates only; deployment needs a fresh snapshot and review."}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":0,"InvalidRows":1,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[{"Id":"CB03841C-FCBA-42D4-A1D9-199F04279E0A","ProductId":"84679C7F-FFD9-4745-8967-556773354808","RawName":"\u200B","Quantity":0,"QuantityType":"integer","Key":"","Valid":false}]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"order_status_sandbox_counts","Rows":[]}
+{"Section":"historical_inventory_review_counts","Rows":[]}
+{"Section":"inventory_review_feature_readiness","SchemaPresent":false,"RequiredGuardsPresent":false,"SchemaReadyForReview":false,"ExecutedAdministrativeOperations":0,"EvidenceVerifiedEligibleLines":0,"UnknownWithoutVerifiedEvidence":0,"ValidDestinationLines":0,"MissingProductLines":0,"Conclusion":"NULL is expected for history, not proof of eligibility or a deployment failure. Schema/guards/evidence are distinct from behavioral tests and case-specific manager decisions. Name matches are candidates only; deployment needs a fresh snapshot and review."}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":0,"InvalidRows":1,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[{"Id":"14744CC6-88F6-4FDF-A125-A2A9F5FCE520","ProductId":"BF5B5C90-C22E-4FA9-8883-278E1C755438","RawName":"S","Quantity":-1,"QuantityType":"integer","Key":"S","Valid":false}]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"order_status_sandbox_counts","Rows":[]}
+{"Section":"historical_inventory_review_counts","Rows":[]}
+{"Section":"inventory_review_feature_readiness","SchemaPresent":false,"RequiredGuardsPresent":false,"SchemaReadyForReview":false,"ExecutedAdministrativeOperations":0,"EvidenceVerifiedEligibleLines":0,"UnknownWithoutVerifiedEvidence":0,"ValidDestinationLines":0,"MissingProductLines":0,"Conclusion":"NULL is expected for history, not proof of eligibility or a deployment failure. Schema/guards/evidence are distinct from behavioral tests and case-specific manager decisions. Name matches are candidates only; deployment needs a fresh snapshot and review."}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[{"ProductId":"BF5B5C90-C22E-4FA9-8883-278E1C755438","SizeId":"14744CC6-88F6-4FDF-A125-A2A9F5FCE520","Quantity":-1,"Reason":"invalid-quantity-or-label"}]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+{"Section":"size_identity_preflight","CanUpgradeSizes":false,"CollisionGroups":0,"InvalidRows":1,"AffectedProducts":1,"Action":"Read only. Stop upgrade on conflicts; never merge rows, infer history identities, delete or change quantities."}
+{"Section":"normalized_size_collisions","Rows":[]}
+{"Section":"invalid_size_names_quantities_identities","Rows":[{"Id":"unmappable-id","ProductId":"5A121BC8-E98F-4A68-A4E6-8C9F85DA06DD","RawName":"S","Quantity":3,"QuantityType":"integer","Key":"S","Valid":false}]}
+{"Section":"order_items_without_provable_size_identity","Rows":[]}
+{"Section":"order_status_sandbox_counts","Rows":[]}
+{"Section":"historical_inventory_review_counts","Rows":[]}
+{"Section":"inventory_review_feature_readiness","SchemaPresent":false,"RequiredGuardsPresent":false,"SchemaReadyForReview":false,"ExecutedAdministrativeOperations":0,"EvidenceVerifiedEligibleLines":0,"UnknownWithoutVerifiedEvidence":0,"ValidDestinationLines":0,"MissingProductLines":0,"Conclusion":"NULL is expected for history, not proof of eligibility or a deployment failure. Schema/guards/evidence are distinct from behavioral tests and case-specific manager decisions. Name matches are candidates only; deployment needs a fresh snapshot and review."}
+{"Section":"engine_and_migrations","Rows":[{"SQLiteVersion":"3.46.1","LastMigration":"20261003154113_AddSafeOrderNumbers"}]}
+{"Section":"internal_identity_schema","Rows":[{"name":"Id","type":"TEXT","pk":1}]}
+{"Section":"positive_stock_excluded_not_necessarily_corrupt","Rows":[]}
+{"Section":"invalid_or_missing_sizes","Rows":[]}
+{"Section":"duplicate_size_labels","Rows":[]}
+{"Section":"display_number_collisions_distinct_logical_owners","Rows":[]}
+{"Section":"invalid_numbers","Rows":[]}
+{"Section":"same_order_and_snapshot_display_only","Rows":[]}
+{"Section":"identity_reuse_or_link_mismatch_suspicions_not_proof","Rows":[]}
+{"Section":"unlinked_history_never_infer_owner_by_number","Rows":[]}
+{"Section":"foreign_key_check","Rows":[]}
+PASS size 15 migration conflicts stop before schema/data change; read-only diagnostic hash unchanged
+PASS size 16 DB bypass duplicate wrong key negative overlarge; safe diagnostics no customer/recovery secrets
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 607E862E4C2B136DC61BE41B20D9D5C68D29D05D424422A1B80A197C7A6ED4F4.
+PASS review 01 migration evidence preserves original rows null identities finances stock and source hash
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 7A4FA019F1BF14CF8453FF84A3D73BF52ED2E24B5478C75883DDCDCB67CF0901.
+PASS review 02 preview then close makes no movement mapping status or success audit
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 7E396D9DCDB3483FCC162DC4A68D45801918B31E241C037C87BA58CECB778029.
+PASS review 03 confirmed cancellation restores explicit zero/unpublished target once and keeps purchase snapshots
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 ECCDE6513F07B704D4E336ABDA8545BBC7F24F6DA2108B3EC1A4EFE048B6CB8A.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 CEED8ACAA98751E2A8EA145AA9831975AF36BF7BCAAFBC275B1FD36799B8A118.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 E904830947E6B7BBC8B1C47F2CD465AFD2A9EF3A15DC90938C727EEE520FE8B1.
+PASS review 04 pre-upgrade cancelled revival 3->1; insufficient and overflow reject atomically
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 22EF988947ED6E746615A129F11D3B7BB227926A849830E7ECD1A4313B157EF8.
+PASS review 05 one matching candidate never substitutes for explicit selection and confirmation
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 0E5B4A4E540AE82059C4D496DF0CD95D3494BE3627D4C0ACFE1A04565743DB7A.
+PASS review 06 foreign product/line extra choices ticket operation/order tampering and unauthorized entries reject
+Legacy evidence staged: 2; original size identities and inventory unchanged; source SHA256 99F4BA7A8574F4399606A5ACCB6B3A0FE5496CA20BC439A2681CE5D7A667435B.
+PASS review 07 several historical and modern lines sharing target aggregate once; no double restore
+Legacy evidence staged: 2; original size identities and inventory unchanged; source SHA256 EF5C09966BE7E1BB798EF477BB16083B6163A55CA578CF1633700B568A6305C1.
+Legacy evidence staged: 2; original size identities and inventory unchanged; source SHA256 A346BC08B0D9D973DAA31E335F56D0464123B42A2A4B6363F96584C16B0BFBBB.
+PASS review 08 incomplete choice and later target failure have no partial effects; grouped overflow rejects
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 90448777C698ACB0237BFA492D07259F74BBEE1332887958A1FBED368E94DD83.
+PASS review 09 double confirm lost-response replay fresh services durable keys same ID changed content rejects
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 50FEEAFF54E2FFA3E8C3406C2A64C25402D411C427AB76045226FAD1CCCEF4AE.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 709E5823189920DE410936F0E3C404281F2062E3F180BC3C1B9B9006B016C064.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 7435701243AD1AB566C57E043FD97043ACAC6399C4B9DA894D83B90FC422CC81.
+PASS review 10 distinct concurrent confirmations and ordinary/bulk contenders cannot apply same source twice
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 1C3BD060E981F8DF5B94F7E69D175A67453E89CD3F4B466BE3309D183079E8B1.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 8D5EF32C501AF132822CC6EB4D20015AAEC1EE87B104E0F27C1B65A995C03570.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 15B4152EDBDEA6EFBDEC889862699BC7CDF3CA592495F00FC73B31B37407A9DD.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 B6F4AF62C4A9A5CE2C24C0510F75ADD1337231C0E1D1320FA301051976F24F21.
+PASS review 11 stock purchase/admin edit or rename/delete after preview invalidates confirmation
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 BD1F7252E2AA9EDA079083B5D6D0E5F1232BCE9B4A773DC4039605D81F9E361F.
+PASS review 12 status ABA invalidates old preview even when source status returns; revision separate from number
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 725BF894D70AB295B20625A33FDAA5244B0C19BBCA0B5A3EE4ABA6B9D9A72348.
+PASS review 13 cancel revive cancel links operations and locks same target; replay never rolls current state back
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 9251124F9DF6DB5066E4EA0E7F7CB43BF039E026C5B247565398FC8E7FC692FB.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 B70F785DC2A46060F689962220C61056130C73CC8333D96B49AED262D45451B6.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 39B455FFB91F0266D4EA2DD48BF2BE4922BD97ACC3F0BBBC9F40EBAB041A5013.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 FD6050E449B1572FA4F1894FD6D765F0683717AE4E0CA747650792565085E08B.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 FA07BC579D896D4DBD42CEFA05ADC188D901FF291BF6EF2B41D7F9368427C0AA.
+PASS review 14 failure saving header detail movement or status rolls back inventory history revision audit
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 A74F4277ED43217269BA008DD4C0010B45C58065716EBAC985B7A9E7685E1B78.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 012C57F89CFF14EEDA0AEC81B9EC5D740A7E103525E6706DEA313C724ECC6B9E.
+PASS review 15 missing product replacement same name or no size blocks; never creates alternative
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 C73EFE0FE28639A439A3AAC023B23E9523E5C974CC1359A1F9958E0338322FD8.
+PASS review 16 no-inventory transitions and current state no-op need no review and update revisions correctly
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 136C8758521E6AAE2B2444DB4800BB1E91FFFA836CB0DF50200A791943D88E2E.
+PASS review 17 mixed bulk refuses all and returns structured needs; later no-op and individual review work
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 104AA92317A1B4C28777EBEFDF5522E819307D1785B55EFBA1CFFCD63D916404.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 0C75C44A83D84317665BF12CBF9954C296F9EB80263E175D783CDD300887CB72.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 011E5CD57B441060CB6D7118432895A4A8E1849A34B9E708443703F6782174E3.
+PASS review 18 cleanup delete destinations preserve audit evidence replay and immutable DB guards
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 D124CA902619C3AE597017B1C852852B20474E68AC4FA8120DC7D29C888D7BF5.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 A89530BA45EE89D63E5D62B12F61DCACE8405FDD1C8F19EC68EEF4B1BB42820E.
+PASS review 19 sandbox isolation and official financial snapshot order number and original timestamps preserved
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 5D772471E6AB6F993A71B563B87A60FF7CD56933B5EEBB00E493EDDD5A77EA7D.
+PASS review 20 blank reason never executes and closing/reopening has no saved selection; server protection has no editable quantity/admin
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 30E2477EC949949E2F8606DC1C2F9F2735C2A6BEC88C30959569A5B87C9CAD51.
+PASS review 21 new null corruption and damaged modern IDs cannot use historical bypass; original evidence mutations block
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 B79C02B672E7860C9E4506F419FE71F4FC9E82D1201008A94DDBEFC1BBACD6D5.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 15AE987B38FC49DC49AAA15B0D4C3448D7C7E211F483F25A7196B0A2C39E29F8.
+PASS review 22 deleted or semantically renamed prior destination blocks next cycle rather than transferring stock
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 15DBCD5E1C3A15C15C97DFAC72BA7C8AE077E0ECBFFC3B36A2D06FDEE3D8E1B5.
+PASS review 23 already identity-upgraded environment requires hash verified pre-identity proof; wrong hash/source reject
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 43FCCECDD07D6ED883B938C8D67CB4A9B9482AD675F2A2FECF4DDF2689BC76CF.
+Legacy evidence staged: 1; original size identities and inventory unchanged; source SHA256 D89738A4447FB4E1A35C29A76011926E0D28D3D2DAAA2525D04908F1D504D6D2.
+PASS review 24 stock/name ABA invalidates preview by persistent destination revision
+RESULT: 68/68 passed; isolated fixtures retained in C:\Users\us050\AppData\Local\Temp\LaraFashionTests\dbb73b4e9d3f4f73b9ba285314354090

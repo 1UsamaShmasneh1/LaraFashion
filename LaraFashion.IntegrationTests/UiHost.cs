@@ -8,12 +8,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.DataProtection;
+using LaraFashion.Models;
 
 static class UiHost
 {
     public static async Task<int> Run()
     {
-        var f = await Fixture.Create(); var p = await f.Product(2, 3, 4); await f.Buy(p);
+        var scenario = await HistoricalInventoryReviewTests.Historical(quantities: [1, 1]);
+        var f = scenario.F;
+        await using (var db = f.Db())
+        {
+            var p = new Product { Name = "كرومي", OriginalPrice = 35, Sizes = new[] { 2, 4, 3, 4 }
+                .Select((q, i) => new ProductSize { Id = Guid.NewGuid(), SizeName = $"{i + 1} سنه", Quantity = q }).ToList() };
+            await f.Products(db).AddProductWithRelationsAsync(p, [], []); await f.Products(db).PublishProductAsync(p.Id);
+            db.AdminUsers.Add(new() { Id = Guid.NewGuid(), Username = "local-ui-test", PasswordHash = new PasswordHasherService().HashPassword("local-ui-test-only") });
+            await db.SaveChangesAsync();
+        }
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             ApplicationName = typeof(App).Assembly.GetName().Name,

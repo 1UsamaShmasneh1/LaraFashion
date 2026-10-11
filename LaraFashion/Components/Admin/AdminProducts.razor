@@ -3,6 +3,7 @@
 @using LaraFashion.Models
 @using LaraFashion.Models.Enums
 @using SkiaSharp
+@using LaraFashion.Services
 
 @inject IWebHostEnvironment WebHostEnvironment
 @inject LaraFashion.Services.ProductService ProductService
@@ -148,6 +149,11 @@ else
                     <div class="product-name">
                         @product.Name
                     </div>
+
+                    @if (SizeNamePolicy.Warning(product) is { } warning)
+                    {
+                        <div class="error-message" dir="rtl">@warning</div>
+                    }
 
                     <div class="product-publish-status"
                          style="display:inline-flex;width:max-content;margin:6px 0 10px;padding:7px 12px;border-radius:999px;background:@(product.IsPublished ? "#dcfce7" : "#fff7ed");color:@(product.IsPublished ? "#166534" : "#9a3412");font-weight:950;font-size:13px;">
@@ -349,20 +355,23 @@ else
 
             @foreach (var size in NewProduct.Sizes)
             {
-                <div class="size-admin-row">
+                <div @key="size.Id" class="size-admin-row">
 
                     <input placeholder="Size"
+                           disabled="@IsSaving"
                            @bind="size.SizeName" />
 
                     <input type="number"
+                           disabled="@IsSaving"
                            placeholder="Quantity"
-                           @bind="size.Quantity" />
+                           @bind="SizeQuantityInputs[size.Id]" />
 
                 </div>
             }
 
             <button type="button"
                     class="continue-shopping-button mb-3"
+                    disabled="@IsSaving"
                     @onclick="AddSize">
                 اضافة مقاس جديد
             </button>
@@ -550,8 +559,12 @@ else
 
     private void AddSize()
     {
-        NewProduct.Sizes.Add(new ProductSize());
+        var size = new ProductSize { Id = Guid.NewGuid() };
+        NewProduct.Sizes.Add(size);
+        SizeQuantityInputs[size.Id] = "0";
     }
+
+    private Dictionary<Guid, string> SizeQuantityInputs = new();
 
     private async Task SaveProduct()
     {
@@ -562,6 +575,15 @@ else
         {
             IsSaving = true;
             ErrorMessage = string.Empty;
+
+            foreach (var size in NewProduct.Sizes)
+            {
+                if (!SizeQuantityInputs.TryGetValue(size.Id, out var input)
+                    || !int.TryParse(input, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var quantity)
+                    || quantity < 0)
+                { ErrorMessage = $"أدخل كمية صحيحة غير سالبة للمقاس {size.SizeName}."; return; }
+                size.Quantity = quantity;
+            }
 
             NewProduct.DiscountType = DiscountType.None;
             NewProduct.DiscountValue = 0;
@@ -639,6 +661,7 @@ else
         NewProduct = new Product();
         SelectedDiscountIds = new();
         SelectedCategoryIds = new();
+        SizeQuantityInputs = new();
     }
 
     private void OpenEditModal(Product product)
@@ -713,6 +736,7 @@ else
             }).ToList()
         };
 
+        SizeQuantityInputs = NewProduct.Sizes.ToDictionary(s => s.Id, s => s.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture));
         IsAddModalOpen = true;
     }
 
@@ -742,8 +766,8 @@ else
         if (!confirmed)
             return;
 
-        await ProductService.PublishProductAsync(id);
-        await LoadProducts();
+        try { await ProductService.PublishProductAsync(id); await LoadProducts(); }
+        catch (InvalidOperationException ex) { ErrorMessage = ex.Message; }
     }
 
     private void ToggleProductSelection(Guid productId, object? value)

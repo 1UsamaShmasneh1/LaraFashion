@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace LaraFashion.Services;
 
@@ -25,21 +26,26 @@ public sealed record OrderCleanupResult(
     int DeletedCancelledOrders,
     DateTime ExecutedAt);
 
-public class OrderService
+public partial class OrderService
 {
     private readonly AdminAuthService _adminAuthService;
     private readonly AppStoragePaths _storagePaths;
     private readonly IDbContextFactory<AppDbContext> _factory;
+    private readonly ILogger<OrderService> _logger;
+    private readonly IDataProtector? _reviewProtector;
     private static readonly SemaphoreSlim CleanupLock = new(1, 1);
 
     public OrderService(
         AdminAuthService adminAuthService,
         AppStoragePaths storagePaths,
-        IDbContextFactory<AppDbContext> factory)
+        IDbContextFactory<AppDbContext> factory, ILogger<OrderService>? logger = null,
+        IDataProtectionProvider? dataProtection = null)
     {
         _adminAuthService = adminAuthService;
         _storagePaths = storagePaths;
         _factory = factory;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<OrderService>.Instance;
+        _reviewProtector = dataProtection?.CreateProtector("LaraFashion.OrderInventoryReview.V1");
     }
 
     public async Task<List<Order>> GetOrdersAsync()
@@ -77,15 +83,20 @@ public class OrderService
         // Capture UI input before the first await; Blazor may process other events while saving.
         customer = new CustomerInfo { FullName = customer.FullName, PhoneNumber = customer.PhoneNumber,
             City = customer.City, Street = customer.Street, HouseNumber = customer.HouseNumber };
-        cartItems = cartItems.Select(x => new CartItem { ProductId = x.ProductId, ProductName = x.ProductName,
+        cartItems = cartItems.Select(x => new CartItem { ProductId = x.ProductId, ProductSizeId = x.ProductSizeId, ProductName = x.ProductName,
             ProductSerialNumber = x.ProductSerialNumber, ProductImageUrl = x.ProductImageUrl,
             Size = x.Size, Quantity = x.Quantity, UnitPrice = x.UnitPrice }).ToList();
         discountResult = new CartDiscountResult { OriginalTotal = discountResult.OriginalTotal,
             DiscountAmount = discountResult.DiscountAmount, DiscountName = discountResult.DiscountName };
-        if (cartItems.Count == 0 || cartItems.Any(x => x.Quantity <= 0 || string.IsNullOrWhiteSpace(x.Size)))
-            throw new InvalidOperationException("السلة فارغة أو تحتوي كمية أو مقاساً غير صالح.");
+        var correlation = Guid.NewGuid();
+        if (cartItems.Count == 0)
+            throw Failure(InventoryFailureReason.InvalidQuantity, "السلة فارغة. أضف منتجاً قبل إرسال الطلب.", correlation, null, null, 0);
+        var invalidItem = cartItems.FirstOrDefault(x => x.Quantity <= 0 || !SizeNamePolicy.IsValid(x.Size));
+        if (invalidItem is not null)
+            throw Failure(invalidItem.Quantity <= 0 ? InventoryFailureReason.InvalidQuantity : InventoryFailureReason.SizeMissing,
+                "السلة تحتوي كمية أو مقاساً غير صالح. راجع هذا العنصر قبل إرسال الطلب.", correlation, invalidItem.ProductId, invalidItem.ProductSizeId, invalidItem.Quantity);
         if (checkoutAttemptId == Guid.Empty) throw new InvalidOperationException("محاولة الشراء غير صالحة.");
-        var requestHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        var legacyRequestHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
             customer.FullName,
             customer.PhoneNumber,
@@ -99,32 +110,43 @@ public class OrderService
             discountResult.DiscountName,
             allowUnpublished
         }))));
-        return SqliteWork.WriteAsync(_factory, async db =>
+        var requestHash = "V2:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(legacyRequestHash
+            + JsonSerializer.Serialize(cartItems.OrderBy(x => x.ProductId).ThenBy(x => x.Size).ThenBy(x => x.Quantity).ThenBy(x => x.UnitPrice)
+                .Select(x => x.ProductSizeId)))));
+        return WriteInventoryAsync(async db =>
         {
             if (checkoutAttemptId.HasValue)
             {
                 var attempt = await db.CheckoutAttempts.FindAsync(checkoutAttemptId.Value);
                 if (attempt is not null)
                 {
-                    if (attempt.RequestHash != requestHash)
+                    if (attempt.RequestHash != requestHash && attempt.RequestHash != legacyRequestHash)
                         throw new InvalidOperationException("محاولة الشراء هذه تخص سلة أخرى. افتح محاولة جديدة بعد مراجعة الطلب السابق.");
                     return await db.Orders.Include(x => x.Customer).Include(x => x.Items).SingleOrDefaultAsync(x => x.Id == attempt.OrderId)
                         ?? throw new InvalidOperationException("تم إرسال هذه المحاولة سابقاً وأرشفة الطلب. راجع طلباتي؛ لن يخصم المخزون مجدداً.");
                 }
             }
             var isSandboxOrder = false;
-            foreach (var group in cartItems.GroupBy(x => (x.ProductId, x.Size)))
+            foreach (var item in cartItems)
             {
-                var product = await db.Products.AsNoTracking().SingleOrDefaultAsync(x => x.Id == group.Key.ProductId);
+                var product = await db.Products.AsNoTracking().Include(p => p.Sizes).SingleOrDefaultAsync(x => x.Id == item.ProductId);
                 if (product is null || !product.IsActive || (!product.IsPublished && !allowUnpublished))
-                    throw new InvalidOperationException("أحد المنتجات لم يعد متاحاً لإرسال الطلب.");
+                    throw Failure(InventoryFailureReason.ProductUnavailable, "المنتج لم يعد متاحاً. راجع هذا العنصر في السلة.", correlation, item.ProductId, item.ProductSizeId, item.Quantity);
                 isSandboxOrder |= !product.IsPublished;
-                var quantity = group.Sum(x => x.Quantity);
+                try { item.ProductSizeId = InventorySelection.Resolve(product, item.ProductSizeId, item.Size).Id; }
+                catch (InventoryException ex)
+                { throw Failure(ex.Reason, ex.Message, correlation, item.ProductId, item.ProductSizeId, item.Quantity,
+                    product.Sizes.Count(s => SizeNamePolicy.Key(s.SizeName) == SizeNamePolicy.Key(item.Size))); }
+            }
+            foreach (var group in cartItems.GroupBy(x => (x.ProductId, x.ProductSizeId)))
+            {
+                var quantity = InventorySelection.TotalQuantity(group.Select(x => x.Quantity));
                 var changed = await db.ProductSizes
-                    .Where(x => x.ProductId == group.Key.ProductId && x.SizeName == group.Key.Size && x.Quantity >= quantity)
+                    .Where(x => x.ProductId == group.Key.ProductId && x.Id == group.Key.ProductSizeId && x.Quantity >= quantity)
                     .ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity - quantity));
                 if (changed != 1)
-                    throw new InvalidOperationException($"الكمية غير متوفرة للمقاس {group.Key.Size}. حدّث السلة وحاول مجدداً.");
+                    throw Failure(InventoryFailureReason.InsufficientStock, $"الكمية المطلوبة غير متاحة للمقاس {group.First().Size}. راجع الكمية في السلة.",
+                        correlation, group.Key.ProductId, group.Key.ProductSizeId, quantity, 1, changed);
             }
             var orderId = Guid.NewGuid();
             for (var retry = 0; await db.OrderNumberReservations.AnyAsync(x => x.OrderId == orderId); retry++)
@@ -166,6 +188,7 @@ public class OrderService
                 {
                     Id = Guid.NewGuid(),
                     ProductId = item.ProductId,
+                    ProductSizeId = item.ProductSizeId,
                     ProductName = item.ProductName,
                     ProductSerialNumber = item.ProductSerialNumber,
                     ProductImageUrl = item.ProductImageUrl,
@@ -187,7 +210,7 @@ public class OrderService
                     CreatedAtUtc = order.CreatedAt.ToUniversalTime(),
                     CustomerName = customer.FullName,
                     PhoneNumber = customer.PhoneNumber,
-                    TotalQuantity = cartItems.Sum(x => x.Quantity),
+                    TotalQuantity = InventorySelection.TotalQuantity(cartItems.Select(x => x.Quantity)),
                     FinalTotal = discountResult.FinalTotal,
                     LastStatus = order.Status,
                     StatusUpdatedAtUtc = order.UpdatedAt.ToUniversalTime()
@@ -197,7 +220,7 @@ public class OrderService
             if (checkoutAttemptId.HasValue)
                 db.CheckoutAttempts.Add(new() { Id = checkoutAttemptId.Value, OrderId = order.Id, RequestHash = requestHash });
             return order;
-        });
+        }, correlation, cartItems);
     }
 
     public async Task<Order?> GetOrderAsync(Guid id)
@@ -367,13 +390,17 @@ public class OrderService
         return new(customerName, normalized, orders);
     }
 
-    public Task UpdateStatusAsync(Guid orderId, OrderStatus status) =>
-        ChangeStatusesAsync([orderId], status);
+    public Task UpdateStatusAsync(Guid orderId, OrderStatus status, string adminToken, long? expectedRevision = null)
+    {
+        EnsureAdmin(adminToken);
+        return ChangeStatusesAsync([orderId], status, adminToken, expectedRevision.HasValue
+            ? new Dictionary<Guid, long> { [orderId] = expectedRevision.Value } : null);
+    }
 
     public async Task<BulkOrderStatusResult> UpdateStatusesAsync(
         IEnumerable<Guid> orderIds,
         OrderStatus status,
-        string adminToken)
+        string adminToken, IReadOnlyDictionary<Guid, long>? expectedRevisions = null)
     {
         EnsureAdmin(adminToken);
 
@@ -381,32 +408,66 @@ public class OrderService
         if (ids.Count == 0)
             throw new InvalidOperationException("لم يتم تحديد أي طلبية.");
 
-        return new BulkOrderStatusResult(await ChangeStatusesAsync(ids, status));
+        return new BulkOrderStatusResult(await ChangeStatusesAsync(ids, status, adminToken, expectedRevisions?.ToDictionary(x => x.Key, x => x.Value)));
     }
 
-    private Task<int> ChangeStatusesAsync(List<Guid> ids, OrderStatus status) =>
-        SqliteWork.WriteAsync(_factory, async db =>
+    private Task<int> ChangeStatusesAsync(List<Guid> ids, OrderStatus status, string adminToken, IReadOnlyDictionary<Guid, long>? expectedRevisions = null) =>
+        WriteInventoryAsync(async db =>
         {
+            EnsureAdmin(adminToken);
             if (!Enum.IsDefined(status)) throw new InvalidOperationException("حالة الطلب غير صالحة.");
             var orders = await db.Orders.Include(x => x.Items).Where(x => ids.Contains(x.Id)).ToListAsync();
             if (orders.Count != ids.Count) throw new InvalidOperationException("تعذر العثور على إحدى الطلبيات. حدّث الصفحة.");
+            var needs = new List<OrderInventoryReviewNeed>();
+            foreach (var order in orders)
+            {
+                if (!Enum.IsDefined(order.Status) || order.InventoryRevision < 0 || order.InventoryRevision == long.MaxValue)
+                    throw new InvalidOperationException("حالة الطلب الحالية أو إصدارها غير صالح؛ يلزم فحص مستقل.");
+                if (order.Status == status) continue;
+                if (expectedRevisions is not null && (!expectedRevisions.TryGetValue(order.Id, out var revision)
+                    || revision != order.InventoryRevision)) throw ReviewConflict();
+                if (NeedsInventory(order.Status, status))
+                {
+                    ValidateInventoryOrder(order);
+                    if (order.Items.Any(i => i.ProductSizeId is null)) needs.Add(await BuildReviewNeedAsync(db, order, status));
+                }
+            }
+            if (needs.Count > 0) throw new InventoryReviewRequiredException(needs);
             var updated = 0;
             foreach (var order in orders)
             {
                 if (order.Status == status) continue;
-                foreach (var group in order.Items.GroupBy(x => (x.ProductId, x.Size)))
+                if (order.Status == OrderStatus.Cancelled || status == OrderStatus.Cancelled)
+                foreach (var group in order.Items.GroupBy(x => (x.ProductId, x.ProductSizeId)))
                 {
-                    var quantity = group.Sum(x => x.Quantity);
-                    var sizes = db.ProductSizes.Where(x => x.ProductId == group.Key.ProductId && x.SizeName == group.Key.Size);
-                    if (order.Status != OrderStatus.Cancelled && status == OrderStatus.Cancelled)
-                        await sizes.ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity + quantity));
-                    else if (order.Status == OrderStatus.Cancelled && status != OrderStatus.Cancelled)
+                    var correlation = Guid.NewGuid();
+                    var quantity = InventorySelection.TotalQuantity(group.Select(x => x.Quantity));
+                    if (group.Key.ProductSizeId is null)
+                        throw Failure(InventoryFailureReason.HistoricalIdentityUnknown,
+                            "تعذر تعديل المخزون تلقائياً: سطر طلب قديم بلا هوية مقاس موثوقة. يلزم مراجعة إدارية؛ لم تتغير الحالة أو الكميات.",
+                            correlation, group.Key.ProductId, null, quantity);
+                    var product = await db.Products.AsNoTracking().Include(p => p.Sizes).SingleOrDefaultAsync(p => p.Id == group.Key.ProductId);
+                    if (product is null)
+                        throw Failure(InventoryFailureReason.ProductUnavailable, "تعذر تعديل المخزون: المنتج لم يعد موجوداً. يلزم مراجعة إدارية.", correlation, group.Key.ProductId, group.Key.ProductSizeId, quantity);
+                    foreach (var item in group)
                     {
-                        if (await sizes.Where(x => x.Quantity >= quantity).ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity - quantity)) != 1)
-                            throw new InvalidOperationException("لا يمكن تغيير حالة الطلبية، الكمية غير متوفرة. حدّث الصفحة.");
+                        try { InventorySelection.Resolve(product, item.ProductSizeId, item.Size); }
+                        catch (InventoryException ex) { throw Failure(ex.Reason, ex.Message, correlation, item.ProductId, item.ProductSizeId, quantity,
+                            product.Sizes.Count(s => SizeNamePolicy.Key(s.SizeName) == SizeNamePolicy.Key(item.Size))); }
                     }
+                    var sizes = db.ProductSizes.Where(x => x.ProductId == group.Key.ProductId && x.Id == group.Key.ProductSizeId);
+                    int changed;
+                    if (order.Status != OrderStatus.Cancelled && status == OrderStatus.Cancelled)
+                        changed = await sizes.Where(x => x.Quantity <= int.MaxValue - quantity)
+                            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity + quantity));
+                    else changed = await sizes.Where(x => x.Quantity >= quantity)
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.Quantity, x => x.Quantity - quantity));
+                    if (changed != 1)
+                        throw Failure(InventoryFailureReason.InsufficientStock, "لا يمكن تغيير حالة الطلبية: الكمية غير متاحة أو تتجاوز الحد المسموح. راجع المخزون.",
+                            correlation, group.Key.ProductId, group.Key.ProductSizeId, quantity, 1, changed);
                 }
                 order.Status = status;
+                order.InventoryRevision = checked(order.InventoryRevision + 1);
                 order.UpdatedAt = DateTime.Now;
                 if (!order.IsSandbox)
                     await db.SalesHistory.Where(x => x.OriginalOrderId == order.Id).ExecuteUpdateAsync(s =>
@@ -414,7 +475,7 @@ public class OrderService
                 updated++;
             }
             return updated;
-        });
+        }, Guid.NewGuid());
 
     public Task<bool> EditOrderNumberAsync(Guid orderId, string newNumber, int expectedRevision, string reason, string adminToken)
     {
@@ -546,6 +607,24 @@ public class OrderService
     {
         if (string.IsNullOrWhiteSpace(token) || !_adminAuthService.IsTokenValid(token))
             throw new UnauthorizedAccessException("انتهت صلاحية جلسة الإدارة.");
+    }
+
+    private InventoryException Failure(InventoryFailureReason reason, string message, Guid correlation,
+        Guid? productId, Guid? sizeId, long requested, int? matches = null, int? affected = null)
+    {
+        _logger.LogWarning("InventoryRejected Reason={Reason} Correlation={Correlation} ProductId={ProductId} ProductSizeId={ProductSizeId} Requested={Requested} Matches={Matches} Affected={Affected}",
+            reason, correlation, productId, sizeId, requested, matches, affected);
+        return new(reason, message);
+    }
+
+    private async Task<T> WriteInventoryAsync<T>(Func<AppDbContext, Task<T>> action, Guid correlation, List<CartItem>? items = null)
+    {
+        try { return await SqliteWork.WriteAsync(_factory, action); }
+        catch (InventoryException ex) when (ex.Reason is InventoryFailureReason.ConcurrentChange or InventoryFailureReason.InvalidQuantity)
+        {
+            throw Failure(ex.Reason, ex.Message, correlation, items?.Count == 1 ? items[0].ProductId : null,
+                items?.Count == 1 ? items[0].ProductSizeId : null, items?.Sum(i => (long)i.Quantity) ?? 0);
+        }
     }
 
     private async Task DeleteImageIfUnusedAsync(string? imageUrl)

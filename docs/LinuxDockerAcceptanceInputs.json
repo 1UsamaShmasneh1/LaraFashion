@@ -1,0 +1,2752 @@
+{
+  "ContractVersion": 1,
+  "FinalRunId": "lf-linux-20261010-7f78c9bd-round7",
+  "Outcome": "PASS",
+  "Scope": "local Docker Desktop Linux acceptance; synthetic data only",
+  "SourceFingerprint": "C129109E1D6F6CDFAA3BBA705BA63DA741C5F7BE669A8D78C8452A08556D0FFF",
+  "InputManifestSha256": "106B009005D301AA9635A64E02059E99FEFA7DD6A692598B136DE0F07FEFE5AA",
+  "InputManifest": {
+    "ContractVersion": 1,
+    "RunId": "lf-linux-20261010-7f78c9bd-round7",
+    "Head": "b196d7268e2b5a5b73b207d963255d5d6a7c0129",
+    "Branch": "main",
+    "Status": [
+      " M .github/workflows/deploy.yml",
+      " M LaraFashion.IntegrationTests/Diagnostics.cs",
+      " M LaraFashion.IntegrationTests/Fixture.cs",
+      " M LaraFashion.IntegrationTests/Program.cs",
+      " M LaraFashion.IntegrationTests/UiHost.cs",
+      " M LaraFashion/Components/Admin/AdminOrders.razor",
+      " M LaraFashion/Components/Admin/AdminOrders.razor.css",
+      " M LaraFashion/Components/Admin/AdminProducts.razor",
+      " M LaraFashion/Components/Cart/CartPersistence.razor",
+      " M LaraFashion/Components/Modals/ProductModal.razor",
+      " M LaraFashion/Components/Pages/CartPage.razor",
+      " M LaraFashion/Components/Store/ProductCard.razor",
+      " M LaraFashion/Data/AppDbContext.cs",
+      " M LaraFashion/LaraFashion.csproj",
+      " M LaraFashion/Migrations/AppDbContextModelSnapshot.cs",
+      " M LaraFashion/Models/CartItem.cs",
+      " M LaraFashion/Models/Order.cs",
+      " M LaraFashion/Models/OrderItem.cs",
+      " M LaraFashion/Models/PersistedCartItem.cs",
+      " M LaraFashion/Models/ProductSize.cs",
+      " M LaraFashion/Program.cs",
+      " M LaraFashion/Services/AppStoragePaths.cs",
+      " M LaraFashion/Services/CartService.cs",
+      " M LaraFashion/Services/OrderService.cs",
+      " M LaraFashion/Services/ProductService.cs",
+      " M LaraFashion/Services/SqliteWork.cs",
+      " M \"New Text Document.txt\"",
+      " M deploy/deploy-production.sh",
+      " M docs/OrderInventoryRepair.ar.md",
+      "?? LaraFashion.IntegrationTests/DeploymentDatabase.cs",
+      "?? LaraFashion.IntegrationTests/DeploymentHarness.cs",
+      "?? LaraFashion.IntegrationTests/DeploymentMaintenance.cs",
+      "?? LaraFashion.IntegrationTests/DeploymentSafetyTests.cs",
+      "?? LaraFashion.IntegrationTests/HistoricalInventoryReviewTests.cs",
+      "?? LaraFashion.IntegrationTests/LegacyReviewEvidence.cs",
+      "?? LaraFashion.IntegrationTests/LinuxAcceptance.cs",
+      "?? LaraFashion.IntegrationTests/ReviewDiagnostics.cs",
+      "?? LaraFashion.IntegrationTests/ReviewUpgradeVerification.cs",
+      "?? LaraFashion.IntegrationTests/SizeIdentityTests.cs",
+      "?? LaraFashion.IntegrationTests/SizeReproduction.cs",
+      "?? LaraFashion/Data/DeploymentReadiness.cs",
+      "?? LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.Designer.cs",
+      "?? LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.cs",
+      "?? LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.Designer.cs",
+      "?? LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.cs",
+      "?? LaraFashion/Models/OrderInventoryReview.cs",
+      "?? LaraFashion/Services/InventoryException.cs",
+      "?? LaraFashion/Services/InventorySelection.cs",
+      "?? LaraFashion/Services/OrderInventoryReviewContracts.cs",
+      "?? LaraFashion/Services/OrderInventoryReviewService.cs",
+      "?? LaraFashion/Services/SizeNamePolicy.cs",
+      "?? deploy/tests/",
+      "?? docs/HistoricalInventoryReviewTestResults.log",
+      "?? docs/HistoricalOrderInventoryReview.ar.md",
+      "?? docs/ProductSizeIdentityRepair.ar.md",
+      "?? docs/RecoveryDeploymentSecurity.ar.md",
+      "?? docs/SafeEvidenceDeployment.ar.md",
+      "?? docs/SafeEvidenceDeploymentBashResults.log",
+      "?? docs/SafeEvidenceDeploymentInputs.json",
+      "?? docs/SafeEvidenceDeploymentTestResults.log",
+      "?? docs/SizeIdentityTestResults.log"
+    ],
+    "Files": [
+      {
+        "Path": ".config/dotnet-tools.json",
+        "Sha256": "0C15EC0803EFE7FE21B93F180A4E735EFE66368AD7576A282A5307C9E21938D4",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": ".gitattributes",
+        "Sha256": "462475EE5301E77D2A54A64757D95C3F21FC3A79E92E6EC94BDFCC8B36E48964",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": ".github/workflows/deploy.yml",
+        "Sha256": "A150176CA49139D2C21C55438696A54B54ACD6246083F9F40EE81FBB29B24065",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "deploy/deploy-production.sh",
+        "Sha256": "32CC9C9A85A0D3184BCF0ABC34D6FE8853CE1AFEE201FF16E6461C88807B2AA4",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "deploy/tests/harness.py",
+        "Sha256": "28D125584FDC2E234C06165A11CAB2872797C14CCA00B4A290A1424B0A2840FF",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "deploy/tests/linux-acceptance.py",
+        "Sha256": "AFE10614E4529B596E04898E3B938E1249B1B97D0C7AF33654CEFC82687F6B9F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "deploy/tests/linux-docker.ps1",
+        "Sha256": "FB94A8A86A731E8D3F2B739904B14EB6DD7F4ED881B79B22FD60F160A2FBB469",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "deploy/tests/recovery-safety.py",
+        "Sha256": "963A6941BBB373BF5F4A588FD2AFCD337FE03285D56FCD0EE5A9893895182625",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "deploy/tests/run-harness.sh",
+        "Sha256": "D92C66AD508D6297D725DD4C6120FC922D2FB01405C936EB7413A9F6A4330889",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentDatabase.cs",
+        "Sha256": "1B46E1528AF8E8DD96A959CA8B659BED0E0C612472575B7B17FDD5DF1C84F92A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentHarness.cs",
+        "Sha256": "51D66584AABE6EA17CF39A3E830413122698D6E7D9CBE1793C07E67DDFAC95B7",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentMaintenance.cs",
+        "Sha256": "50DF110540508AADB7464E62860BA066CAFFB62A258437617D15138D1E4CF6EA",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentSafetyTests.cs",
+        "Sha256": "E8B5C1886E89AA3376FA33B510F3338C3DEDB044D37CC3BCB98BDE6810E071C9",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/Diagnostics.cs",
+        "Sha256": "355CD6032A47D6EE47500DA296284E911C483906DA7406F42629CB144B7CC2CF",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/Fixture.cs",
+        "Sha256": "D0702D2039EAA697586A92CAC06F4F71CEEEB62A0F1632E7E6E2E49B9D0CFD0E",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/HistoricalInventoryReviewTests.cs",
+        "Sha256": "200E498D5D169E8169C51A9D765F92BF27CB56F87742A0589AD3A99D77C05368",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/LaraFashion.IntegrationTests.csproj",
+        "Sha256": "231A3DC8015C5B62170DC0D315A026DAB8BC57AE9E36537AD68C664FF8F71029",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/LegacyReviewEvidence.cs",
+        "Sha256": "830C558318ED69849F3B3FD82A16B05AA5D79D7679B6B3AD20BCD0067A93855A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/LinuxAcceptance.cs",
+        "Sha256": "AE52C0A4243FE28DFCE36910632D26CE30912A5C5C9430E532F85CE4C200B4D7",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/Program.cs",
+        "Sha256": "68AE947A73FA34F48635E2A3568B7F3DF7391F4B0F545C3725FB60054460C043",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/ReviewDiagnostics.cs",
+        "Sha256": "39ACEAE1D96B608830E09570A9FB544E3EF7744E1648A70A5082CE1AE60C3745",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/ReviewUpgradeVerification.cs",
+        "Sha256": "49051B478E57EF4A9D275EBD6A75F2002B2A876214BD71B513A84AB501E3A3BB",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/SizeIdentityTests.cs",
+        "Sha256": "AA0C2A4096F73A584C5A761FEACF4908B037A143F8721C20C957CC025BED93D7",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/SizeReproduction.cs",
+        "Sha256": "294515219A3D2B7BEAC9694DAC01623A1057940C2AE785715EE11F5DBE0E4E9B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/UiHost.cs",
+        "Sha256": "1126E4140EAB84FAB8A7800C72DFEE7F3D582B4E2CAB79336EB8AF5A3F19A340",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion.slnx",
+        "Sha256": "5431E3D7F26E1F0679F7BB0716F27F952E66FC5C24C332D0AC528331E7995B4A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/_Imports.razor",
+        "Sha256": "9DEF67FCC6E8305622043227B3FF1930227DA17B99A377B863B3CDF1548CD7C7",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminCategories.razor",
+        "Sha256": "9DDCC83BE4E2B84BF48C43015287DF020A75356BEE57226B82AE0E5A9CB8F246",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminChats.razor",
+        "Sha256": "3D95AEDE31C570B1F55BF683D03FDED87373605330B5808250ACAB1A0F2C2D07",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminChats.razor.css",
+        "Sha256": "6560A8B8D7EBF03F43D6D8A63CA05EAD2EACD5A6DD6EC601453487F3CB8D3D03",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminDiscounts.razor",
+        "Sha256": "F62378FAC107A17CD109F2C3CF29C28C55714DE209F9CE05CA6DAB7E53CC8224",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminLogin.razor",
+        "Sha256": "D87696BEBB868D3477C26343B952AF138AE05657B81EC124075AD83A028C1DEC",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminNav.razor",
+        "Sha256": "B59D5E40576C4620235F985FA75F03EF9C5C12AB810CDD1E40B84F18923FA8FB",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminOrders.razor",
+        "Sha256": "662ECE90590F343E48E79CD64883ACE570841028D92EACD50DC66B440046FDDA",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminOrders.razor.css",
+        "Sha256": "2F0A6E9BB166FA3FE21B4C807D2124970B0FB65A8E5B393BA71557A74E554923",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminProducts.razor",
+        "Sha256": "93B6AF5FECBEC22DB4BEED2C827891E0DE7DD8AE0BA0647CFD7C346204CFA94F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminReports.razor",
+        "Sha256": "AE639232705A87E323B40D66DCD6BBCF28DC19680D650B4E6C198462CF8DB47F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminReports.razor.css",
+        "Sha256": "B3FEC88FC90F810DCD773C43A3A8B556FA5A33A273C1E7D88FE594F1A2EF7C24",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminSandbox.razor",
+        "Sha256": "07214E1D40670FC70515ED56B86FB41FE418A7FC9E38B4A44C94370EB3BEBA51",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminSettings.razor",
+        "Sha256": "97AC6BED9E783D34683F54060001FB347027DD54B702EBD77C11489A786416DC",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/ReportAnalyticsChart.razor",
+        "Sha256": "F7E93736FEFFD12D443BC2C7CA18535AE1CE83C12CCD064EEBE171F3F09FC9FA",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/ReportAnalyticsChart.razor.css",
+        "Sha256": "FB7E3C05B438BE9F2F70AF4B8EA98AB8E6874FF43C1782E8C1977E8276E190ED",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/App.razor",
+        "Sha256": "EDA98C957C181FE4F6EFD90A0E6010318197AF03E40AB699C87C3630D86EB6D9",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Cart/CartButton.razor",
+        "Sha256": "48C7BF7F78D8337FFA8AE846790272356B54EDD5F234D4E1A27E79AA405FA9E0",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Cart/CartPersistence.razor",
+        "Sha256": "ADF1526EEA19BED0381F13A33E68DE81A5BB8D5AD2C9BD6B9492104D8CFF5204",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Chat/StoreChatWidget.razor",
+        "Sha256": "3970A8D66D4A6E1BDD42BC877C67776A64BC413FE48F19602D8043D1EBB02FA3",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Chat/StoreChatWidget.razor.css",
+        "Sha256": "13296F38549EDD54FF3D2D1C4E1527B5F370C0F2E6CE54D3685DB5E9666DC6EC",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Layout/MainLayout.razor",
+        "Sha256": "BE22DEFF36D00D70409BB7570EF8EBD6A6DA8698E7F33296B54EFB2115FBDA4F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Layout/MainLayout.razor.css",
+        "Sha256": "3843531EA35440D59B5E688B5AC3FEAAED91F760DA8940B662531C49F4DE66B5",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Modals/CheckoutModal.razor",
+        "Sha256": "31553928F81E939DD6160A54A7A3F5C68F9C528FE333D59159955C16BA0B4140",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Modals/ProductModal.razor",
+        "Sha256": "67FF5094494902320049135E3284E386F5DBAA8C48E2CC370AC0B27CC9F7431A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Orders/MyOrdersButton.razor",
+        "Sha256": "5901AF3F90041A56ECD3F4CAE6EE5BF2DBF3FB32658D3E4ACF9723485E15FD9A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Orders/MyOrdersButton.razor.css",
+        "Sha256": "CB734F4CC810DF7EE0960520E078C6DE7B44AD86552CF81F4546A6C2AFBE6980",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/CartPage.razor",
+        "Sha256": "AC41B15D1258A4104EB4C073FD07C06178F2B5DF7918598FEA2A8C09A8D465B1",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/Error.razor",
+        "Sha256": "E77473780E53F2BA6D42105B745D3ECA7CDBDAEC1D407BC46A8CE9338B43EB29",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/Home.razor",
+        "Sha256": "5DAD4CD8739B653C7BA04CE7A0BED5554159D785404F9453EDE59F836EB230B0",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/Home.razor.css",
+        "Sha256": "CEEB2A0F636FE3EE2BBAA12A2BFEE957BC6444A258F2CDCF9E5C8D0E6894E94A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Routes.razor",
+        "Sha256": "B401F54B7848A5A7288F5B3435A1616D80EB4F68A64AAA592024FE3FCD2BEC56",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Shared/PageLoader.razor",
+        "Sha256": "B10444B9AA415FF455A6C7729B2F5E2AD14C711B40B2C5FDC30B3F00644C0729",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Components/Store/ProductCard.razor",
+        "Sha256": "5E07D6723B1A0629CBFC9D91FF467EB33B5B3FEF3DFAF8F84D9EA78869E30F5D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Data/AppDbContext.cs",
+        "Sha256": "E99B3F530B4E8E5508E96A72F7BA540856C89895F3D9FD03C6F150A9BCFB9632",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Data/AppDbContextFactory.cs",
+        "Sha256": "EB19957956581ED9FC77F12659BB31BBC0AE5B5A43FD3EEAE694AA4A08AEEF5E",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Data/DeploymentReadiness.cs",
+        "Sha256": "07E8584AFDD4A9ACE1B67BFAAC3E1A84558C25921983EC969ECB04F745F1FD97",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Data/DummyData.cs",
+        "Sha256": "F8AF8F357DDD805E8389C0AE8F9C27D6A6AB73420AADE2D4D51D4D3AAC65BA49",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/LaraFashion.csproj",
+        "Sha256": "534B01B779357B91D53B3FB3BAA4A45954ED09A587F3A17E3B0A8D1FFD53442F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524133650_InitialCreate.cs",
+        "Sha256": "682FC7CA0D68D820B3436FE927F15239472222B9403AFC97B9E891B6E1542FC1",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524133650_InitialCreate.Designer.cs",
+        "Sha256": "E2A5AB98F7AC2CED7BB008C0182ED3FCD6BE7D8B1CCB3CE09813EFBBCE67628A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524143208_AddAdmin.cs",
+        "Sha256": "5374103859A7506B28240D02B3EC87D3B70891B6536FA95DAA809E10E23B162D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524143208_AddAdmin.Designer.cs",
+        "Sha256": "76A84A8BF96976C5A26AE213821657DD461C7F4F47766CA03FC05703D07CBE2E",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260526120819_RenameImageFields.cs",
+        "Sha256": "76D530ED535B4CC6E1D86125402EC5C349CCF3793E714E1C0C8D1F984B7B83FD",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260526120819_RenameImageFields.Designer.cs",
+        "Sha256": "BA000DB874A4DDA90A5D02B8D378A98D487C909908E8C460888372204AB0AA82",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530130008_AddDiscountManagement.cs",
+        "Sha256": "9C6A89F124D89AB9741142335A857378F136544392CECF0199E215FE9241E192",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530130008_AddDiscountManagement.Designer.cs",
+        "Sha256": "1C0F1A6738004FFD409E0B0F3B1D8A957778AC7949BC75C1C64FF7C042D403B0",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530185921_AddBundleDiscounts.cs",
+        "Sha256": "B71F91643C46D9124AAEE28763E878F2BE1F73967A283933863741FDC8286815",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530185921_AddBundleDiscounts.Designer.cs",
+        "Sha256": "618D0F55F0F58E1A01C3CB03A446EB6F6DF14090821FAC9F09F0EDE4BDC4B9E6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530194618_AddOrderDiscountFields.cs",
+        "Sha256": "C6821A0F364D2810FF56F067674C95176D68ECDA45A9B2E42272A38AA9D6F444",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530194618_AddOrderDiscountFields.Designer.cs",
+        "Sha256": "6FD4E13D6FD289E696A063F7D7D4FEC4F41F48E11E6FB11B08834030C090521B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530201753_AddDiscountSystem.cs",
+        "Sha256": "A6E174D83325B9F31B7A8EC9BCEAE1E431F5D731A9A9989171770AE80512EF3B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530201753_AddDiscountSystem.Designer.cs",
+        "Sha256": "464E7A1D05905ACBB671655CAD770B1FBA4D3E8D90D0F6640F0272AF592475CE",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260710094029_AddProductPublishingState.cs",
+        "Sha256": "0E498ED43FD5D29AE926DA4B08408951EAB2786BB94B471F7FCB899628A6E9F3",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260710094029_AddProductPublishingState.Designer.cs",
+        "Sha256": "8AF96846A3210A562849D803A28CA4500BAFE6367A8C889B55D30D8F95DE4863",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260711120000_AddStoreReports.cs",
+        "Sha256": "37761F2309D864FDE55804C9DCA516085323251BEB412EE94B917E064BDF487D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260821085216_AddMultipleProductImages.cs",
+        "Sha256": "4B441FBCAC6B1DDFC3957973671F0FC4C78B29960B5E59CABE49DD26F30CE34A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260821085216_AddMultipleProductImages.Designer.cs",
+        "Sha256": "432ACB3141E95B970200F342AFAF93EB51F58F52FF41270D9793F1F290DBDB9B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824141208_NormalizeProductImageGuidFormat.cs",
+        "Sha256": "6BF17610A804080005D315276BAB4342B31DEA0DADE70F8F3A0B53EC01EC39DB",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824141208_NormalizeProductImageGuidFormat.Designer.cs",
+        "Sha256": "702255C92CA0E0E238E27ECCFC2B5CDEF9566D70BCB6DB8F13D18C8F40781009",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824182219_AddStoreChat.cs",
+        "Sha256": "0CEA6CC5B811A9B63F983006724B883B9D14BA9C77368FABC6B14B5776A9FABF",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824182219_AddStoreChat.Designer.cs",
+        "Sha256": "7043D8C9AFE636384797B2C19E9A8FC7D74EF45710EDBE5C88C4A9282E9F6F9A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260825203549_AddStoreChatSettings.cs",
+        "Sha256": "C2AAE16E9C5B94F107E14EAAA3B48E347F9388ADCC9D331C280712467FC84D47",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260825203549_AddStoreChatSettings.Designer.cs",
+        "Sha256": "E4114A136620CFDC979E5E209D0E7A82C5F5D0E39C647C7673DD43AFD83C57FB",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261003154113_AddSafeOrderNumbers.cs",
+        "Sha256": "F0283BC2A932F2F50C77615CFAB604B3E4BB28BE009DD5DAB54D8B5DE8212424",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261003154113_AddSafeOrderNumbers.Designer.cs",
+        "Sha256": "8A8BA68DFEB27F8B6EF77B6D8EB48DDDA2C50931CA458C38BAEC182BF8DE2209",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.cs",
+        "Sha256": "BFC8D54110FE7B6618D94A7A44ACDB57B10611F556DF374156B4489A230E40A6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.Designer.cs",
+        "Sha256": "683B1B71E38507E840BC98CE02A52805167E51C29B727ADA23D4FD35F6FEBA4E",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.cs",
+        "Sha256": "B9E3593F0EBFAE29EACB7819250C82C66595F3A0883D2D8BA3426C1558C6F9DD",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.Designer.cs",
+        "Sha256": "E78C6C54E0AD8DFF00F65D79A99E064684C52C44BD42D365B95163E02013C15A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Migrations/AppDbContextModelSnapshot.cs",
+        "Sha256": "B98708870B5307467988738B7017059191375D3264F94B4B271AD70441875A97",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/AdminUser.cs",
+        "Sha256": "AFBB0F40BDE995A27282E5AE89A0060D442808F5E83015128805F7F44E87D5E7",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/CartDiscountResult.cs",
+        "Sha256": "89D5D80037A216698811850233144F9B30C0F3ABE153E7609CCA461577C66FD2",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/CartItem.cs",
+        "Sha256": "61C2B7F7C3F593FE235A7E4B87600E7343CFFF79286C468B128B7B165313556D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Category.cs",
+        "Sha256": "CB0B9A199E2543BE1AF6089913425DC12F66B5FAAF6419A9ED87A481A834BA67",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/CustomerInfo.cs",
+        "Sha256": "E91850968FF1EB28FDED7D531C89C774C7ABD6BB839B17BA38A073190EDFB281",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/CustomerOrders.cs",
+        "Sha256": "A68C293111935EFC59159BA0B887600627C8A48020085A7C3B2E028734A74C2F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Discount.cs",
+        "Sha256": "06ECC2B1852D704389754FB2DA5AB588778C2EC5025ACD7BC4986BC6D6EE5ABE",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/DiscountRuleType.cs",
+        "Sha256": "38F2815BD1530920023A0284FE52C2B49CFF4E4F042CB9624FB7A41EBE4F1A94",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/DiscountType.cs",
+        "Sha256": "005FA017C62A1D5046C03B6704BD6123A944A07AF5B998ADF3670EAC02C1100F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/DiscountValueType.cs",
+        "Sha256": "A083B73FAEA0A4F7E9BC58F67E86943B4309AACCCC96CAE09A9B128D0CA3C544",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/OrderStatus.cs",
+        "Sha256": "68D062AD9412995412EF5E5180BB3C74530F3243F37DCBC5D9E18265E2A0A667",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Order.cs",
+        "Sha256": "7B5164F4F4C17A69690483A095A5829A5662A56E5D2F44EC991F95F51D3A72BB",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/OrderInventoryReview.cs",
+        "Sha256": "053496F4665BDD059CE91F42F3DF09BAFE2AD66D520743C6D1E9364C3FD9AA06",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/OrderItem.cs",
+        "Sha256": "BCE2D056EAA3EB398521E0C86D7A1F6EB0267C867B5233225CFD4FE29019B954",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/OrderNumberReservation.cs",
+        "Sha256": "45D30788AA9CB8D01B91D807B1CF3442D4CAF86F79A5317A845B227B57C8911A",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/PersistedCartItem.cs",
+        "Sha256": "4384630CEF342903845C3D23872751E3AD40EB41A2CF62B2EB9E48C66B655867",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/PersistedCartState.cs",
+        "Sha256": "8D2528B7D32099318251F842B3739F3DB07192548C29944FDC4A3FB20A7E799D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/Product.cs",
+        "Sha256": "351B3DFD6817F9A5868705FA44D32FB246C25D869F7DADB04EC68BF8B80412B2",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/ProductCategory.cs",
+        "Sha256": "65DD2AA8EF3E8328AF9072AF430B1BC7B9621FD1FACA4DBB98480C7AE97EAD20",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/ProductDiscount.cs",
+        "Sha256": "CB22FC3ADC687CD6B82471B7CE2D399E986DB83A7C5D908BF6FDE26651A3D2C6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/ProductImage.cs",
+        "Sha256": "324A3E27CE2AB5300611CD142AB5895F33CD1E8062A3C91FDE1F2EC9D87908B3",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/ProductSize.cs",
+        "Sha256": "9B18731B03841EA403309BFB76C4F262247CEBD5ACAA0A520A657F048B3EDB81",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/SalesHistory.cs",
+        "Sha256": "225A5A8D94928D651D2B1377DA4CE2DBCE3D7CA9E895A5A594367D3846034C2B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/StoreChatMessage.cs",
+        "Sha256": "6FD08ECBB5864DDADA551064906CBCCFD2C316AE6458C6B66A8553DCB89EF936",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/StoreChatSession.cs",
+        "Sha256": "D27F74FFCBF8777632B7EDCC1C0E21F93DB670109730F27224D6984C41CCC3CA",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/StoreChatSettings.cs",
+        "Sha256": "A423C3EF0A0A4B103C427B20FB4C9AC74CA153BDC92A430822A7E004B6C0DC2F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Models/StoreVisit.cs",
+        "Sha256": "000C3010286189DC7AD0BFA69D184EB0C20BFA0D2B19B82DDB089958CCE21175",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Program.cs",
+        "Sha256": "26AC9F899F727F849C67CEFAB8B73A6536C502981589D40C3456FA2147BF2586",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/AdminAuthService.cs",
+        "Sha256": "3CF3AA1250C9DEC0B888A4157F01D709690061795DF8974AC511438260F1DFD6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/AppStoragePaths.cs",
+        "Sha256": "D8B8D0D7DDD44685C320BEF810AA6EDF7D86FDF1CFB34D5974BF73C962D95A08",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/BrowserStorageService.cs",
+        "Sha256": "AB5AF2AAC4456898FF60103396A9156A04A5B33B457BC2E19107F0C445880CD6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/CartService.cs",
+        "Sha256": "B70DE83C34CFC3985E63D646DB6841E3472A1E350F29FA9F52D30A4FB5C9149D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/CategoryService.cs",
+        "Sha256": "DCC690BE69BC4368B4F3034A88E669587F8A4E555E5648F4B5E39F665D311C78",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/DatabaseSeeder.cs",
+        "Sha256": "C73E2C2ED9C686B879C0DAEFA9ADD5D142A72FCBC26B19CA1A3DE7DD8005D6FA",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/DiscountService.cs",
+        "Sha256": "F19A6A669434C67ABCC7C2F4947923AD095044DA3C0C0F2787F6DA2F99088B58",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/ImageMaintenanceService.cs",
+        "Sha256": "573A9D0757A105471C2D4571D5DA28CBB8458E51E1F5D5780173D9EB73D468C6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/InventoryException.cs",
+        "Sha256": "09DDC1197C5E879F3D4933CE96066F634A6D37767B8DC59BA9F7B8B598405BBF",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/InventorySelection.cs",
+        "Sha256": "7B86278267812EE154E4A7E1931257CC4D1111521A1E0A545DF0AFC0729A0585",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/JwtService.cs",
+        "Sha256": "CA9BB412024C648AAF7E30B082A802B66D2D748F4E2CC0D13B19CC289600C826",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/OrderInventoryReviewContracts.cs",
+        "Sha256": "B63D993749CE55059D330BF9BB97B1FE95486BDFAC016F65DD5A3279175428CC",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/OrderInventoryReviewService.cs",
+        "Sha256": "3E877A762A6230EB11C5D8F4F85064ABF506092627EEF56667952EAC58D8D443",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/OrderNumberPolicy.cs",
+        "Sha256": "0F1CD4FF317B184A62B86AE68F288E766608F780F533A5963281CE756A701631",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/OrderService.cs",
+        "Sha256": "508051520AD272DF78A7DCFEF884B4A4EE0A06E9CE587A8D19A728F7A8D4E30F",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/PasswordHasherService.cs",
+        "Sha256": "28AFD774170061AAA970207A3E9921713C097CE7506434A6664E7022DA8F97C6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/PhoneNumberNormalizer.cs",
+        "Sha256": "96701271E744CEDCE571D895506122C96E2E48A15541380918C64F96B4EEC097",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/ProductService.cs",
+        "Sha256": "106D5FFADE4B3B9707CBD95B60BC233E752CB7E5CAB18AC41B8A1E0ACAA3C773",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/ReportsService.cs",
+        "Sha256": "E34E08882816FB713D30DB39B2CBB7C18A458FE47D0538E607063CA5429E9EF8",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/SandboxFilterState.cs",
+        "Sha256": "6DCA22141EA8DB6058C2B4DBE069F2EC872575784BAD1B8EC76F360E21634F31",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/SizeLabelParser.cs",
+        "Sha256": "C63E775506AED7B76CEDA525798BEF10D242C5DDED16E463A80E5B134D48F20B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/SizeNamePolicy.cs",
+        "Sha256": "9D1D675B1C2C36597B51B103EBA251F8080F3AF7D10AD50047FA19C4E9580DB6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/SqliteWork.cs",
+        "Sha256": "CB40410B22BA9E7019AC5068C92A17B41FE8BC29D4BF511CC5FE823CECBC4D36",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatAgentService.cs",
+        "Sha256": "E4BE8D93E32DB0C3C9315FBDECFCF6EDD1BE9132EB8E8B41381F72EC574BDAF6",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatMode.cs",
+        "Sha256": "2B4255A17BBF74E1F80BF462F0080D6DAAB348065BFD6AB3D08EA3FBBF3FDE53",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatService.cs",
+        "Sha256": "4A36B3A4BEFFE9EE228E3B5C62A107CF3A92F5DA472826E2127E8B6BCCFA6697",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatSettingsService.cs",
+        "Sha256": "D429A2745B2A11269E32FF40FD66BF48B1C47BD3F8D3D47D4585582B17F0A5CD",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/Services/StorefrontFilterState.cs",
+        "Sha256": "3251CEC521B3CEF60FFBDE40B3D549B9A4E55BF9547351F7459F9AEC1EF485FE",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/wwwroot/app.css",
+        "Sha256": "F434788EA7A9188A3D0A3ED50982AE66D66A5C02D7D635AAF14A67B85DEECF7D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/wwwroot/css/modern-controls.css",
+        "Sha256": "D2179F2DC11BE6E8471FAA0CF9A9F2F2CAAB5D2B830924DDC42F33A911C30A9B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/wwwroot/css/site.css",
+        "Sha256": "E1E50AD75A9A9E9CC063B79D693B1E7EC3C13B58C18415AF81E221E6443E473B",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/wwwroot/js/product-image-upload.js",
+        "Sha256": "A1D23C1FD7335C08C4D9F75FE6F683CCA251CBD624B54B4AED7FF17954905F3D",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "LaraFashion/wwwroot/js/store-visits.js",
+        "Sha256": "00896FA72362F64B9C1A60D504E5FB066E9D42F32B469C45144DE984CB103273",
+        "Classification": "current-working-tree"
+      },
+      {
+        "Path": "NuGet.Config",
+        "Sha256": "33C19291500FAF9739E66E381654E020FE02AC5BF6EB6AF3AF311BD56FBEEADA",
+        "Classification": "generated-public-source-only"
+      }
+    ],
+    "Excluded": [
+      "databases/sidecars/backups",
+      "keys/certificates/.env",
+      "real appsettings",
+      "Data Protection keys",
+      ".git/.vs/bin/obj",
+      "uploads/images",
+      "production evidence/logs"
+    ]
+  },
+  "Baseline": {
+    "Sha256": "DAEDFAE9CC1F55AB0EB72626B50AB7EFB75D368B46C50F4EC53F6D0C7410FB73",
+    "Branch": "main",
+    "Head": "b196d7268e2b5a5b73b207d963255d5d6a7c0129",
+    "Status": [
+      " M .github/workflows/deploy.yml",
+      " M LaraFashion.IntegrationTests/Diagnostics.cs",
+      " M LaraFashion.IntegrationTests/Fixture.cs",
+      " M LaraFashion.IntegrationTests/Program.cs",
+      " M LaraFashion.IntegrationTests/UiHost.cs",
+      " M LaraFashion/Components/Admin/AdminOrders.razor",
+      " M LaraFashion/Components/Admin/AdminOrders.razor.css",
+      " M LaraFashion/Components/Admin/AdminProducts.razor",
+      " M LaraFashion/Components/Cart/CartPersistence.razor",
+      " M LaraFashion/Components/Modals/ProductModal.razor",
+      " M LaraFashion/Components/Pages/CartPage.razor",
+      " M LaraFashion/Components/Store/ProductCard.razor",
+      " M LaraFashion/Data/AppDbContext.cs",
+      " M LaraFashion/LaraFashion.csproj",
+      " M LaraFashion/Migrations/AppDbContextModelSnapshot.cs",
+      " M LaraFashion/Models/CartItem.cs",
+      " M LaraFashion/Models/Order.cs",
+      " M LaraFashion/Models/OrderItem.cs",
+      " M LaraFashion/Models/PersistedCartItem.cs",
+      " M LaraFashion/Models/ProductSize.cs",
+      " M LaraFashion/Program.cs",
+      " M LaraFashion/Services/AppStoragePaths.cs",
+      " M LaraFashion/Services/CartService.cs",
+      " M LaraFashion/Services/OrderService.cs",
+      " M LaraFashion/Services/ProductService.cs",
+      " M LaraFashion/Services/SqliteWork.cs",
+      " M \"New Text Document.txt\"",
+      " M deploy/deploy-production.sh",
+      " M docs/OrderInventoryRepair.ar.md",
+      "?? LaraFashion.IntegrationTests/DeploymentDatabase.cs",
+      "?? LaraFashion.IntegrationTests/DeploymentHarness.cs",
+      "?? LaraFashion.IntegrationTests/DeploymentMaintenance.cs",
+      "?? LaraFashion.IntegrationTests/DeploymentSafetyTests.cs",
+      "?? LaraFashion.IntegrationTests/HistoricalInventoryReviewTests.cs",
+      "?? LaraFashion.IntegrationTests/LegacyReviewEvidence.cs",
+      "?? LaraFashion.IntegrationTests/ReviewDiagnostics.cs",
+      "?? LaraFashion.IntegrationTests/ReviewUpgradeVerification.cs",
+      "?? LaraFashion.IntegrationTests/SizeIdentityTests.cs",
+      "?? LaraFashion.IntegrationTests/SizeReproduction.cs",
+      "?? LaraFashion/Data/DeploymentReadiness.cs",
+      "?? LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.Designer.cs",
+      "?? LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.cs",
+      "?? LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.Designer.cs",
+      "?? LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.cs",
+      "?? LaraFashion/Models/OrderInventoryReview.cs",
+      "?? LaraFashion/Services/InventoryException.cs",
+      "?? LaraFashion/Services/InventorySelection.cs",
+      "?? LaraFashion/Services/OrderInventoryReviewContracts.cs",
+      "?? LaraFashion/Services/OrderInventoryReviewService.cs",
+      "?? LaraFashion/Services/SizeNamePolicy.cs",
+      "?? deploy/tests/",
+      "?? docs/HistoricalInventoryReviewTestResults.log",
+      "?? docs/HistoricalOrderInventoryReview.ar.md",
+      "?? docs/ProductSizeIdentityRepair.ar.md",
+      "?? docs/RecoveryDeploymentSecurity.ar.md",
+      "?? docs/SafeEvidenceDeployment.ar.md",
+      "?? docs/SafeEvidenceDeploymentBashResults.log",
+      "?? docs/SafeEvidenceDeploymentInputs.json",
+      "?? docs/SafeEvidenceDeploymentTestResults.log",
+      "?? docs/SizeIdentityTestResults.log"
+    ],
+    "FilesCompared": 165,
+    "FilesUnchanged": 163,
+    "Files": [
+      {
+        "Path": ".config/dotnet-tools.json",
+        "BaselineSha256": "0C15EC0803EFE7FE21B93F180A4E735EFE66368AD7576A282A5307C9E21938D4",
+        "CurrentSha256": "0C15EC0803EFE7FE21B93F180A4E735EFE66368AD7576A282A5307C9E21938D4",
+        "Unchanged": true
+      },
+      {
+        "Path": ".gitattributes",
+        "BaselineSha256": "462475EE5301E77D2A54A64757D95C3F21FC3A79E92E6EC94BDFCC8B36E48964",
+        "CurrentSha256": "462475EE5301E77D2A54A64757D95C3F21FC3A79E92E6EC94BDFCC8B36E48964",
+        "Unchanged": true
+      },
+      {
+        "Path": ".github/workflows/deploy.yml",
+        "BaselineSha256": "A150176CA49139D2C21C55438696A54B54ACD6246083F9F40EE81FBB29B24065",
+        "CurrentSha256": "A150176CA49139D2C21C55438696A54B54ACD6246083F9F40EE81FBB29B24065",
+        "Unchanged": true
+      },
+      {
+        "Path": "AGENTS.md",
+        "BaselineSha256": "BCDFED52039C26D8CB0DF31EC921FD19352B4A0DDA574288593DCB837AA1D6BF",
+        "CurrentSha256": "BCDFED52039C26D8CB0DF31EC921FD19352B4A0DDA574288593DCB837AA1D6BF",
+        "Unchanged": true
+      },
+      {
+        "Path": "deploy/deploy-production.sh",
+        "BaselineSha256": "32CC9C9A85A0D3184BCF0ABC34D6FE8853CE1AFEE201FF16E6461C88807B2AA4",
+        "CurrentSha256": "32CC9C9A85A0D3184BCF0ABC34D6FE8853CE1AFEE201FF16E6461C88807B2AA4",
+        "Unchanged": true
+      },
+      {
+        "Path": "deploy/tests/harness.py",
+        "BaselineSha256": "F4B10E49A2C8EF087E4CB4A93D26B9CD732B9AA2A4A8BF5C2609CB0A5827633D",
+        "CurrentSha256": "28D125584FDC2E234C06165A11CAB2872797C14CCA00B4A290A1424B0A2840FF",
+        "Unchanged": false
+      },
+      {
+        "Path": "deploy/tests/recovery-safety.py",
+        "BaselineSha256": "963A6941BBB373BF5F4A588FD2AFCD337FE03285D56FCD0EE5A9893895182625",
+        "CurrentSha256": "963A6941BBB373BF5F4A588FD2AFCD337FE03285D56FCD0EE5A9893895182625",
+        "Unchanged": true
+      },
+      {
+        "Path": "deploy/tests/run-harness.sh",
+        "BaselineSha256": "D92C66AD508D6297D725DD4C6120FC922D2FB01405C936EB7413A9F6A4330889",
+        "CurrentSha256": "D92C66AD508D6297D725DD4C6120FC922D2FB01405C936EB7413A9F6A4330889",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/HistoricalInventoryReviewTestResults.log",
+        "BaselineSha256": "E11471C14632609F4A7BF531823593A86AEB41950483FF946029BCF5347DB027",
+        "CurrentSha256": "E11471C14632609F4A7BF531823593A86AEB41950483FF946029BCF5347DB027",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/HistoricalOrderInventoryReview.ar.md",
+        "BaselineSha256": "502D4977F56FF8050E2D0A5A5232D552A8CE6C2C5471113691F43073D9E3B671",
+        "CurrentSha256": "502D4977F56FF8050E2D0A5A5232D552A8CE6C2C5471113691F43073D9E3B671",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/OrderInventoryRepair.ar.md",
+        "BaselineSha256": "39669C3971C18C738F738138AB63734329D70C26993991DF44704DD59988028B",
+        "CurrentSha256": "39669C3971C18C738F738138AB63734329D70C26993991DF44704DD59988028B",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/ProductSizeIdentityRepair.ar.md",
+        "BaselineSha256": "7C8899AB241AE623F67D283F23C833D780B66D403B7CDBA75BB4FFE5BFA62003",
+        "CurrentSha256": "7C8899AB241AE623F67D283F23C833D780B66D403B7CDBA75BB4FFE5BFA62003",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/RecoveryDeploymentSecurity.ar.md",
+        "BaselineSha256": "25B47F42198E955E94EEA0F0C677444D369EEF7C035E0A732E1A4F50EF0ADEB3",
+        "CurrentSha256": "25B47F42198E955E94EEA0F0C677444D369EEF7C035E0A732E1A4F50EF0ADEB3",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/SafeEvidenceDeployment.ar.md",
+        "BaselineSha256": "FEC725482809A1E71514EB9EC4CFFFB4867C31C9C54B56875D6CE3F668B17F2A",
+        "CurrentSha256": "FEC725482809A1E71514EB9EC4CFFFB4867C31C9C54B56875D6CE3F668B17F2A",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/SafeEvidenceDeploymentBashResults.log",
+        "BaselineSha256": "C72093C6955A8AB29DCC5D396B4916E62D1145A47C0D679AF293D4F34AEC010F",
+        "CurrentSha256": "C72093C6955A8AB29DCC5D396B4916E62D1145A47C0D679AF293D4F34AEC010F",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/SafeEvidenceDeploymentTestResults.log",
+        "BaselineSha256": "CEFF37667444D705F1AAAB30E52A31FF900C7F268CDB9A7B5EE06DFB2B0EDD12",
+        "CurrentSha256": "CEFF37667444D705F1AAAB30E52A31FF900C7F268CDB9A7B5EE06DFB2B0EDD12",
+        "Unchanged": true
+      },
+      {
+        "Path": "docs/SizeIdentityTestResults.log",
+        "BaselineSha256": "A58AD5F1930C4B0CF6D6BF6BDF854598E006D5599094373B2BC3D02D77031092",
+        "CurrentSha256": "A58AD5F1930C4B0CF6D6BF6BDF854598E006D5599094373B2BC3D02D77031092",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentDatabase.cs",
+        "BaselineSha256": "1B46E1528AF8E8DD96A959CA8B659BED0E0C612472575B7B17FDD5DF1C84F92A",
+        "CurrentSha256": "1B46E1528AF8E8DD96A959CA8B659BED0E0C612472575B7B17FDD5DF1C84F92A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentHarness.cs",
+        "BaselineSha256": "51D66584AABE6EA17CF39A3E830413122698D6E7D9CBE1793C07E67DDFAC95B7",
+        "CurrentSha256": "51D66584AABE6EA17CF39A3E830413122698D6E7D9CBE1793C07E67DDFAC95B7",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentMaintenance.cs",
+        "BaselineSha256": "50DF110540508AADB7464E62860BA066CAFFB62A258437617D15138D1E4CF6EA",
+        "CurrentSha256": "50DF110540508AADB7464E62860BA066CAFFB62A258437617D15138D1E4CF6EA",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/DeploymentSafetyTests.cs",
+        "BaselineSha256": "E8B5C1886E89AA3376FA33B510F3338C3DEDB044D37CC3BCB98BDE6810E071C9",
+        "CurrentSha256": "E8B5C1886E89AA3376FA33B510F3338C3DEDB044D37CC3BCB98BDE6810E071C9",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/Diagnostics.cs",
+        "BaselineSha256": "355CD6032A47D6EE47500DA296284E911C483906DA7406F42629CB144B7CC2CF",
+        "CurrentSha256": "355CD6032A47D6EE47500DA296284E911C483906DA7406F42629CB144B7CC2CF",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/Fixture.cs",
+        "BaselineSha256": "D0702D2039EAA697586A92CAC06F4F71CEEEB62A0F1632E7E6E2E49B9D0CFD0E",
+        "CurrentSha256": "D0702D2039EAA697586A92CAC06F4F71CEEEB62A0F1632E7E6E2E49B9D0CFD0E",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/HistoricalInventoryReviewTests.cs",
+        "BaselineSha256": "200E498D5D169E8169C51A9D765F92BF27CB56F87742A0589AD3A99D77C05368",
+        "CurrentSha256": "200E498D5D169E8169C51A9D765F92BF27CB56F87742A0589AD3A99D77C05368",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/LaraFashion.IntegrationTests.csproj",
+        "BaselineSha256": "231A3DC8015C5B62170DC0D315A026DAB8BC57AE9E36537AD68C664FF8F71029",
+        "CurrentSha256": "231A3DC8015C5B62170DC0D315A026DAB8BC57AE9E36537AD68C664FF8F71029",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/LegacyReviewEvidence.cs",
+        "BaselineSha256": "830C558318ED69849F3B3FD82A16B05AA5D79D7679B6B3AD20BCD0067A93855A",
+        "CurrentSha256": "830C558318ED69849F3B3FD82A16B05AA5D79D7679B6B3AD20BCD0067A93855A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/Program.cs",
+        "BaselineSha256": "27D7745ABA74937B134877F917A0A9EB3EF5A1F412FDB3E1528500E663D0E072",
+        "CurrentSha256": "68AE947A73FA34F48635E2A3568B7F3DF7391F4B0F545C3725FB60054460C043",
+        "Unchanged": false
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/ReviewDiagnostics.cs",
+        "BaselineSha256": "39ACEAE1D96B608830E09570A9FB544E3EF7744E1648A70A5082CE1AE60C3745",
+        "CurrentSha256": "39ACEAE1D96B608830E09570A9FB544E3EF7744E1648A70A5082CE1AE60C3745",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/ReviewUpgradeVerification.cs",
+        "BaselineSha256": "49051B478E57EF4A9D275EBD6A75F2002B2A876214BD71B513A84AB501E3A3BB",
+        "CurrentSha256": "49051B478E57EF4A9D275EBD6A75F2002B2A876214BD71B513A84AB501E3A3BB",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/SizeIdentityTests.cs",
+        "BaselineSha256": "AA0C2A4096F73A584C5A761FEACF4908B037A143F8721C20C957CC025BED93D7",
+        "CurrentSha256": "AA0C2A4096F73A584C5A761FEACF4908B037A143F8721C20C957CC025BED93D7",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/SizeReproduction.cs",
+        "BaselineSha256": "294515219A3D2B7BEAC9694DAC01623A1057940C2AE785715EE11F5DBE0E4E9B",
+        "CurrentSha256": "294515219A3D2B7BEAC9694DAC01623A1057940C2AE785715EE11F5DBE0E4E9B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion.IntegrationTests/UiHost.cs",
+        "BaselineSha256": "1126E4140EAB84FAB8A7800C72DFEE7F3D582B4E2CAB79336EB8AF5A3F19A340",
+        "CurrentSha256": "1126E4140EAB84FAB8A7800C72DFEE7F3D582B4E2CAB79336EB8AF5A3F19A340",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/_Imports.razor",
+        "BaselineSha256": "9DEF67FCC6E8305622043227B3FF1930227DA17B99A377B863B3CDF1548CD7C7",
+        "CurrentSha256": "9DEF67FCC6E8305622043227B3FF1930227DA17B99A377B863B3CDF1548CD7C7",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminCategories.razor",
+        "BaselineSha256": "9DDCC83BE4E2B84BF48C43015287DF020A75356BEE57226B82AE0E5A9CB8F246",
+        "CurrentSha256": "9DDCC83BE4E2B84BF48C43015287DF020A75356BEE57226B82AE0E5A9CB8F246",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminChats.razor",
+        "BaselineSha256": "3D95AEDE31C570B1F55BF683D03FDED87373605330B5808250ACAB1A0F2C2D07",
+        "CurrentSha256": "3D95AEDE31C570B1F55BF683D03FDED87373605330B5808250ACAB1A0F2C2D07",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminChats.razor.css",
+        "BaselineSha256": "6560A8B8D7EBF03F43D6D8A63CA05EAD2EACD5A6DD6EC601453487F3CB8D3D03",
+        "CurrentSha256": "6560A8B8D7EBF03F43D6D8A63CA05EAD2EACD5A6DD6EC601453487F3CB8D3D03",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminDiscounts.razor",
+        "BaselineSha256": "F62378FAC107A17CD109F2C3CF29C28C55714DE209F9CE05CA6DAB7E53CC8224",
+        "CurrentSha256": "F62378FAC107A17CD109F2C3CF29C28C55714DE209F9CE05CA6DAB7E53CC8224",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminLogin.razor",
+        "BaselineSha256": "D87696BEBB868D3477C26343B952AF138AE05657B81EC124075AD83A028C1DEC",
+        "CurrentSha256": "D87696BEBB868D3477C26343B952AF138AE05657B81EC124075AD83A028C1DEC",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminNav.razor",
+        "BaselineSha256": "B59D5E40576C4620235F985FA75F03EF9C5C12AB810CDD1E40B84F18923FA8FB",
+        "CurrentSha256": "B59D5E40576C4620235F985FA75F03EF9C5C12AB810CDD1E40B84F18923FA8FB",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminOrders.razor",
+        "BaselineSha256": "662ECE90590F343E48E79CD64883ACE570841028D92EACD50DC66B440046FDDA",
+        "CurrentSha256": "662ECE90590F343E48E79CD64883ACE570841028D92EACD50DC66B440046FDDA",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminOrders.razor.css",
+        "BaselineSha256": "2F0A6E9BB166FA3FE21B4C807D2124970B0FB65A8E5B393BA71557A74E554923",
+        "CurrentSha256": "2F0A6E9BB166FA3FE21B4C807D2124970B0FB65A8E5B393BA71557A74E554923",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminProducts.razor",
+        "BaselineSha256": "93B6AF5FECBEC22DB4BEED2C827891E0DE7DD8AE0BA0647CFD7C346204CFA94F",
+        "CurrentSha256": "93B6AF5FECBEC22DB4BEED2C827891E0DE7DD8AE0BA0647CFD7C346204CFA94F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminReports.razor",
+        "BaselineSha256": "AE639232705A87E323B40D66DCD6BBCF28DC19680D650B4E6C198462CF8DB47F",
+        "CurrentSha256": "AE639232705A87E323B40D66DCD6BBCF28DC19680D650B4E6C198462CF8DB47F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminReports.razor.css",
+        "BaselineSha256": "B3FEC88FC90F810DCD773C43A3A8B556FA5A33A273C1E7D88FE594F1A2EF7C24",
+        "CurrentSha256": "B3FEC88FC90F810DCD773C43A3A8B556FA5A33A273C1E7D88FE594F1A2EF7C24",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminSandbox.razor",
+        "BaselineSha256": "07214E1D40670FC70515ED56B86FB41FE418A7FC9E38B4A44C94370EB3BEBA51",
+        "CurrentSha256": "07214E1D40670FC70515ED56B86FB41FE418A7FC9E38B4A44C94370EB3BEBA51",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/AdminSettings.razor",
+        "BaselineSha256": "97AC6BED9E783D34683F54060001FB347027DD54B702EBD77C11489A786416DC",
+        "CurrentSha256": "97AC6BED9E783D34683F54060001FB347027DD54B702EBD77C11489A786416DC",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/ReportAnalyticsChart.razor",
+        "BaselineSha256": "F7E93736FEFFD12D443BC2C7CA18535AE1CE83C12CCD064EEBE171F3F09FC9FA",
+        "CurrentSha256": "F7E93736FEFFD12D443BC2C7CA18535AE1CE83C12CCD064EEBE171F3F09FC9FA",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Admin/ReportAnalyticsChart.razor.css",
+        "BaselineSha256": "FB7E3C05B438BE9F2F70AF4B8EA98AB8E6874FF43C1782E8C1977E8276E190ED",
+        "CurrentSha256": "FB7E3C05B438BE9F2F70AF4B8EA98AB8E6874FF43C1782E8C1977E8276E190ED",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/App.razor",
+        "BaselineSha256": "EDA98C957C181FE4F6EFD90A0E6010318197AF03E40AB699C87C3630D86EB6D9",
+        "CurrentSha256": "EDA98C957C181FE4F6EFD90A0E6010318197AF03E40AB699C87C3630D86EB6D9",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Cart/CartButton.razor",
+        "BaselineSha256": "48C7BF7F78D8337FFA8AE846790272356B54EDD5F234D4E1A27E79AA405FA9E0",
+        "CurrentSha256": "48C7BF7F78D8337FFA8AE846790272356B54EDD5F234D4E1A27E79AA405FA9E0",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Cart/CartPersistence.razor",
+        "BaselineSha256": "ADF1526EEA19BED0381F13A33E68DE81A5BB8D5AD2C9BD6B9492104D8CFF5204",
+        "CurrentSha256": "ADF1526EEA19BED0381F13A33E68DE81A5BB8D5AD2C9BD6B9492104D8CFF5204",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Chat/StoreChatWidget.razor",
+        "BaselineSha256": "3970A8D66D4A6E1BDD42BC877C67776A64BC413FE48F19602D8043D1EBB02FA3",
+        "CurrentSha256": "3970A8D66D4A6E1BDD42BC877C67776A64BC413FE48F19602D8043D1EBB02FA3",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Chat/StoreChatWidget.razor.css",
+        "BaselineSha256": "13296F38549EDD54FF3D2D1C4E1527B5F370C0F2E6CE54D3685DB5E9666DC6EC",
+        "CurrentSha256": "13296F38549EDD54FF3D2D1C4E1527B5F370C0F2E6CE54D3685DB5E9666DC6EC",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Layout/MainLayout.razor",
+        "BaselineSha256": "BE22DEFF36D00D70409BB7570EF8EBD6A6DA8698E7F33296B54EFB2115FBDA4F",
+        "CurrentSha256": "BE22DEFF36D00D70409BB7570EF8EBD6A6DA8698E7F33296B54EFB2115FBDA4F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Layout/MainLayout.razor.css",
+        "BaselineSha256": "3843531EA35440D59B5E688B5AC3FEAAED91F760DA8940B662531C49F4DE66B5",
+        "CurrentSha256": "3843531EA35440D59B5E688B5AC3FEAAED91F760DA8940B662531C49F4DE66B5",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Modals/CheckoutModal.razor",
+        "BaselineSha256": "31553928F81E939DD6160A54A7A3F5C68F9C528FE333D59159955C16BA0B4140",
+        "CurrentSha256": "31553928F81E939DD6160A54A7A3F5C68F9C528FE333D59159955C16BA0B4140",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Modals/ProductModal.razor",
+        "BaselineSha256": "67FF5094494902320049135E3284E386F5DBAA8C48E2CC370AC0B27CC9F7431A",
+        "CurrentSha256": "67FF5094494902320049135E3284E386F5DBAA8C48E2CC370AC0B27CC9F7431A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Orders/MyOrdersButton.razor",
+        "BaselineSha256": "5901AF3F90041A56ECD3F4CAE6EE5BF2DBF3FB32658D3E4ACF9723485E15FD9A",
+        "CurrentSha256": "5901AF3F90041A56ECD3F4CAE6EE5BF2DBF3FB32658D3E4ACF9723485E15FD9A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Orders/MyOrdersButton.razor.css",
+        "BaselineSha256": "CB734F4CC810DF7EE0960520E078C6DE7B44AD86552CF81F4546A6C2AFBE6980",
+        "CurrentSha256": "CB734F4CC810DF7EE0960520E078C6DE7B44AD86552CF81F4546A6C2AFBE6980",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/CartPage.razor",
+        "BaselineSha256": "AC41B15D1258A4104EB4C073FD07C06178F2B5DF7918598FEA2A8C09A8D465B1",
+        "CurrentSha256": "AC41B15D1258A4104EB4C073FD07C06178F2B5DF7918598FEA2A8C09A8D465B1",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/Error.razor",
+        "BaselineSha256": "E77473780E53F2BA6D42105B745D3ECA7CDBDAEC1D407BC46A8CE9338B43EB29",
+        "CurrentSha256": "E77473780E53F2BA6D42105B745D3ECA7CDBDAEC1D407BC46A8CE9338B43EB29",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/Home.razor",
+        "BaselineSha256": "5DAD4CD8739B653C7BA04CE7A0BED5554159D785404F9453EDE59F836EB230B0",
+        "CurrentSha256": "5DAD4CD8739B653C7BA04CE7A0BED5554159D785404F9453EDE59F836EB230B0",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Pages/Home.razor.css",
+        "BaselineSha256": "CEEB2A0F636FE3EE2BBAA12A2BFEE957BC6444A258F2CDCF9E5C8D0E6894E94A",
+        "CurrentSha256": "CEEB2A0F636FE3EE2BBAA12A2BFEE957BC6444A258F2CDCF9E5C8D0E6894E94A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Routes.razor",
+        "BaselineSha256": "B401F54B7848A5A7288F5B3435A1616D80EB4F68A64AAA592024FE3FCD2BEC56",
+        "CurrentSha256": "B401F54B7848A5A7288F5B3435A1616D80EB4F68A64AAA592024FE3FCD2BEC56",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Shared/PageLoader.razor",
+        "BaselineSha256": "B10444B9AA415FF455A6C7729B2F5E2AD14C711B40B2C5FDC30B3F00644C0729",
+        "CurrentSha256": "B10444B9AA415FF455A6C7729B2F5E2AD14C711B40B2C5FDC30B3F00644C0729",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Components/Store/ProductCard.razor",
+        "BaselineSha256": "5E07D6723B1A0629CBFC9D91FF467EB33B5B3FEF3DFAF8F84D9EA78869E30F5D",
+        "CurrentSha256": "5E07D6723B1A0629CBFC9D91FF467EB33B5B3FEF3DFAF8F84D9EA78869E30F5D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Data/AppDbContext.cs",
+        "BaselineSha256": "E99B3F530B4E8E5508E96A72F7BA540856C89895F3D9FD03C6F150A9BCFB9632",
+        "CurrentSha256": "E99B3F530B4E8E5508E96A72F7BA540856C89895F3D9FD03C6F150A9BCFB9632",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Data/AppDbContextFactory.cs",
+        "BaselineSha256": "EB19957956581ED9FC77F12659BB31BBC0AE5B5A43FD3EEAE694AA4A08AEEF5E",
+        "CurrentSha256": "EB19957956581ED9FC77F12659BB31BBC0AE5B5A43FD3EEAE694AA4A08AEEF5E",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Data/DeploymentReadiness.cs",
+        "BaselineSha256": "07E8584AFDD4A9ACE1B67BFAAC3E1A84558C25921983EC969ECB04F745F1FD97",
+        "CurrentSha256": "07E8584AFDD4A9ACE1B67BFAAC3E1A84558C25921983EC969ECB04F745F1FD97",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Data/DummyData.cs",
+        "BaselineSha256": "F8AF8F357DDD805E8389C0AE8F9C27D6A6AB73420AADE2D4D51D4D3AAC65BA49",
+        "CurrentSha256": "F8AF8F357DDD805E8389C0AE8F9C27D6A6AB73420AADE2D4D51D4D3AAC65BA49",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/LaraFashion.csproj",
+        "BaselineSha256": "534B01B779357B91D53B3FB3BAA4A45954ED09A587F3A17E3B0A8D1FFD53442F",
+        "CurrentSha256": "534B01B779357B91D53B3FB3BAA4A45954ED09A587F3A17E3B0A8D1FFD53442F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524133650_InitialCreate.cs",
+        "BaselineSha256": "682FC7CA0D68D820B3436FE927F15239472222B9403AFC97B9E891B6E1542FC1",
+        "CurrentSha256": "682FC7CA0D68D820B3436FE927F15239472222B9403AFC97B9E891B6E1542FC1",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524133650_InitialCreate.Designer.cs",
+        "BaselineSha256": "E2A5AB98F7AC2CED7BB008C0182ED3FCD6BE7D8B1CCB3CE09813EFBBCE67628A",
+        "CurrentSha256": "E2A5AB98F7AC2CED7BB008C0182ED3FCD6BE7D8B1CCB3CE09813EFBBCE67628A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524143208_AddAdmin.cs",
+        "BaselineSha256": "5374103859A7506B28240D02B3EC87D3B70891B6536FA95DAA809E10E23B162D",
+        "CurrentSha256": "5374103859A7506B28240D02B3EC87D3B70891B6536FA95DAA809E10E23B162D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260524143208_AddAdmin.Designer.cs",
+        "BaselineSha256": "76A84A8BF96976C5A26AE213821657DD461C7F4F47766CA03FC05703D07CBE2E",
+        "CurrentSha256": "76A84A8BF96976C5A26AE213821657DD461C7F4F47766CA03FC05703D07CBE2E",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260526120819_RenameImageFields.cs",
+        "BaselineSha256": "76D530ED535B4CC6E1D86125402EC5C349CCF3793E714E1C0C8D1F984B7B83FD",
+        "CurrentSha256": "76D530ED535B4CC6E1D86125402EC5C349CCF3793E714E1C0C8D1F984B7B83FD",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260526120819_RenameImageFields.Designer.cs",
+        "BaselineSha256": "BA000DB874A4DDA90A5D02B8D378A98D487C909908E8C460888372204AB0AA82",
+        "CurrentSha256": "BA000DB874A4DDA90A5D02B8D378A98D487C909908E8C460888372204AB0AA82",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530130008_AddDiscountManagement.cs",
+        "BaselineSha256": "9C6A89F124D89AB9741142335A857378F136544392CECF0199E215FE9241E192",
+        "CurrentSha256": "9C6A89F124D89AB9741142335A857378F136544392CECF0199E215FE9241E192",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530130008_AddDiscountManagement.Designer.cs",
+        "BaselineSha256": "1C0F1A6738004FFD409E0B0F3B1D8A957778AC7949BC75C1C64FF7C042D403B0",
+        "CurrentSha256": "1C0F1A6738004FFD409E0B0F3B1D8A957778AC7949BC75C1C64FF7C042D403B0",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530185921_AddBundleDiscounts.cs",
+        "BaselineSha256": "B71F91643C46D9124AAEE28763E878F2BE1F73967A283933863741FDC8286815",
+        "CurrentSha256": "B71F91643C46D9124AAEE28763E878F2BE1F73967A283933863741FDC8286815",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530185921_AddBundleDiscounts.Designer.cs",
+        "BaselineSha256": "618D0F55F0F58E1A01C3CB03A446EB6F6DF14090821FAC9F09F0EDE4BDC4B9E6",
+        "CurrentSha256": "618D0F55F0F58E1A01C3CB03A446EB6F6DF14090821FAC9F09F0EDE4BDC4B9E6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530194618_AddOrderDiscountFields.cs",
+        "BaselineSha256": "C6821A0F364D2810FF56F067674C95176D68ECDA45A9B2E42272A38AA9D6F444",
+        "CurrentSha256": "C6821A0F364D2810FF56F067674C95176D68ECDA45A9B2E42272A38AA9D6F444",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530194618_AddOrderDiscountFields.Designer.cs",
+        "BaselineSha256": "6FD4E13D6FD289E696A063F7D7D4FEC4F41F48E11E6FB11B08834030C090521B",
+        "CurrentSha256": "6FD4E13D6FD289E696A063F7D7D4FEC4F41F48E11E6FB11B08834030C090521B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530201753_AddDiscountSystem.cs",
+        "BaselineSha256": "A6E174D83325B9F31B7A8EC9BCEAE1E431F5D731A9A9989171770AE80512EF3B",
+        "CurrentSha256": "A6E174D83325B9F31B7A8EC9BCEAE1E431F5D731A9A9989171770AE80512EF3B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260530201753_AddDiscountSystem.Designer.cs",
+        "BaselineSha256": "464E7A1D05905ACBB671655CAD770B1FBA4D3E8D90D0F6640F0272AF592475CE",
+        "CurrentSha256": "464E7A1D05905ACBB671655CAD770B1FBA4D3E8D90D0F6640F0272AF592475CE",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260710094029_AddProductPublishingState.cs",
+        "BaselineSha256": "0E498ED43FD5D29AE926DA4B08408951EAB2786BB94B471F7FCB899628A6E9F3",
+        "CurrentSha256": "0E498ED43FD5D29AE926DA4B08408951EAB2786BB94B471F7FCB899628A6E9F3",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260710094029_AddProductPublishingState.Designer.cs",
+        "BaselineSha256": "8AF96846A3210A562849D803A28CA4500BAFE6367A8C889B55D30D8F95DE4863",
+        "CurrentSha256": "8AF96846A3210A562849D803A28CA4500BAFE6367A8C889B55D30D8F95DE4863",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260711120000_AddStoreReports.cs",
+        "BaselineSha256": "37761F2309D864FDE55804C9DCA516085323251BEB412EE94B917E064BDF487D",
+        "CurrentSha256": "37761F2309D864FDE55804C9DCA516085323251BEB412EE94B917E064BDF487D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260821085216_AddMultipleProductImages.cs",
+        "BaselineSha256": "4B441FBCAC6B1DDFC3957973671F0FC4C78B29960B5E59CABE49DD26F30CE34A",
+        "CurrentSha256": "4B441FBCAC6B1DDFC3957973671F0FC4C78B29960B5E59CABE49DD26F30CE34A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260821085216_AddMultipleProductImages.Designer.cs",
+        "BaselineSha256": "432ACB3141E95B970200F342AFAF93EB51F58F52FF41270D9793F1F290DBDB9B",
+        "CurrentSha256": "432ACB3141E95B970200F342AFAF93EB51F58F52FF41270D9793F1F290DBDB9B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824141208_NormalizeProductImageGuidFormat.cs",
+        "BaselineSha256": "6BF17610A804080005D315276BAB4342B31DEA0DADE70F8F3A0B53EC01EC39DB",
+        "CurrentSha256": "6BF17610A804080005D315276BAB4342B31DEA0DADE70F8F3A0B53EC01EC39DB",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824141208_NormalizeProductImageGuidFormat.Designer.cs",
+        "BaselineSha256": "702255C92CA0E0E238E27ECCFC2B5CDEF9566D70BCB6DB8F13D18C8F40781009",
+        "CurrentSha256": "702255C92CA0E0E238E27ECCFC2B5CDEF9566D70BCB6DB8F13D18C8F40781009",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824182219_AddStoreChat.cs",
+        "BaselineSha256": "0CEA6CC5B811A9B63F983006724B883B9D14BA9C77368FABC6B14B5776A9FABF",
+        "CurrentSha256": "0CEA6CC5B811A9B63F983006724B883B9D14BA9C77368FABC6B14B5776A9FABF",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260824182219_AddStoreChat.Designer.cs",
+        "BaselineSha256": "7043D8C9AFE636384797B2C19E9A8FC7D74EF45710EDBE5C88C4A9282E9F6F9A",
+        "CurrentSha256": "7043D8C9AFE636384797B2C19E9A8FC7D74EF45710EDBE5C88C4A9282E9F6F9A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260825203549_AddStoreChatSettings.cs",
+        "BaselineSha256": "C2AAE16E9C5B94F107E14EAAA3B48E347F9388ADCC9D331C280712467FC84D47",
+        "CurrentSha256": "C2AAE16E9C5B94F107E14EAAA3B48E347F9388ADCC9D331C280712467FC84D47",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20260825203549_AddStoreChatSettings.Designer.cs",
+        "BaselineSha256": "E4114A136620CFDC979E5E209D0E7A82C5F5D0E39C647C7673DD43AFD83C57FB",
+        "CurrentSha256": "E4114A136620CFDC979E5E209D0E7A82C5F5D0E39C647C7673DD43AFD83C57FB",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261003154113_AddSafeOrderNumbers.cs",
+        "BaselineSha256": "F0283BC2A932F2F50C77615CFAB604B3E4BB28BE009DD5DAB54D8B5DE8212424",
+        "CurrentSha256": "F0283BC2A932F2F50C77615CFAB604B3E4BB28BE009DD5DAB54D8B5DE8212424",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261003154113_AddSafeOrderNumbers.Designer.cs",
+        "BaselineSha256": "8A8BA68DFEB27F8B6EF77B6D8EB48DDDA2C50931CA458C38BAEC182BF8DE2209",
+        "CurrentSha256": "8A8BA68DFEB27F8B6EF77B6D8EB48DDDA2C50931CA458C38BAEC182BF8DE2209",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.cs",
+        "BaselineSha256": "BFC8D54110FE7B6618D94A7A44ACDB57B10611F556DF374156B4489A230E40A6",
+        "CurrentSha256": "BFC8D54110FE7B6618D94A7A44ACDB57B10611F556DF374156B4489A230E40A6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.Designer.cs",
+        "BaselineSha256": "683B1B71E38507E840BC98CE02A52805167E51C29B727ADA23D4FD35F6FEBA4E",
+        "CurrentSha256": "683B1B71E38507E840BC98CE02A52805167E51C29B727ADA23D4FD35F6FEBA4E",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.cs",
+        "BaselineSha256": "B9E3593F0EBFAE29EACB7819250C82C66595F3A0883D2D8BA3426C1558C6F9DD",
+        "CurrentSha256": "B9E3593F0EBFAE29EACB7819250C82C66595F3A0883D2D8BA3426C1558C6F9DD",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.Designer.cs",
+        "BaselineSha256": "E78C6C54E0AD8DFF00F65D79A99E064684C52C44BD42D365B95163E02013C15A",
+        "CurrentSha256": "E78C6C54E0AD8DFF00F65D79A99E064684C52C44BD42D365B95163E02013C15A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Migrations/AppDbContextModelSnapshot.cs",
+        "BaselineSha256": "B98708870B5307467988738B7017059191375D3264F94B4B271AD70441875A97",
+        "CurrentSha256": "B98708870B5307467988738B7017059191375D3264F94B4B271AD70441875A97",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/AdminUser.cs",
+        "BaselineSha256": "AFBB0F40BDE995A27282E5AE89A0060D442808F5E83015128805F7F44E87D5E7",
+        "CurrentSha256": "AFBB0F40BDE995A27282E5AE89A0060D442808F5E83015128805F7F44E87D5E7",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/CartDiscountResult.cs",
+        "BaselineSha256": "89D5D80037A216698811850233144F9B30C0F3ABE153E7609CCA461577C66FD2",
+        "CurrentSha256": "89D5D80037A216698811850233144F9B30C0F3ABE153E7609CCA461577C66FD2",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/CartItem.cs",
+        "BaselineSha256": "61C2B7F7C3F593FE235A7E4B87600E7343CFFF79286C468B128B7B165313556D",
+        "CurrentSha256": "61C2B7F7C3F593FE235A7E4B87600E7343CFFF79286C468B128B7B165313556D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Category.cs",
+        "BaselineSha256": "CB0B9A199E2543BE1AF6089913425DC12F66B5FAAF6419A9ED87A481A834BA67",
+        "CurrentSha256": "CB0B9A199E2543BE1AF6089913425DC12F66B5FAAF6419A9ED87A481A834BA67",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/CustomerInfo.cs",
+        "BaselineSha256": "E91850968FF1EB28FDED7D531C89C774C7ABD6BB839B17BA38A073190EDFB281",
+        "CurrentSha256": "E91850968FF1EB28FDED7D531C89C774C7ABD6BB839B17BA38A073190EDFB281",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/CustomerOrders.cs",
+        "BaselineSha256": "A68C293111935EFC59159BA0B887600627C8A48020085A7C3B2E028734A74C2F",
+        "CurrentSha256": "A68C293111935EFC59159BA0B887600627C8A48020085A7C3B2E028734A74C2F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Discount.cs",
+        "BaselineSha256": "06ECC2B1852D704389754FB2DA5AB588778C2EC5025ACD7BC4986BC6D6EE5ABE",
+        "CurrentSha256": "06ECC2B1852D704389754FB2DA5AB588778C2EC5025ACD7BC4986BC6D6EE5ABE",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/DiscountRuleType.cs",
+        "BaselineSha256": "38F2815BD1530920023A0284FE52C2B49CFF4E4F042CB9624FB7A41EBE4F1A94",
+        "CurrentSha256": "38F2815BD1530920023A0284FE52C2B49CFF4E4F042CB9624FB7A41EBE4F1A94",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/DiscountType.cs",
+        "BaselineSha256": "005FA017C62A1D5046C03B6704BD6123A944A07AF5B998ADF3670EAC02C1100F",
+        "CurrentSha256": "005FA017C62A1D5046C03B6704BD6123A944A07AF5B998ADF3670EAC02C1100F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/DiscountValueType.cs",
+        "BaselineSha256": "A083B73FAEA0A4F7E9BC58F67E86943B4309AACCCC96CAE09A9B128D0CA3C544",
+        "CurrentSha256": "A083B73FAEA0A4F7E9BC58F67E86943B4309AACCCC96CAE09A9B128D0CA3C544",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Enums/OrderStatus.cs",
+        "BaselineSha256": "68D062AD9412995412EF5E5180BB3C74530F3243F37DCBC5D9E18265E2A0A667",
+        "CurrentSha256": "68D062AD9412995412EF5E5180BB3C74530F3243F37DCBC5D9E18265E2A0A667",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Order.cs",
+        "BaselineSha256": "7B5164F4F4C17A69690483A095A5829A5662A56E5D2F44EC991F95F51D3A72BB",
+        "CurrentSha256": "7B5164F4F4C17A69690483A095A5829A5662A56E5D2F44EC991F95F51D3A72BB",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/OrderInventoryReview.cs",
+        "BaselineSha256": "053496F4665BDD059CE91F42F3DF09BAFE2AD66D520743C6D1E9364C3FD9AA06",
+        "CurrentSha256": "053496F4665BDD059CE91F42F3DF09BAFE2AD66D520743C6D1E9364C3FD9AA06",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/OrderItem.cs",
+        "BaselineSha256": "BCE2D056EAA3EB398521E0C86D7A1F6EB0267C867B5233225CFD4FE29019B954",
+        "CurrentSha256": "BCE2D056EAA3EB398521E0C86D7A1F6EB0267C867B5233225CFD4FE29019B954",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/OrderNumberReservation.cs",
+        "BaselineSha256": "45D30788AA9CB8D01B91D807B1CF3442D4CAF86F79A5317A845B227B57C8911A",
+        "CurrentSha256": "45D30788AA9CB8D01B91D807B1CF3442D4CAF86F79A5317A845B227B57C8911A",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/PersistedCartItem.cs",
+        "BaselineSha256": "4384630CEF342903845C3D23872751E3AD40EB41A2CF62B2EB9E48C66B655867",
+        "CurrentSha256": "4384630CEF342903845C3D23872751E3AD40EB41A2CF62B2EB9E48C66B655867",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/PersistedCartState.cs",
+        "BaselineSha256": "8D2528B7D32099318251F842B3739F3DB07192548C29944FDC4A3FB20A7E799D",
+        "CurrentSha256": "8D2528B7D32099318251F842B3739F3DB07192548C29944FDC4A3FB20A7E799D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/Product.cs",
+        "BaselineSha256": "351B3DFD6817F9A5868705FA44D32FB246C25D869F7DADB04EC68BF8B80412B2",
+        "CurrentSha256": "351B3DFD6817F9A5868705FA44D32FB246C25D869F7DADB04EC68BF8B80412B2",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/ProductCategory.cs",
+        "BaselineSha256": "65DD2AA8EF3E8328AF9072AF430B1BC7B9621FD1FACA4DBB98480C7AE97EAD20",
+        "CurrentSha256": "65DD2AA8EF3E8328AF9072AF430B1BC7B9621FD1FACA4DBB98480C7AE97EAD20",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/ProductDiscount.cs",
+        "BaselineSha256": "CB22FC3ADC687CD6B82471B7CE2D399E986DB83A7C5D908BF6FDE26651A3D2C6",
+        "CurrentSha256": "CB22FC3ADC687CD6B82471B7CE2D399E986DB83A7C5D908BF6FDE26651A3D2C6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/ProductImage.cs",
+        "BaselineSha256": "324A3E27CE2AB5300611CD142AB5895F33CD1E8062A3C91FDE1F2EC9D87908B3",
+        "CurrentSha256": "324A3E27CE2AB5300611CD142AB5895F33CD1E8062A3C91FDE1F2EC9D87908B3",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/ProductSize.cs",
+        "BaselineSha256": "9B18731B03841EA403309BFB76C4F262247CEBD5ACAA0A520A657F048B3EDB81",
+        "CurrentSha256": "9B18731B03841EA403309BFB76C4F262247CEBD5ACAA0A520A657F048B3EDB81",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/SalesHistory.cs",
+        "BaselineSha256": "225A5A8D94928D651D2B1377DA4CE2DBCE3D7CA9E895A5A594367D3846034C2B",
+        "CurrentSha256": "225A5A8D94928D651D2B1377DA4CE2DBCE3D7CA9E895A5A594367D3846034C2B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/StoreChatMessage.cs",
+        "BaselineSha256": "6FD08ECBB5864DDADA551064906CBCCFD2C316AE6458C6B66A8553DCB89EF936",
+        "CurrentSha256": "6FD08ECBB5864DDADA551064906CBCCFD2C316AE6458C6B66A8553DCB89EF936",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/StoreChatSession.cs",
+        "BaselineSha256": "D27F74FFCBF8777632B7EDCC1C0E21F93DB670109730F27224D6984C41CCC3CA",
+        "CurrentSha256": "D27F74FFCBF8777632B7EDCC1C0E21F93DB670109730F27224D6984C41CCC3CA",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/StoreChatSettings.cs",
+        "BaselineSha256": "A423C3EF0A0A4B103C427B20FB4C9AC74CA153BDC92A430822A7E004B6C0DC2F",
+        "CurrentSha256": "A423C3EF0A0A4B103C427B20FB4C9AC74CA153BDC92A430822A7E004B6C0DC2F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Models/StoreVisit.cs",
+        "BaselineSha256": "000C3010286189DC7AD0BFA69D184EB0C20BFA0D2B19B82DDB089958CCE21175",
+        "CurrentSha256": "000C3010286189DC7AD0BFA69D184EB0C20BFA0D2B19B82DDB089958CCE21175",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Program.cs",
+        "BaselineSha256": "26AC9F899F727F849C67CEFAB8B73A6536C502981589D40C3456FA2147BF2586",
+        "CurrentSha256": "26AC9F899F727F849C67CEFAB8B73A6536C502981589D40C3456FA2147BF2586",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/AdminAuthService.cs",
+        "BaselineSha256": "3CF3AA1250C9DEC0B888A4157F01D709690061795DF8974AC511438260F1DFD6",
+        "CurrentSha256": "3CF3AA1250C9DEC0B888A4157F01D709690061795DF8974AC511438260F1DFD6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/AppStoragePaths.cs",
+        "BaselineSha256": "D8B8D0D7DDD44685C320BEF810AA6EDF7D86FDF1CFB34D5974BF73C962D95A08",
+        "CurrentSha256": "D8B8D0D7DDD44685C320BEF810AA6EDF7D86FDF1CFB34D5974BF73C962D95A08",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/BrowserStorageService.cs",
+        "BaselineSha256": "AB5AF2AAC4456898FF60103396A9156A04A5B33B457BC2E19107F0C445880CD6",
+        "CurrentSha256": "AB5AF2AAC4456898FF60103396A9156A04A5B33B457BC2E19107F0C445880CD6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/CartService.cs",
+        "BaselineSha256": "B70DE83C34CFC3985E63D646DB6841E3472A1E350F29FA9F52D30A4FB5C9149D",
+        "CurrentSha256": "B70DE83C34CFC3985E63D646DB6841E3472A1E350F29FA9F52D30A4FB5C9149D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/CategoryService.cs",
+        "BaselineSha256": "DCC690BE69BC4368B4F3034A88E669587F8A4E555E5648F4B5E39F665D311C78",
+        "CurrentSha256": "DCC690BE69BC4368B4F3034A88E669587F8A4E555E5648F4B5E39F665D311C78",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/DatabaseSeeder.cs",
+        "BaselineSha256": "C73E2C2ED9C686B879C0DAEFA9ADD5D142A72FCBC26B19CA1A3DE7DD8005D6FA",
+        "CurrentSha256": "C73E2C2ED9C686B879C0DAEFA9ADD5D142A72FCBC26B19CA1A3DE7DD8005D6FA",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/DiscountService.cs",
+        "BaselineSha256": "F19A6A669434C67ABCC7C2F4947923AD095044DA3C0C0F2787F6DA2F99088B58",
+        "CurrentSha256": "F19A6A669434C67ABCC7C2F4947923AD095044DA3C0C0F2787F6DA2F99088B58",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/ImageMaintenanceService.cs",
+        "BaselineSha256": "573A9D0757A105471C2D4571D5DA28CBB8458E51E1F5D5780173D9EB73D468C6",
+        "CurrentSha256": "573A9D0757A105471C2D4571D5DA28CBB8458E51E1F5D5780173D9EB73D468C6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/InventoryException.cs",
+        "BaselineSha256": "09DDC1197C5E879F3D4933CE96066F634A6D37767B8DC59BA9F7B8B598405BBF",
+        "CurrentSha256": "09DDC1197C5E879F3D4933CE96066F634A6D37767B8DC59BA9F7B8B598405BBF",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/InventorySelection.cs",
+        "BaselineSha256": "7B86278267812EE154E4A7E1931257CC4D1111521A1E0A545DF0AFC0729A0585",
+        "CurrentSha256": "7B86278267812EE154E4A7E1931257CC4D1111521A1E0A545DF0AFC0729A0585",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/JwtService.cs",
+        "BaselineSha256": "CA9BB412024C648AAF7E30B082A802B66D2D748F4E2CC0D13B19CC289600C826",
+        "CurrentSha256": "CA9BB412024C648AAF7E30B082A802B66D2D748F4E2CC0D13B19CC289600C826",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/OrderInventoryReviewContracts.cs",
+        "BaselineSha256": "B63D993749CE55059D330BF9BB97B1FE95486BDFAC016F65DD5A3279175428CC",
+        "CurrentSha256": "B63D993749CE55059D330BF9BB97B1FE95486BDFAC016F65DD5A3279175428CC",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/OrderInventoryReviewService.cs",
+        "BaselineSha256": "3E877A762A6230EB11C5D8F4F85064ABF506092627EEF56667952EAC58D8D443",
+        "CurrentSha256": "3E877A762A6230EB11C5D8F4F85064ABF506092627EEF56667952EAC58D8D443",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/OrderNumberPolicy.cs",
+        "BaselineSha256": "0F1CD4FF317B184A62B86AE68F288E766608F780F533A5963281CE756A701631",
+        "CurrentSha256": "0F1CD4FF317B184A62B86AE68F288E766608F780F533A5963281CE756A701631",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/OrderService.cs",
+        "BaselineSha256": "508051520AD272DF78A7DCFEF884B4A4EE0A06E9CE587A8D19A728F7A8D4E30F",
+        "CurrentSha256": "508051520AD272DF78A7DCFEF884B4A4EE0A06E9CE587A8D19A728F7A8D4E30F",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/PasswordHasherService.cs",
+        "BaselineSha256": "28AFD774170061AAA970207A3E9921713C097CE7506434A6664E7022DA8F97C6",
+        "CurrentSha256": "28AFD774170061AAA970207A3E9921713C097CE7506434A6664E7022DA8F97C6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/PhoneNumberNormalizer.cs",
+        "BaselineSha256": "96701271E744CEDCE571D895506122C96E2E48A15541380918C64F96B4EEC097",
+        "CurrentSha256": "96701271E744CEDCE571D895506122C96E2E48A15541380918C64F96B4EEC097",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/ProductService.cs",
+        "BaselineSha256": "106D5FFADE4B3B9707CBD95B60BC233E752CB7E5CAB18AC41B8A1E0ACAA3C773",
+        "CurrentSha256": "106D5FFADE4B3B9707CBD95B60BC233E752CB7E5CAB18AC41B8A1E0ACAA3C773",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/ReportsService.cs",
+        "BaselineSha256": "E34E08882816FB713D30DB39B2CBB7C18A458FE47D0538E607063CA5429E9EF8",
+        "CurrentSha256": "E34E08882816FB713D30DB39B2CBB7C18A458FE47D0538E607063CA5429E9EF8",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/SandboxFilterState.cs",
+        "BaselineSha256": "6DCA22141EA8DB6058C2B4DBE069F2EC872575784BAD1B8EC76F360E21634F31",
+        "CurrentSha256": "6DCA22141EA8DB6058C2B4DBE069F2EC872575784BAD1B8EC76F360E21634F31",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/SizeLabelParser.cs",
+        "BaselineSha256": "C63E775506AED7B76CEDA525798BEF10D242C5DDED16E463A80E5B134D48F20B",
+        "CurrentSha256": "C63E775506AED7B76CEDA525798BEF10D242C5DDED16E463A80E5B134D48F20B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/SizeNamePolicy.cs",
+        "BaselineSha256": "9D1D675B1C2C36597B51B103EBA251F8080F3AF7D10AD50047FA19C4E9580DB6",
+        "CurrentSha256": "9D1D675B1C2C36597B51B103EBA251F8080F3AF7D10AD50047FA19C4E9580DB6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/SqliteWork.cs",
+        "BaselineSha256": "CB40410B22BA9E7019AC5068C92A17B41FE8BC29D4BF511CC5FE823CECBC4D36",
+        "CurrentSha256": "CB40410B22BA9E7019AC5068C92A17B41FE8BC29D4BF511CC5FE823CECBC4D36",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatAgentService.cs",
+        "BaselineSha256": "E4BE8D93E32DB0C3C9315FBDECFCF6EDD1BE9132EB8E8B41381F72EC574BDAF6",
+        "CurrentSha256": "E4BE8D93E32DB0C3C9315FBDECFCF6EDD1BE9132EB8E8B41381F72EC574BDAF6",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatMode.cs",
+        "BaselineSha256": "2B4255A17BBF74E1F80BF462F0080D6DAAB348065BFD6AB3D08EA3FBBF3FDE53",
+        "CurrentSha256": "2B4255A17BBF74E1F80BF462F0080D6DAAB348065BFD6AB3D08EA3FBBF3FDE53",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatService.cs",
+        "BaselineSha256": "4A36B3A4BEFFE9EE228E3B5C62A107CF3A92F5DA472826E2127E8B6BCCFA6697",
+        "CurrentSha256": "4A36B3A4BEFFE9EE228E3B5C62A107CF3A92F5DA472826E2127E8B6BCCFA6697",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/StoreChatSettingsService.cs",
+        "BaselineSha256": "D429A2745B2A11269E32FF40FD66BF48B1C47BD3F8D3D47D4585582B17F0A5CD",
+        "CurrentSha256": "D429A2745B2A11269E32FF40FD66BF48B1C47BD3F8D3D47D4585582B17F0A5CD",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/Services/StorefrontFilterState.cs",
+        "BaselineSha256": "3251CEC521B3CEF60FFBDE40B3D549B9A4E55BF9547351F7459F9AEC1EF485FE",
+        "CurrentSha256": "3251CEC521B3CEF60FFBDE40B3D549B9A4E55BF9547351F7459F9AEC1EF485FE",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/wwwroot/app.css",
+        "BaselineSha256": "F434788EA7A9188A3D0A3ED50982AE66D66A5C02D7D635AAF14A67B85DEECF7D",
+        "CurrentSha256": "F434788EA7A9188A3D0A3ED50982AE66D66A5C02D7D635AAF14A67B85DEECF7D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/wwwroot/css/modern-controls.css",
+        "BaselineSha256": "D2179F2DC11BE6E8471FAA0CF9A9F2F2CAAB5D2B830924DDC42F33A911C30A9B",
+        "CurrentSha256": "D2179F2DC11BE6E8471FAA0CF9A9F2F2CAAB5D2B830924DDC42F33A911C30A9B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/wwwroot/css/site.css",
+        "BaselineSha256": "E1E50AD75A9A9E9CC063B79D693B1E7EC3C13B58C18415AF81E221E6443E473B",
+        "CurrentSha256": "E1E50AD75A9A9E9CC063B79D693B1E7EC3C13B58C18415AF81E221E6443E473B",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/wwwroot/js/product-image-upload.js",
+        "BaselineSha256": "A1D23C1FD7335C08C4D9F75FE6F683CCA251CBD624B54B4AED7FF17954905F3D",
+        "CurrentSha256": "A1D23C1FD7335C08C4D9F75FE6F683CCA251CBD624B54B4AED7FF17954905F3D",
+        "Unchanged": true
+      },
+      {
+        "Path": "LaraFashion/wwwroot/js/store-visits.js",
+        "BaselineSha256": "00896FA72362F64B9C1A60D504E5FB066E9D42F32B469C45144DE984CB103273",
+        "CurrentSha256": "00896FA72362F64B9C1A60D504E5FB066E9D42F32B469C45144DE984CB103273",
+        "Unchanged": true
+      },
+      {
+        "Path": "New Text Document.txt",
+        "BaselineSha256": "2E402A6242CA8958C5B5CA5E6F2184E18E79CC91FEDB512CE6D3034052066A97",
+        "CurrentSha256": "2E402A6242CA8958C5B5CA5E6F2184E18E79CC91FEDB512CE6D3034052066A97",
+        "Unchanged": true
+      }
+    ]
+  },
+  "FinalHead": "b196d7268e2b5a5b73b207d963255d5d6a7c0129",
+  "FinalBranch": "main",
+  "FinalStatus": [
+    " M .github/workflows/deploy.yml",
+    " M LaraFashion.IntegrationTests/Diagnostics.cs",
+    " M LaraFashion.IntegrationTests/Fixture.cs",
+    " M LaraFashion.IntegrationTests/Program.cs",
+    " M LaraFashion.IntegrationTests/UiHost.cs",
+    " M LaraFashion/Components/Admin/AdminOrders.razor",
+    " M LaraFashion/Components/Admin/AdminOrders.razor.css",
+    " M LaraFashion/Components/Admin/AdminProducts.razor",
+    " M LaraFashion/Components/Cart/CartPersistence.razor",
+    " M LaraFashion/Components/Modals/ProductModal.razor",
+    " M LaraFashion/Components/Pages/CartPage.razor",
+    " M LaraFashion/Components/Store/ProductCard.razor",
+    " M LaraFashion/Data/AppDbContext.cs",
+    " M LaraFashion/LaraFashion.csproj",
+    " M LaraFashion/Migrations/AppDbContextModelSnapshot.cs",
+    " M LaraFashion/Models/CartItem.cs",
+    " M LaraFashion/Models/Order.cs",
+    " M LaraFashion/Models/OrderItem.cs",
+    " M LaraFashion/Models/PersistedCartItem.cs",
+    " M LaraFashion/Models/ProductSize.cs",
+    " M LaraFashion/Program.cs",
+    " M LaraFashion/Services/AppStoragePaths.cs",
+    " M LaraFashion/Services/CartService.cs",
+    " M LaraFashion/Services/OrderService.cs",
+    " M LaraFashion/Services/ProductService.cs",
+    " M LaraFashion/Services/SqliteWork.cs",
+    " M \"New Text Document.txt\"",
+    " M deploy/deploy-production.sh",
+    " M docs/OrderInventoryRepair.ar.md",
+    "?? LaraFashion.IntegrationTests/DeploymentDatabase.cs",
+    "?? LaraFashion.IntegrationTests/DeploymentHarness.cs",
+    "?? LaraFashion.IntegrationTests/DeploymentMaintenance.cs",
+    "?? LaraFashion.IntegrationTests/DeploymentSafetyTests.cs",
+    "?? LaraFashion.IntegrationTests/HistoricalInventoryReviewTests.cs",
+    "?? LaraFashion.IntegrationTests/LegacyReviewEvidence.cs",
+    "?? LaraFashion.IntegrationTests/LinuxAcceptance.cs",
+    "?? LaraFashion.IntegrationTests/ReviewDiagnostics.cs",
+    "?? LaraFashion.IntegrationTests/ReviewUpgradeVerification.cs",
+    "?? LaraFashion.IntegrationTests/SizeIdentityTests.cs",
+    "?? LaraFashion.IntegrationTests/SizeReproduction.cs",
+    "?? LaraFashion/Data/DeploymentReadiness.cs",
+    "?? LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.Designer.cs",
+    "?? LaraFashion/Migrations/20261005162501_AddStableProductSizeIdentity.cs",
+    "?? LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.Designer.cs",
+    "?? LaraFashion/Migrations/20261005191438_AddHistoricalOrderInventoryReview.cs",
+    "?? LaraFashion/Models/OrderInventoryReview.cs",
+    "?? LaraFashion/Services/InventoryException.cs",
+    "?? LaraFashion/Services/InventorySelection.cs",
+    "?? LaraFashion/Services/OrderInventoryReviewContracts.cs",
+    "?? LaraFashion/Services/OrderInventoryReviewService.cs",
+    "?? LaraFashion/Services/SizeNamePolicy.cs",
+    "?? deploy/tests/",
+    "?? docs/HistoricalInventoryReviewTestResults.log",
+    "?? docs/HistoricalOrderInventoryReview.ar.md",
+    "?? docs/LinuxDockerAcceptance.ar.md",
+    "?? docs/LinuxDockerAcceptanceInputs.json",
+    "?? docs/LinuxDockerAcceptanceResults.log",
+    "?? docs/ProductSizeIdentityRepair.ar.md",
+    "?? docs/RecoveryDeploymentSecurity.ar.md",
+    "?? docs/SafeEvidenceDeployment.ar.md",
+    "?? docs/SafeEvidenceDeploymentBashResults.log",
+    "?? docs/SafeEvidenceDeploymentInputs.json",
+    "?? docs/SafeEvidenceDeploymentTestResults.log",
+    "?? docs/SizeIdentityTestResults.log"
+  ],
+  "Docker": {
+    "BaseDigest": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3",
+    "ImageId": "sha256:09c2fa87740a13e1cddd3badce8cb20397cca3275fb7248d1138ac8d0d3a3790",
+    "SourceFingerprint": "C129109E1D6F6CDFAA3BBA705BA63DA741C5F7BE669A8D78C8452A08556D0FFF",
+    "ManifestSha256": "106B009005D301AA9635A64E02059E99FEFA7DD6A692598B136DE0F07FEFE5AA",
+    "Client": {
+      "Version": "29.7.2",
+      "ApiVersion": "1.55",
+      "DefaultAPIVersion": "1.55",
+      "GitCommit": "a7dcaa6",
+      "GoVersion": "go1.26.5",
+      "Os": "windows",
+      "Arch": "amd64",
+      "BuildTime": "Wed Aug  5 18:31:33 2026",
+      "Context": "desktop-linux"
+    },
+    "Server": {
+      "Platform": {
+        "Name": "Docker Desktop 4.86.0 (236216)"
+      },
+      "Version": "29.7.2",
+      "ApiVersion": "1.55",
+      "MinAPIVersion": "1.40",
+      "Os": "linux",
+      "Arch": "amd64",
+      "Components": [
+        {
+          "Name": "Engine",
+          "Version": "29.7.2",
+          "Details": {
+            "ApiVersion": "1.55",
+            "Arch": "amd64",
+            "BuildTime": "Wed Aug  5 18:28:36 2026",
+            "Experimental": "false",
+            "GitCommit": "6a43e3d",
+            "GoVersion": "go1.26.5",
+            "KernelVersion": "6.18.33.2-microsoft-standard-WSL2",
+            "MinAPIVersion": "1.40",
+            "Module": "github.com/moby/moby/v2",
+            "ModuleVersion": "v2.0.0+unknown",
+            "Os": "linux"
+          }
+        },
+        {
+          "Name": "containerd",
+          "Version": "v2.2.5",
+          "Details": {
+            "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+          }
+        },
+        {
+          "Name": "runc",
+          "Version": "1.3.6",
+          "Details": {
+            "GitCommit": "v1.3.6-0-g491b69ba"
+          }
+        },
+        {
+          "Name": "docker-init",
+          "Version": "0.19.0",
+          "Details": {
+            "GitCommit": "de40ad0"
+          }
+        }
+      ],
+      "GitCommit": "6a43e3d",
+      "GoVersion": "go1.26.5",
+      "KernelVersion": "6.18.33.2-microsoft-standard-WSL2",
+      "BuildTime": "2026-08-05T18:28:36.000000000+00:00"
+    },
+    "Context": "desktop-linux",
+    "Endpoint": "npipe:////./pipe/dockerDesktopLinuxEngine"
+  },
+  "Container": {
+    "Name": "/lf-linux-20261010-7f78c9bd-round7-test",
+    "Id": "3986b59167fcd9289bcfeef6979f87c56a3d395c0a9db9a4b2a9bd30d5250f34",
+    "State": {
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-10-10T16:50:08.930359879Z",
+      "FinishedAt": "2026-10-10T17:05:26.433163802Z"
+    },
+    "Network": "none",
+    "Mounts": [],
+    "Ports": {},
+    "Privileged": false,
+    "MemoryBytes": 6442450944,
+    "NanoCpus": 4000000000,
+    "PidsLimit": 1024
+  },
+  "Storage": {
+    "SyntheticTemp": "/tmp/lf-linux-20261010-7f78c9bd-round7",
+    "TempFs": "overlayfs",
+    "SQLite": "3.45.1",
+    "Network": "none; IPv4 loopback only",
+    "ManagedGcHeapLimitPerProcessMiB": 512,
+    "HarnessScenarioWorkers": 1,
+    "Mocks": "harness systemctl/curl/git/build/fuser; actual published HTTP is separate"
+  },
+  "FilesystemPaths": {
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/locks/deployment.lock": "overlayfs",
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/identity-state/state.json": "overlayfs",
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/service-temp/web/test.db": "overlayfs",
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/service-temp/web/keys": "overlayfs",
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/service-temp": "overlayfs",
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/LaraFashionDeployHarness-vu5ebv92/persistent/data/larafashion.db": "overlayfs",
+    "/tmp/lf-linux-20261010-7f78c9bd-round7/LaraFashionDeployHarness-vu5ebv92/persistent/backups": "overlayfs"
+  },
+  "ProviderSQLite": {
+    "ProviderSQLite": "3.46.1",
+    "NativeLibrary": "/tmp/lf-linux-20261010-7f78c9bd-round7/tool-drop/runtimes/linux-x64/native/libe_sqlite3.so",
+    "AppNativeSha256": "478AFD10C84CDA9DB29C6ADDA40E8A2BABBA67C7E726C27F91D330AE73E2475B",
+    "ToolNativeSha256": "478AFD10C84CDA9DB29C6ADDA40E8A2BABBA67C7E726C27F91D330AE73E2475B",
+    "SameNativeBinary": true
+  },
+  "PackageVersions": {
+    "apt": "2.8.3",
+    "base-files": "13ubuntu10.4",
+    "base-passwd": "3.6.3build1",
+    "bash": "5.2.21-2ubuntu4",
+    "bsdutils": "1:2.39.3-9ubuntu6.5",
+    "ca-certificates": "20240203",
+    "coreutils": "9.4-3ubuntu6.2",
+    "curl": "8.5.0-2ubuntu10.9",
+    "dash": "0.5.12-6ubuntu5",
+    "debconf": "1.5.86ubuntu1",
+    "debianutils": "5.17build1",
+    "diffutils": "1:3.10-1build1",
+    "dpkg": "1.22.6ubuntu6.6",
+    "e2fsprogs": "1.47.0-2.4~exp1ubuntu4.1",
+    "findutils": "4.9.0-5build1",
+    "gcc-14-base:amd64": "14.2.0-4ubuntu2~24.04.1",
+    "git": "1:2.43.0-1ubuntu7.3",
+    "git-man": "1:2.43.0-1ubuntu7.3",
+    "gpgv": "2.4.4-2ubuntu17.4",
+    "grep": "3.11-4build1",
+    "gzip": "1.12-1ubuntu3.1",
+    "hostname": "3.23+nmu2ubuntu2",
+    "init-system-helpers": "1.66ubuntu1",
+    "iproute2": "6.1.0-1ubuntu6.4",
+    "libacl1:amd64": "2.3.2-1build1.1",
+    "libapt-pkg6.0t64:amd64": "2.8.3",
+    "libassuan0:amd64": "2.5.6-1build1",
+    "libatomic1:amd64": "14.2.0-4ubuntu2~24.04.1",
+    "libattr1:amd64": "1:2.5.2-1build1.1",
+    "libaudit-common": "1:3.1.2-2.1build1.1",
+    "libaudit1:amd64": "1:3.1.2-2.1build1.1",
+    "libblkid1:amd64": "2.39.3-9ubuntu6.5",
+    "libbpf1:amd64": "1:1.3.0-2build2",
+    "libbrotli1:amd64": "1.1.0-2build2",
+    "libbz2-1.0:amd64": "1.0.8-5.1build0.1",
+    "libc-bin": "2.39-0ubuntu8.7",
+    "libc6:amd64": "2.39-0ubuntu8.7",
+    "libcap-ng0:amd64": "0.8.4-2build2",
+    "libcap2:amd64": "1:2.66-5ubuntu2.4",
+    "libcap2-bin": "1:2.66-5ubuntu2.4",
+    "libcom-err2:amd64": "1.47.0-2.4~exp1ubuntu4.1",
+    "libcrypt1:amd64": "1:4.4.36-4build1",
+    "libcurl3t64-gnutls:amd64": "8.5.0-2ubuntu10.9",
+    "libcurl4t64:amd64": "8.5.0-2ubuntu10.9",
+    "libdb5.3t64:amd64": "5.3.28+dfsg2-7",
+    "libdebconfclient0:amd64": "0.271ubuntu3",
+    "libelf1t64:amd64": "0.190-1.1ubuntu0.1",
+    "liberror-perl": "0.17029-2",
+    "libexpat1:amd64": "2.6.1-2ubuntu0.4",
+    "libext2fs2t64:amd64": "1.47.0-2.4~exp1ubuntu4.1",
+    "libffi8:amd64": "3.4.6-1build1",
+    "libgcc-s1:amd64": "14.2.0-4ubuntu2~24.04.1",
+    "libgcrypt20:amd64": "1.10.3-2build1",
+    "libgdbm-compat4t64:amd64": "1.23-5.1build1",
+    "libgdbm6t64:amd64": "1.23-5.1build1",
+    "libgmp10:amd64": "2:6.3.0+dfsg-2ubuntu6.1",
+    "libgnutls30t64:amd64": "3.8.3-1.1ubuntu3.5",
+    "libgpg-error0:amd64": "1.47-3build2.1",
+    "libgssapi-krb5-2:amd64": "1.20.1-6ubuntu2.6",
+    "libhogweed6t64:amd64": "3.9.1-2.2build1.1",
+    "libicu74:amd64": "74.2-1ubuntu3.1",
+    "libidn2-0:amd64": "2.3.7-2build1.1",
+    "libk5crypto3:amd64": "1.20.1-6ubuntu2.6",
+    "libkeyutils1:amd64": "1.6.3-3build1",
+    "libkrb5-3:amd64": "1.20.1-6ubuntu2.6",
+    "libkrb5support0:amd64": "1.20.1-6ubuntu2.6",
+    "libldap2:amd64": "2.6.10+dfsg-0ubuntu0.24.04.1",
+    "liblz4-1:amd64": "1.9.4-1build1.1",
+    "liblzma5:amd64": "5.6.1+really5.4.5-1ubuntu0.2",
+    "libmd0:amd64": "1.1.0-2build1.1",
+    "libmnl0:amd64": "1.0.5-2build1",
+    "libmount1:amd64": "2.39.3-9ubuntu6.5",
+    "libncursesw6:amd64": "6.4+20240113-1ubuntu2",
+    "libnettle8t64:amd64": "3.9.1-2.2build1.1",
+    "libnghttp2-14:amd64": "1.59.0-1ubuntu0.3",
+    "libnpth0t64:amd64": "1.6-3.1build1",
+    "libp11-kit0:amd64": "0.25.3-4ubuntu2.1",
+    "libpam-modules:amd64": "1.5.3-5ubuntu5.5",
+    "libpam-modules-bin": "1.5.3-5ubuntu5.5",
+    "libpam-runtime": "1.5.3-5ubuntu5.5",
+    "libpam0g:amd64": "1.5.3-5ubuntu5.5",
+    "libpcre2-8-0:amd64": "10.42-4ubuntu2.1",
+    "libperl5.38t64:amd64": "5.38.2-3.2ubuntu0.2",
+    "libproc2-0:amd64": "2:4.0.4-4ubuntu3.3",
+    "libpsl5t64:amd64": "0.21.2-1.1build1",
+    "libpython3-stdlib:amd64": "3.12.3-0ubuntu2.1",
+    "libpython3.12-minimal:amd64": "3.12.3-1ubuntu0.17",
+    "libpython3.12-stdlib:amd64": "3.12.3-1ubuntu0.17",
+    "libreadline8t64:amd64": "8.2-4build1",
+    "librtmp1:amd64": "2.4+20151223.gitfa8646d.1-2build7",
+    "libsasl2-2:amd64": "2.1.28+dfsg1-5ubuntu3.1",
+    "libsasl2-modules-db:amd64": "2.1.28+dfsg1-5ubuntu3.1",
+    "libseccomp2:amd64": "2.5.5-1ubuntu3.1",
+    "libselinux1:amd64": "3.5-2ubuntu2.1",
+    "libsemanage-common": "3.5-1build5",
+    "libsemanage2:amd64": "3.5-1build5",
+    "libsepol2:amd64": "3.5-2build1",
+    "libsmartcols1:amd64": "2.39.3-9ubuntu6.5",
+    "libsqlite3-0:amd64": "3.45.1-1ubuntu2.8",
+    "libss2:amd64": "1.47.0-2.4~exp1ubuntu4.1",
+    "libssh-4:amd64": "0.10.6-2ubuntu0.4",
+    "libssl3t64:amd64": "3.0.13-0ubuntu3.9",
+    "libstdc++6:amd64": "14.2.0-4ubuntu2~24.04.1",
+    "libsystemd0:amd64": "255.4-1ubuntu8.15",
+    "libtasn1-6:amd64": "4.19.0-3ubuntu0.24.04.2",
+    "libtinfo6:amd64": "6.4+20240113-1ubuntu2",
+    "libudev1:amd64": "255.4-1ubuntu8.15",
+    "libunistring5:amd64": "1.1-2build1.1",
+    "libunwind8:amd64": "1.6.2-3build1.1",
+    "libuuid1:amd64": "2.39.3-9ubuntu6.5",
+    "libxtables12:amd64": "1.8.10-3ubuntu2",
+    "libxxhash0:amd64": "0.8.2-2build1",
+    "libzstd1:amd64": "1.5.5+dfsg2-2build1.1",
+    "login": "1:4.13+dfsg1-4ubuntu3.2",
+    "logsave": "1.47.0-2.4~exp1ubuntu4.1",
+    "mawk": "1.3.4.20240123-1build1",
+    "media-types": "10.1.0",
+    "mount": "2.39.3-9ubuntu6.5",
+    "ncurses-base": "6.4+20240113-1ubuntu2",
+    "ncurses-bin": "6.4+20240113-1ubuntu2",
+    "netbase": "6.4",
+    "openssl": "3.0.13-0ubuntu3.9",
+    "passwd": "1:4.13+dfsg1-4ubuntu3.2",
+    "perl": "5.38.2-3.2ubuntu0.2",
+    "perl-base": "5.38.2-3.2ubuntu0.2",
+    "perl-modules-5.38": "5.38.2-3.2ubuntu0.2",
+    "procps": "2:4.0.4-4ubuntu3.3",
+    "psmisc": "23.7-1build1",
+    "python3": "3.12.3-0ubuntu2.1",
+    "python3-minimal": "3.12.3-0ubuntu2.1",
+    "python3.12": "3.12.3-1ubuntu0.17",
+    "python3.12-minimal": "3.12.3-1ubuntu0.17",
+    "readline-common": "8.2-4build1",
+    "sed": "4.9-2ubuntu0.24.04.1",
+    "sensible-utils": "0.0.22",
+    "strace": "6.8-0ubuntu2",
+    "sysvinit-utils": "3.08-6ubuntu3",
+    "tar": "1.35+dfsg-3build1",
+    "tzdata": "2026a-0ubuntu0.24.04.1",
+    "tzdata-legacy": "2026a-0ubuntu0.24.04.1",
+    "ubuntu-keyring": "2023.11.28.1",
+    "unminimize": "0.2.1",
+    "util-linux": "2.39.3-9ubuntu6.5",
+    "wget": "1.21.4-1ubuntu4.1",
+    "zlib1g:amd64": "1:1.3.dfsg-3.1ubuntu2.1"
+  },
+  "BinaryHashes": {
+    "app-drop/LaraFashion.dll": "9D6056509E2E1CD9D67797F9768E259C16831BFEDE3ECE66662C17117EE53DF5",
+    "tool-drop/LaraFashion.IntegrationTests.dll": "40E6BFD5CB7AC4D94BA933C91C04B0AD526A3713B8E046D7BE23168E9533CC79"
+  },
+  "LinuxChecks": [
+    {
+      "Name": "wrapper-to-child-real-FD9-no-self-deadlock-and-independent-conflict",
+      "Status": "PASS"
+    },
+    {
+      "Name": "reject-flag-without-FD",
+      "Status": "PASS"
+    },
+    {
+      "Name": "reject-closed-FD9",
+      "Status": "PASS"
+    },
+    {
+      "Name": "reject-wrong-file-FD9",
+      "Status": "PASS"
+    },
+    {
+      "Name": "reject-same-file-unlocked-FD9",
+      "Status": "PASS"
+    },
+    {
+      "Name": "descriptor-lifetime-wrapper-death-child-retains-and-final-close-releases",
+      "Status": "PASS"
+    },
+    {
+      "Name": "all-current-dotnet-groups",
+      "Status": "PASS",
+      "Count": 91
+    },
+    {
+      "Name": "actual-application-fstat-device-inode-symlink-hardlink-distinct-identical-copy",
+      "Status": "PASS"
+    },
+    {
+      "Name": "atomic-replacement-real-file-and-directory-fsync-independent-reader-after-SIGKILL",
+      "Status": "PASS",
+      "ConcurrentReaderValidated": true
+    },
+    {
+      "Name": "actual-directory-sync-open-denial-propagates-after-atomic-replacement",
+      "Status": "PASS"
+    },
+    {
+      "Name": "fsync-EIO-error-propagates",
+      "Status": "PASS",
+      "NegativeCase": "strace errno injection only; success fsync/fstat are real"
+    },
+    {
+      "Name": "independent-CLI-refuses-restore-after-persisted-RecoveryStartAttempted-no-DB-write",
+      "Status": "PASS"
+    },
+    {
+      "Name": "published-preview-real-GET-contract-PID-DB-and-DP",
+      "Status": "PASS",
+      "Success": true,
+      "Phase": "preview",
+      "ProcessId": 494,
+      "Discriminator": "/tmp/lf-linux-20261010-7f78c9bd-round7/http-app/",
+      "KeyRepository": "/tmp/lf-linux-20261010-7f78c9bd-round7/service-temp/web/keys",
+      "Stock": 3,
+      "Movements": 0,
+      "Replayed": false,
+      "StartupBusinessPreserved": true
+    },
+    {
+      "Name": "published-confirm-real-GET-contract-PID-DB-and-DP",
+      "Status": "PASS",
+      "Success": true,
+      "Phase": "confirm",
+      "ProcessId": 590,
+      "Discriminator": "/tmp/lf-linux-20261010-7f78c9bd-round7/http-app/",
+      "KeyRepository": "/tmp/lf-linux-20261010-7f78c9bd-round7/service-temp/web/keys",
+      "Stock": 5,
+      "Movements": 1,
+      "Replayed": false,
+      "StartupBusinessPreserved": true
+    },
+    {
+      "Name": "published-replay-real-GET-contract-PID-DB-and-DP",
+      "Status": "PASS",
+      "Success": true,
+      "Phase": "replay",
+      "ProcessId": 679,
+      "Discriminator": "/tmp/lf-linux-20261010-7f78c9bd-round7/http-app/",
+      "KeyRepository": "/tmp/lf-linux-20261010-7f78c9bd-round7/service-temp/web/keys",
+      "Stock": 5,
+      "Movements": 1,
+      "Replayed": true,
+      "StartupBusinessPreserved": true
+    },
+    {
+      "Name": "synthetic-DP-keys-reused-ticket-confirmed-after-restart-and-replay-with-one-movement",
+      "Status": "PASS"
+    },
+    {
+      "Name": "actual-startup-reject-missing-db",
+      "Status": "PASS"
+    },
+    {
+      "Name": "actual-startup-reject-incompatible-schema",
+      "Status": "PASS"
+    },
+    {
+      "Name": "actual-startup-reject-missing-runtime-config",
+      "Status": "PASS"
+    },
+    {
+      "Name": "actual-startup-reject-DP-path-missing",
+      "Status": "PASS"
+    },
+    {
+      "Name": "actual-startup-reject-DP-path-inside-release",
+      "Status": "PASS"
+    },
+    {
+      "Name": "dotnet-mock-rejects-bare-or-self-executable-without-recursive-dispatch",
+      "Status": "PASS"
+    },
+    {
+      "Name": "full-current-Bash-plus-Linux-permissions-and-signals",
+      "Status": "PASS",
+      "Count": 42
+    },
+    {
+      "Name": "exact-deployment-flock-900-second-timeout-clear-failure",
+      "Status": "PASS"
+    }
+  ],
+  "Resources": [
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-probe",
+      "Id": "ac220a37b812a17a7f860796d8181fe060a958945b5884c87635eff61889781b",
+      "RunId": "lf-linux-20261010-7f78c9bd",
+      "State": "exited",
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 0,
+      "PidsLimit": null,
+      "NanoCpus": 0
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-recursion-proof",
+      "Id": "2b07873c6c698b59d4c67e0b7b665f3c7fa073535b5b99e0af06b23954792def",
+      "RunId": "lf-linux-20261010-7f78c9bd-recursion-proof",
+      "State": "exited",
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 0,
+      "PidsLimit": null,
+      "NanoCpus": 0
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round1-test",
+      "Id": "6200d78d47ec73f9176ddfdc38ae6287bac984d6fd8c4fe87a3362c83c389b89",
+      "RunId": "lf-linux-20261010-7f78c9bd-round1",
+      "State": "exited",
+      "ExitCode": 1,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round1",
+      "Id": "sha256:91d22f3e66cb77da4b83db7b4bbae205c6541adba325efbd0e43083b00caf0a1",
+      "RunId": "lf-linux-20261010-7f78c9bd-round1",
+      "Manifest": "9910235481B4986DFBE5178144E393B7E0E1A33B238F4460CD11672A6E179B8D",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round2-test",
+      "Id": "4aa449bd0a7b219bc53259cff39a2dc04673fd4b6081e4519afa1f8a02b1c0da",
+      "RunId": "lf-linux-20261010-7f78c9bd-round2",
+      "State": "exited",
+      "ExitCode": 1,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round2",
+      "Id": "sha256:5e26be09522422ddabeb61d3fa906048771d1be6870048580277cd6707c2d47e",
+      "RunId": "lf-linux-20261010-7f78c9bd-round2",
+      "Manifest": "F234B59C27A0938CC43968230D6E0E4166CA825F5DA24AF44FB91E78654001CE",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round3-test",
+      "Id": "2db6e0a2e56200d7e983edfb4c6ce87775e55991f2c6be8a5868d37ace17ce0a",
+      "RunId": "lf-linux-20261010-7f78c9bd-round3",
+      "State": "exited",
+      "ExitCode": 1,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round3",
+      "Id": "sha256:1466f178aab872d3dc4d7581f91638c5795349e244addaab787b085f82a79c19",
+      "RunId": "lf-linux-20261010-7f78c9bd-round3",
+      "Manifest": "91BAC6A0140EBCFE1B3265AE6F52ABA067B6C7C06C47AE6983737E5E0189F108",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round4-test",
+      "Id": "05ebd8ba4bd01f74af97e642956aa1af09377a0bdee6c9cd127fafa3e7eadef1",
+      "RunId": "lf-linux-20261010-7f78c9bd-round4",
+      "State": "exited",
+      "ExitCode": 137,
+      "OOMKilled": true,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round4",
+      "Id": "sha256:31c2e41f69878d98a26b7a9d59380ee5333228f7705aa13fbb733d5d2800a2af",
+      "RunId": "lf-linux-20261010-7f78c9bd-round4",
+      "Manifest": "BF9BD5D0F9B89386C1E9F41B5639BB2E6CD628291F5BDBE42B4AA75F0EFAB5E9",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round5-test",
+      "Id": "5cca4ed368694b8f0e5bb86f7a180477bfa769571d281820d91b4093da4fda06",
+      "RunId": "lf-linux-20261010-7f78c9bd-round5",
+      "State": "exited",
+      "ExitCode": 1,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round5",
+      "Id": "sha256:212012a0e4df9853ce16e4064ad3f9d9dce1eb8809c1f934bbb0c2043418268c",
+      "RunId": "lf-linux-20261010-7f78c9bd-round5",
+      "Manifest": "5533D40B06465B46A1C192A3D897EB72726B537555B32F7115BABBD1D4DD043A",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round6-test",
+      "Id": "d6c2b96587fef248b245bb3fc383a882be67a19eb51a579a769f8c85a44c2db7",
+      "RunId": "lf-linux-20261010-7f78c9bd-round6",
+      "State": "exited",
+      "ExitCode": 137,
+      "OOMKilled": true,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round6",
+      "Id": "sha256:2d17897ca265b109b7846286f51fe89f480b96eb00800629726a4b5ec92a9126",
+      "RunId": "lf-linux-20261010-7f78c9bd-round6",
+      "Manifest": "79D1CF3C7974F183E979DA288E42170D1612B72BC13BA956EE0271A630E2D162",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    },
+    {
+      "Kind": "container",
+      "Name": "lf-linux-20261010-7f78c9bd-round7-test",
+      "Id": "3986b59167fcd9289bcfeef6979f87c56a3d395c0a9db9a4b2a9bd30d5250f34",
+      "RunId": "lf-linux-20261010-7f78c9bd-round7",
+      "State": "exited",
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "Network": "none",
+      "Mounts": 0,
+      "Privileged": false,
+      "MemoryBytes": 6442450944,
+      "PidsLimit": 1024,
+      "NanoCpus": 4000000000
+    },
+    {
+      "Kind": "image",
+      "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round7",
+      "Id": "sha256:09c2fa87740a13e1cddd3badce8cb20397cca3275fb7248d1138ac8d0d3a3790",
+      "RunId": "lf-linux-20261010-7f78c9bd-round7",
+      "Manifest": "C129109E1D6F6CDFAA3BBA705BA63DA741C5F7BE669A8D78C8452A08556D0FFF",
+      "Base": "mcr.microsoft.com/dotnet/sdk@sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3"
+    }
+  ],
+  "Cleanup": {
+    "Removed": [
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-probe",
+        "Id": "ac220a37b812a17a7f860796d8181fe060a958945b5884c87635eff61889781b",
+        "RunId": "lf-linux-20261010-7f78c9bd",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-recursion-proof",
+        "Id": "2b07873c6c698b59d4c67e0b7b665f3c7fa073535b5b99e0af06b23954792def",
+        "RunId": "lf-linux-20261010-7f78c9bd-recursion-proof",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round1-test",
+        "Id": "6200d78d47ec73f9176ddfdc38ae6287bac984d6fd8c4fe87a3362c83c389b89",
+        "RunId": "lf-linux-20261010-7f78c9bd-round1",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round2-test",
+        "Id": "4aa449bd0a7b219bc53259cff39a2dc04673fd4b6081e4519afa1f8a02b1c0da",
+        "RunId": "lf-linux-20261010-7f78c9bd-round2",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round3-test",
+        "Id": "2db6e0a2e56200d7e983edfb4c6ce87775e55991f2c6be8a5868d37ace17ce0a",
+        "RunId": "lf-linux-20261010-7f78c9bd-round3",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round4-test",
+        "Id": "05ebd8ba4bd01f74af97e642956aa1af09377a0bdee6c9cd127fafa3e7eadef1",
+        "RunId": "lf-linux-20261010-7f78c9bd-round4",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round5-test",
+        "Id": "5cca4ed368694b8f0e5bb86f7a180477bfa769571d281820d91b4093da4fda06",
+        "RunId": "lf-linux-20261010-7f78c9bd-round5",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round6-test",
+        "Id": "d6c2b96587fef248b245bb3fc383a882be67a19eb51a579a769f8c85a44c2db7",
+        "RunId": "lf-linux-20261010-7f78c9bd-round6",
+        "Removed": true
+      },
+      {
+        "Kind": "container",
+        "Name": "lf-linux-20261010-7f78c9bd-round7-test",
+        "Id": "3986b59167fcd9289bcfeef6979f87c56a3d395c0a9db9a4b2a9bd30d5250f34",
+        "RunId": "lf-linux-20261010-7f78c9bd-round7",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round1",
+        "Id": "sha256:91d22f3e66cb77da4b83db7b4bbae205c6541adba325efbd0e43083b00caf0a1",
+        "RunId": "lf-linux-20261010-7f78c9bd-round1",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round2",
+        "Id": "sha256:5e26be09522422ddabeb61d3fa906048771d1be6870048580277cd6707c2d47e",
+        "RunId": "lf-linux-20261010-7f78c9bd-round2",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round3",
+        "Id": "sha256:1466f178aab872d3dc4d7581f91638c5795349e244addaab787b085f82a79c19",
+        "RunId": "lf-linux-20261010-7f78c9bd-round3",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round4",
+        "Id": "sha256:31c2e41f69878d98a26b7a9d59380ee5333228f7705aa13fbb733d5d2800a2af",
+        "RunId": "lf-linux-20261010-7f78c9bd-round4",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round5",
+        "Id": "sha256:212012a0e4df9853ce16e4064ad3f9d9dce1eb8809c1f934bbb0c2043418268c",
+        "RunId": "lf-linux-20261010-7f78c9bd-round5",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round6",
+        "Id": "sha256:2d17897ca265b109b7846286f51fe89f480b96eb00800629726a4b5ec92a9126",
+        "RunId": "lf-linux-20261010-7f78c9bd-round6",
+        "Removed": true
+      },
+      {
+        "Kind": "image",
+        "Name": "larafashion-linux-acceptance:lf-linux-20261010-7f78c9bd-round7",
+        "Id": "sha256:09c2fa87740a13e1cddd3badce8cb20397cca3275fb7248d1138ac8d0d3a3790",
+        "RunId": "lf-linux-20261010-7f78c9bd-round7",
+        "Removed": true
+      },
+      {
+        "Kind": "dependency-image",
+        "Name": "mcr.microsoft.com/dotnet/sdk:9.0.314-noble",
+        "Id": "sha256:fda2105a0319b5ae5d7d51bd540ab0f7fc548ee6ea48cbc95c2b63b62ecad3a3",
+        "RunId": "lf-linux-20261010-7f78c9bd",
+        "Removed": true
+      }
+    ],
+    "RemainingTaskContainers": [],
+    "RemainingTaskImages": [],
+    "VolumesCreated": 0,
+    "NetworksCreated": 0,
+    "BuildCache": "Retained; no general prune",
+    "OtherResources": [
+      "66cb6ecd04b6 phase11-linux-0801-retest04-68e84d71c52a exited",
+      "666d93b7cdc7 phase11-linux-0801-retest03-68e84d71c52a exited",
+      "8a9640cefadc phase11-linux-0801-retest02-68e84d71c52a exited",
+      "eccd8fa4d000 phase11-linux-0801-verify-68e84d71c52a exited",
+      "e041059f5c54 phase11-linux-0801-restore-68e84d71c52a exited",
+      "c261b5afa1e3 alssareea-postgres running"
+    ]
+  },
+  "ModifiedExistingFiles": [
+    "LaraFashion.IntegrationTests/Program.cs",
+    "deploy/tests/harness.py"
+  ],
+  "NewTestFiles": [
+    "LaraFashion.IntegrationTests/LinuxAcceptance.cs",
+    "deploy/tests/linux-acceptance.py",
+    "deploy/tests/linux-docker.ps1"
+  ]
+}

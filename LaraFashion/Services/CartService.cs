@@ -17,18 +17,24 @@ public class CartService
 
     public int GetQuantity(Guid productId, string size)
     {
-        return Items.FirstOrDefault(x =>
-            x.ProductId == productId &&
-            x.Size == size)?.Quantity ?? 0;
+        var matches = Items.Where(x => x.ProductId == productId && SizeNamePolicy.Key(x.Size) == SizeNamePolicy.Key(size)).ToList();
+        if (matches.Count > 1)
+            throw new InventoryException(InventoryFailureReason.AmbiguousSize, "يوجد أكثر من عنصر لهذا المقاس. راجع العناصر في السلة.");
+        return matches.Count == 1 ? matches[0].Quantity : 0;
     }
 
     public void AddToCart(Product product, string size, int quantity, bool allowUnpublished = false)
+        => AddToCart(product, InventorySelection.Resolve(product, null, size).Id, quantity, allowUnpublished);
+
+    public void AddToCart(Product product, Guid sizeId, int quantity, bool allowUnpublished = false)
     {
         if (!product.IsPublished && !allowUnpublished)
             return;
 
-        var maxAvailableQuantity = product.Sizes
-            .FirstOrDefault(x => x.SizeName == size)?.Quantity ?? 0;
+        var row = product.Sizes.SingleOrDefault(s => s.Id == sizeId);
+        if (row is null || !SizeNamePolicy.IsSelectable(product, row)) return;
+        var size = row.SizeName;
+        var maxAvailableQuantity = row.Quantity;
 
         if (maxAvailableQuantity <= 0)
             return;
@@ -37,7 +43,7 @@ public class CartService
 
         var existingItem = Items.FirstOrDefault(x =>
             x.ProductId == product.Id &&
-            x.Size == size);
+            x.ProductSizeId == sizeId);
 
         if (existingItem is not null)
         {
@@ -54,12 +60,15 @@ public class CartService
                 .ToList();
 
             existingItem.Quantity = quantity;
+            existingItem.Size = size;
+            existingItem.ReviewMessage = null;
         }
         else
         {
             Items.Add(new CartItem
             {
                 ProductId = product.Id,
+                ProductSizeId = sizeId,
                 ProductName = product.Name,
                 ProductSerialNumber = product.SerialNumber,
                 ProductImageUrl = product.PrimaryImageUrl,
@@ -114,6 +123,11 @@ public class CartService
             .Select(x => new PersistedCartItem
             {
                 ProductId = x.ProductId,
+                ProductSizeId = x.ProductSizeId,
+                ProductName = x.ProductName,
+                ProductSerialNumber = x.ProductSerialNumber,
+                ProductImageUrl = x.ProductImageUrl,
+                UnitPrice = x.UnitPrice,
                 Size = x.Size,
                 Quantity = x.Quantity
             })

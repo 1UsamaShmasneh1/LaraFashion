@@ -1,39 +1,145 @@
-name: Deploy LaraFashion
-
-on:
-  push:
-    branches:
-      - main
-
-concurrency:
-  group: larafashion-production
-  cancel-in-progress: false
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Oracle Server
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          DEPLOY_COMMIT: ${{ github.sha }}
-        with:
-          host: 158.178.131.94
-          username: ubuntu
-          key: ${{ secrets.SSH_KEY }}
-          envs: DEPLOY_COMMIT
-          script: |
-            set -Eeuo pipefail
-            test -n "$DEPLOY_COMMIT"
-            exec 9>/tmp/larafashion-production-deploy.lock
-            flock -w 900 9
-
-            REPOSITORY=/var/www/larafashion/LaraFashion
-            cd "$REPOSITORY"
-            git fetch --prune origin main
-            git cat-file -e "${DEPLOY_COMMIT}^{commit}"
-            git reset --hard "$DEPLOY_COMMIT"
-
-            export LARAFASHION_DEPLOY_LOCK_HELD=1
-            bash deploy/deploy-production.sh "$DEPLOY_COMMIT"
+{
+  "name": "Deploy LaraFashion",
+  "on": {
+    "push": {
+      "branches": [
+        "main"
+      ]
+    },
+    "workflow_dispatch": {
+      "inputs": {
+        "run_id": {
+          "required": true,
+          "description": "Single approved transition RunId",
+          "type": "string"
+        },
+        "commit": {
+          "required": true,
+          "description": "Exact validated full commit SHA",
+          "type": "string"
+        },
+        "authorized_until_utc": {
+          "required": true,
+          "description": "Fixed authorization end in UTC",
+          "type": "string"
+        },
+        "host_fingerprint": {
+          "required": true,
+          "description": "Independent Oracle host fingerprint",
+          "type": "string"
+        }
+      }
+    }
+  },
+  "concurrency": {
+    "group": "larafashion-production",
+    "cancel-in-progress": false
+  },
+  "permissions": {
+    "contents": "read",
+    "actions": "read"
+  },
+  "jobs": {
+    "validate": {
+      "runs-on": "ubuntu-22.04",
+      "timeout-minutes": 30,
+      "steps": [
+        {
+          "name": "Check out exact candidate",
+          "uses": "actions/checkout@v4",
+          "with": {
+            "ref": "${{ github.sha }}",
+            "fetch-depth": 0,
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Use target .NET SDK",
+          "uses": "actions/setup-dotnet@v4",
+          "with": {
+            "dotnet-version": "9.0.203"
+          }
+        },
+        {
+          "name": "Validate workflow and Bash syntax",
+          "run": "python3 -m json.tool .github/workflows/deploy.yml >/dev/null\nbash -n deploy/deploy-production.sh\nbash -n deploy/tests/run-harness.sh\npython3 -m py_compile deploy/tests/harness.py\npython3 -m py_compile deploy/first-transition.py\nsudo python3 deploy/tests/first-transition-tests.py"
+        },
+        {
+          "name": "Test safe checkout with isolated local Git fixtures",
+          "run": "python3 deploy/tests/recovery-safety.py"
+        },
+        {
+          "name": "Restore pinned dependencies and tools",
+          "run": "dotnet tool restore\ndotnet restore LaraFashion.IntegrationTests"
+        },
+        {
+          "name": "Build and verify model",
+          "env": {
+            "LARAFASHION_EF_CONNECTION": "Data Source=${{ runner.temp }}/design-only.db;Mode=ReadWrite"
+          },
+          "run": "dotnet build LaraFashion.IntegrationTests -c Release --no-restore\ndotnet tool run dotnet-ef migrations has-pending-model-changes --project LaraFashion --configuration Release --no-build"
+        },
+        {
+          "name": "Run actual SQLite regression runner",
+          "run": "dotnet run --project LaraFashion.IntegrationTests -c Release --no-build"
+        },
+        {
+          "name": "Publish isolated harness candidates",
+          "run": "dotnet publish LaraFashion -c Release --no-build --no-restore -o \"$RUNNER_TEMP/app-drop\"\ndotnet publish LaraFashion.IntegrationTests -c Release --no-build --no-restore -o \"$RUNNER_TEMP/tool-drop\""
+        },
+        {
+          "name": "Exercise Bash deployment failures with synthetic SQLite",
+          "env": {
+            "LARAFASHION_HARNESS_DOTNET": "dotnet",
+            "LARAFASHION_HARNESS_TOOL": "${{ runner.temp }}/tool-drop/LaraFashion.IntegrationTests.dll",
+            "LARAFASHION_HARNESS_TOOL_DROP": "${{ runner.temp }}/tool-drop",
+            "LARAFASHION_HARNESS_APP_DROP": "${{ runner.temp }}/app-drop",
+            "LARAFASHION_HARNESS_COMMIT": "${{ github.sha }}",
+            "LARAFASHION_HARNESS_WORKERS": "1"
+          },
+          "run": "set -Eeuo pipefail\nexport LARAFASHION_HARNESS_DOTNET=\"$(readlink -f \"$(command -v dotnet)\")\"\nif ! id app >/dev/null 2>&1; then sudo useradd --uid 1654 --create-home --shell /usr/sbin/nologin app; fi\n[[ \"$(id -u app)\" == 1654 ]]\nsudo --preserve-env=LARAFASHION_HARNESS_DOTNET,LARAFASHION_HARNESS_TOOL,LARAFASHION_HARNESS_TOOL_DROP,LARAFASHION_HARNESS_APP_DROP,LARAFASHION_HARNESS_COMMIT,LARAFASHION_HARNESS_WORKERS bash deploy/tests/run-harness.sh"
+        }
+      ]
+    },
+    "deploy": {
+      "needs": "validate",
+      "runs-on": "ubuntu-22.04",
+      "timeout-minutes": 240,
+      "steps": [
+        {
+          "name": "Require exact SHA and one bounded first-transition authorization",
+          "env": {
+            "SSH_HOST_FINGERPRINT": "${{ inputs.host_fingerprint }}",
+            "TRANSITION_RUN_ID": "${{ inputs.run_id }}",
+            "DEPLOY_COMMIT": "${{ github.sha }}",
+            "AUTHORIZED_UNTIL_UTC": "${{ inputs.authorized_until_utc }}",
+            "REQUESTED_COMMIT": "${{ inputs.commit }}"
+          },
+          "run": "set +x\nset -Eeuo pipefail\n[[ \"$DEPLOY_COMMIT\" =~ ^[0-9a-f]{40}$ && \"$REQUESTED_COMMIT\" == \"$DEPLOY_COMMIT\" ]]\n[[ \"$TRANSITION_RUN_ID\" =~ ^lf-cutover-[A-Za-z0-9-]+$ ]]\n[[ \"$AUTHORIZED_UNTIL_UTC\" == 2026-10-11T23:38:00Z ]]\n[[ \"$SSH_HOST_FINGERPRINT\" == SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws ]]\n(( $(date -u -d \"$AUTHORIZED_UNTIL_UTC\" +%s) - $(date -u +%s) >= 3600 ))"
+        },
+        {
+          "name": "Deploy verified SHA through one deployment script",
+          "uses": "appleboy/ssh-action@v1.0.3",
+          "env": {
+            "LARAFASHION_FIRST_TRANSITION": "1",
+            "AUTHORIZED_UNTIL_UTC": "${{ inputs.authorized_until_utc }}",
+            "DEPLOY_COMMIT": "${{ github.sha }}",
+            "LARAFASHION_ACTION_RUN_ID": "${{ github.run_id }}",
+            "LARAFASHION_TRANSITION_RUN_ID": "${{ inputs.run_id }}"
+          },
+          "with": {
+            "host": "82.70.208.68",
+            "username": "ubuntu",
+            "key": "${{ secrets.SSH_KEY }}",
+            "fingerprint": "${{ inputs.host_fingerprint }}",
+            "envs": "DEPLOY_COMMIT,LARAFASHION_FIRST_TRANSITION,LARAFASHION_TRANSITION_RUN_ID,LARAFASHION_ACTION_RUN_ID,AUTHORIZED_UNTIL_UTC",
+            "timeout": "30s",
+            "command_timeout": "180m",
+            "script": "set +x\nset -Eeuo pipefail\numask 077\n[[ \"$DEPLOY_COMMIT\" =~ ^[0-9a-f]{40}$ ]]\n[[ \"$LARAFASHION_TRANSITION_RUN_ID\" =~ ^lf-cutover-[A-Za-z0-9-]+$ ]]\n[[ \"$AUTHORIZED_UNTIL_UTC\" == 2026-10-11T23:38:00Z ]]\n(( $(date -u -d \"$AUTHORIZED_UNTIL_UTC\" +%s) - $(date -u +%s) >= 3600 ))\nLOCK_FILE=/tmp/larafashion-production-deploy.lock\n# BEGIN LOCK GUARD FUNCTIONS\nlock_file_is_trusted() {\n    local owner mode\n    [[ -f \"$LOCK_FILE\" && ! -L \"$LOCK_FILE\" && \"$(stat -c %h -- \"$LOCK_FILE\")\" == 1 ]] || return 1\n    owner=\"$(stat -c %u -- \"$LOCK_FILE\")\" || return 1\n    mode=\"$(stat -c %a -- \"$LOCK_FILE\")\" || return 1\n    [[ \"$owner\" == 0 || \"$owner\" == \"$(id -u)\" ]] && (( (8#$mode & 0022) == 0 ))\n}\nprepare_deploy_lock() {\n    # Windows harness cannot prove POSIX permissions or /proc descriptors.\n    if [[ \"$OSTYPE\" != linux* ]]; then\n        [[ -n \"${LARAFASHION_DEPLOY_HARNESS_ROOT:-}\" && ( \"$OSTYPE\" == msys || \"$OSTYPE\" == cygwin ) ]] && return 0\n        return 1\n    fi\n    local parent owner mode\n    parent=\"$(realpath -e -- \"$(dirname -- \"$LOCK_FILE\")\")\" || return 1\n    owner=\"$(stat -c %u -- \"$parent\")\" || return 1\n    mode=\"$(stat -c %a -- \"$parent\")\" || return 1\n    [[ \"$owner\" == 0 || \"$owner\" == \"$(id -u)\" ]] || return 1\n    # A shared parent is allowed only when root owns it and sticky semantics protect the file.\n    (( (8#$mode & 0022) == 0 || (owner == 0 && (8#$mode & 01000) != 0) )) || return 1\n    if [[ ! -e \"$LOCK_FILE\" && ! -L \"$LOCK_FILE\" ]]; then\n        (set -o noclobber; : > \"$LOCK_FILE\") || return 1\n    fi\n    lock_file_is_trusted\n}\nverify_deploy_lock_fd() {\n    if [[ \"$OSTYPE\" != linux* ]]; then\n        [[ -n \"${LARAFASHION_DEPLOY_HARNESS_ROOT:-}\" && ( \"$OSTYPE\" == msys || \"$OSTYPE\" == cygwin ) ]] && return 0\n        return 1\n    fi\n    lock_file_is_trusted && [[ \"$(stat -Lc '%d:%i' -- /proc/$$/fd/9)\" == \"$(stat -c '%d:%i' -- \"$LOCK_FILE\")\" ]]\n}\n# END LOCK GUARD FUNCTIONS\nprepare_deploy_lock || { echo \"Untrusted deployment lock or parent\" >&2; exit 1; }\nexec 9<>\"$LOCK_FILE\"\nverify_deploy_lock_fd || { echo \"Lock descriptor changed\" >&2; exit 1; }\nflock -w 900 9\nREPOSITORY=/var/www/larafashion/LaraFashion\ncd \"$REPOSITORY\"\n[[ \"$(realpath -e -- \"$(git rev-parse --show-toplevel)\")\" == \"$(realpath -e -- \"$REPOSITORY\")\" ]]\n# BEGIN SAFE CHECKOUT FUNCTIONS\nrequire_clean_checkout() {\n    local status\n    status=\"$(git status --porcelain --untracked-files=all)\" || return 1\n    [[ -z \"$status\" ]] || { echo 'Unsaved or untracked server files; checkout refused' >&2; return 1; }\n    local operation\n    for operation in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-apply sequencer; do\n        [[ ! -e \"$(git rev-parse --git-path \"$operation\")\" ]] || { echo 'Unfinished Git operation; checkout refused' >&2; return 1; }\n    done\n}\ncheckout_candidate() {\n    local candidate=\"$1\"\n    [[ \"$candidate\" =~ ^[0-9a-f]{40}$ ]] || return 1\n    require_clean_checkout || return 1\n    git cat-file -e \"${candidate}^{commit}\" || return 1\n    git merge-base --is-ancestor \"$candidate\" refs/remotes/origin/main || return 1\n    git -c core.hooksPath=/dev/null checkout --detach --no-overwrite-ignore \"$candidate\" || return 1\n    [[ \"$(git rev-parse HEAD)\" == \"$candidate\" ]] && require_clean_checkout\n}\n# END SAFE CHECKOUT FUNCTIONS\nrequire_clean_checkout\ngit fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'\ncheckout_candidate \"$DEPLOY_COMMIT\"\nexport LARAFASHION_DEPLOY_LOCK_HELD=1\nbash deploy/deploy-production.sh \"$DEPLOY_COMMIT\""
+          }
+        }
+      ],
+      "if": "${{ github.event_name == 'workflow_dispatch' }}"
+    }
+  }
+}

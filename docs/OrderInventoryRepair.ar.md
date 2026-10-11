@@ -1,5 +1,9 @@
 # تقرير إصلاح المخزون وأرقام الطلبات — 3 أكتوبر 2026
 
+متابعة مراجعة الطلبات القديمة — 5 أكتوبر: [التقرير الحالي](C:/dev/LaraFashion/docs/HistoricalOrderInventoryReview.ar.md) يوثق المراجعة الإدارية الصريحة للمخزون، وحفظ هوية الشراء التاريخية مجهولة، والتدقيق الدائم و68/68 مجموعة فعلية وخطة الترقية. لم تُنفذ تسويات حقيقية أو نشر إنتاج.
+
+متابعة 5 أكتوبر: [تقرير هوية المقاس والسلة](C:/dev/LaraFashion/docs/ProductSizeIdentityRepair.ar.md) يوثق الإصلاح اللاحق و44 اختباراً وفحص الواجهة التفاعلي الذي أصبح متاحاً. تفاصيل المطابقة بالاسم والحدود البصرية في تقرير 3 أكتوبر أدناه تصف تلك المرحلة التاريخية؛ المرجع الحالي للمقاسات هو تقرير المتابعة.
+
 ## A. الحالة الأولية
 
 الفرع `main`، وHEAD هو `ddf060a0aca86938194f8f09f93dc051a735f52c`. كان `git status --short` فارغاً؛ لا تعديلات سابقة للمستخدم. لم أغيّر الفرع أو HEAD. لا توثيق معماري محلي آخر ظهر في البحث؛ تمت قراءة `AGENTS.md` وملفات التنفيذ. تعذر جلب المستودع المرجعي عبر أداة الويب، واعتمد الفحص على هذا checkout.
@@ -125,3 +129,5 @@ dotnet run --project LaraFashion.IntegrationTests --no-build -- --ui
 لا Commit أو Push أو تغيير فرع أو Reset أو Deployment. لا تعديل إعدادات Production أو secrets أو GitHub Actions أو ملفات DB الأصلية. لم يُشغّل شراء أو حذف أو تنظيف على متجر حقيقي. لم تُعدّل Migrations مطبقة أو تُستبدل قاعدة بقاعدة فارغة. تغييرات المشروع محصورة في الإصلاح والميزة والاختبارات والتقرير.
 
 مرجع آلية SQLite: [Microsoft.Data.Sqlite transactions](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions). مرجع Concurrency Tokens: [EF Core concurrency](https://learn.microsoft.com/en-us/ef/core/saving/concurrency). الاعتماد هنا مدعوم بالاختبارات الفعلية على SQLite، ولا يعتمد على SQL Server rowversion.
+
+متابعة 6 أكتوبر: [مسار النشر الآمن مع إثبات الأهلية](SafeEvidenceDeployment.ar.md) يفصل مقارنة الأعمال قبل التشغيل عن الصحة بعده، ويحظر restore آلية بعد محاولة تشغيل قد تقبل طلبات جديدة. إصلاحات المخزون والأرقام والمقاسات السابقة محفوظة؛ لم يُنفذ نشر أو تسوية بيانات حقيقية.
