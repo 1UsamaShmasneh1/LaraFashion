@@ -92,6 +92,9 @@ def main():
     for mode in ("clean", "tracked", "staged", "untracked", "ignored-collision", "ignored-unrelated", "unfinished", "invalid-sha", "outside-main"):
         fixture = ROOT / mode
         git("clone", "--local", "--no-hardlinks", "--no-checkout", str(BASE), str(fixture), cwd=ROOT)
+        # Actions checks out a detached SHA; a local clone then has no origin/main.
+        # Define only this synthetic fixture's accepted main tip, without modifying the source repository.
+        git("update-ref", "refs/remotes/origin/main", initial_head.decode().strip(), cwd=fixture)
         git("-c", "core.hooksPath=/dev/null", "checkout", "--detach", parent, cwd=fixture)
         tracked = next(p for p in git("ls-tree", "-r", "--name-only", parent, cwd=fixture).decode().splitlines() if p.endswith(".cs"))
         sentinel = None
