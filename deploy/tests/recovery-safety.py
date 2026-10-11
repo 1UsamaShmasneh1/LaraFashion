@@ -38,15 +38,16 @@ def main():
     initial_status = git("status", "--porcelain", "--untracked-files=all")
     initial_head = git("rev-parse", "HEAD")
     deploy = WORKFLOW["jobs"]["deploy"]
-    gate, action = deploy["steps"]
-    remote = action["with"]["script"]
+    gate, checkout, action = deploy["steps"]
+    remote = (BASE / "deploy/actions-remote.sh").read_text(encoding="utf-8")
     assert WORKFLOW["on"]["push"] == {"branches": ["main"]} and "workflow_dispatch" in WORKFLOW["on"]
     assert WORKFLOW["concurrency"] == {"group": "larafashion-production", "cancel-in-progress": False}
     assert WORKFLOW["permissions"] == {"contents": "read", "actions": "read"}
     assert deploy["needs"] == "validate" and deploy["runs-on"] == "ubuntu-22.04"
-    assert action["with"]["host"] == "82.70.208.68"
-    assert action["with"]["key"] == "${{ secrets.SSH_KEY }}"
-    assert action["with"]["fingerprint"] == gate["env"]["SSH_HOST_FINGERPRINT"]
+    assert checkout["with"]["ref"] == "${{ github.sha }}" and checkout["with"]["persist-credentials"] is False
+    assert action["run"] == "bash deploy/actions-ssh.sh"
+    assert action["env"]["SSH_KEY"] == "${{ secrets.SSH_KEY }}"
+    assert action["env"]["SSH_HOST_FINGERPRINT"] == gate["env"]["SSH_HOST_FINGERPRINT"]
     assert action["env"]["DEPLOY_COMMIT"] == "${{ github.sha }}"
     assert "reset --hard" not in remote and "git clean" not in remote
     assert "158.178.131.94" not in json.dumps(WORKFLOW)

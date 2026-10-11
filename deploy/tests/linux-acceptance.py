@@ -69,7 +69,7 @@ def lock_tests():
     fragment=source[source.index('# BEGIN LOCK GUARD FUNCTIONS'):source.index('PROJECT_FILE=')]
     functions=fragment[:fragment.index('# END LOCK GUARD FUNCTIONS')+len('# END LOCK GUARD FUNCTIONS')]
     workflow=json.loads((BASE/'.github/workflows/deploy.yml').read_text())
-    wrapper=workflow['jobs']['deploy']['steps'][1]['with']['script']
+    wrapper=(BASE/'deploy/actions-remote.sh').read_text()
     assert functions==wrapper[wrapper.index('# BEGIN LOCK GUARD FUNCTIONS'):wrapper.index('# END LOCK GUARD FUNCTIONS')+len('# END LOCK GUARD FUNCTIONS')]
     section=root/'lock-section.sh'
     section.write_text('set -Eeuo pipefail\nlog() { printf "%s\\n" "$*" >&2; }\n'+fragment)
