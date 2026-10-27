@@ -3,8 +3,8 @@ set -Eeuo pipefail
 umask 077
 [[ "$DEPLOY_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$LARAFASHION_TRANSITION_RUN_ID" =~ ^lf-cutover-[A-Za-z0-9-]+$ ]]
-[[ "$AUTHORIZED_UNTIL_UTC" == 2026-10-11T23:38:00Z ]]
-(( $(date -u -d "$AUTHORIZED_UNTIL_UTC" +%s) - $(date -u +%s) >= 3600 ))
+[[ "$LARAFASHION_ACTION_RUN_ID" =~ ^[0-9]+$ ]]
+[[ "$LARAFASHION_AUTHORIZATION_MODE" == UntilTransitionClosed ]]
 LOCK_FILE=/tmp/larafashion-production-deploy.lock
 # BEGIN LOCK GUARD FUNCTIONS
 lock_file_is_trusted() {
@@ -44,6 +44,10 @@ prepare_deploy_lock || { echo "Untrusted deployment lock or parent" >&2; exit 1;
 exec 9<>"$LOCK_FILE"
 verify_deploy_lock_fd || { echo "Lock descriptor changed" >&2; exit 1; }
 flock -w 900 9
+# Recheck the root-owned authorization under the actual lock before changing checkout.
+sudo --preserve-env=LARAFASHION_ACTION_RUN_ID,LARAFASHION_AUTHORIZATION_MODE python3 -B \
+    "/var/www/larafashion/backups/first-transition/$LARAFASHION_TRANSITION_RUN_ID/first-transition.py" \
+    transport-preflight "$LARAFASHION_TRANSITION_RUN_ID" "$DEPLOY_COMMIT"
 REPOSITORY=/var/www/larafashion/LaraFashion
 cd "$REPOSITORY"
 [[ "$(realpath -e -- "$(git rev-parse --show-toplevel)")" == "$(realpath -e -- "$REPOSITORY")" ]]

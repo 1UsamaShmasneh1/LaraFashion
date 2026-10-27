@@ -60,17 +60,19 @@ def main():
     passed("workflow main/SHA/concurrency/new host/mandatory fingerprint/least permissions")
 
     # The real authorization is dispatch-only and checked again against a root-owned server record.
-    for name, requested, fingerprint, until, success in [
-        ("exact SHA absent", "", "SHA256:" + "A" * 43, "2026-10-11T23:38:00Z", False),
-        ("exact SHA differs", "2" * 40, "SHA256:" + "A" * 43, "2026-10-11T23:38:00Z", False),
-        ("fingerprint absent", "1" * 40, "", "2026-10-11T23:38:00Z", False),
-        ("fingerprint malformed", "1" * 40, "untrusted", "2026-10-11T23:38:00Z", False),
-        ("explicit bounded dispatch", "1" * 40, "SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws", "2026-10-11T23:38:00Z", True),
+    for name, requested, fingerprint, mode, success in [
+        ("exact SHA absent", "", "SHA256:" + "A" * 43, "UntilTransitionClosed", False),
+        ("exact SHA differs", "2" * 40, "SHA256:" + "A" * 43, "UntilTransitionClosed", False),
+        ("fingerprint absent", "1" * 40, "", "UntilTransitionClosed", False),
+        ("fingerprint malformed", "1" * 40, "untrusted", "UntilTransitionClosed", False),
+        ("explicit task dispatch", "1" * 40, "SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws", "UntilTransitionClosed", True),
+        ("missing authorization mode", "1" * 40, "SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws", "", False),
+        ("legacy date cannot grant authorization", "1" * 40, "SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws", "2026-10-11T23:38:00Z", False),
     ]:
         env = os.environ.copy()
-        env.update(DEPLOY_COMMIT="1" * 40,REQUESTED_COMMIT=requested,TRANSITION_RUN_ID="lf-cutover-synthetic",AUTHORIZED_UNTIL_UTC=until,SSH_HOST_FINGERPRINT=fingerprint)
-        # A fixture clock makes this policy test independent of real authorization expiry.
-        clock="date() { if [[ \"$*\" == *'-d '* ]]; then printf '7200\\n'; else printf '0\\n'; fi; }\n"
+        env.update(DEPLOY_COMMIT="1" * 40,REQUESTED_COMMIT=requested,TRANSITION_RUN_ID="lf-cutover-synthetic",LARAFASHION_AUTHORIZATION_MODE=mode,SSH_HOST='82.70.208.68',SSH_HOST_FINGERPRINT=fingerprint)
+        # The lifecycle gate must not pass a missing or invalid date to date(1).
+        clock="date() { echo unexpected-date-command >&2; return 98; }\n"
         result = subprocess.run([BASH, "-c", clock+gate["run"]], env=env, capture_output=True)
         assert (result.returncode == 0) == success
         passed(name)

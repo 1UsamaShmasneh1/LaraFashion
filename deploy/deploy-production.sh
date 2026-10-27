@@ -26,7 +26,7 @@ SERVICE_ENV_FILE="${LARAFASHION_SERVICE_ENV_FILE:-}"
 FIRST_TRANSITION="${LARAFASHION_FIRST_TRANSITION:-0}"
 TRANSITION_RUN_ID="${LARAFASHION_TRANSITION_RUN_ID:-}"
 TRANSITION_ROOT="/var/www/larafashion/backups/first-transition/$TRANSITION_RUN_ID"
-transition() { sudo --preserve-env=LARAFASHION_ACTION_RUN_ID python3 "$REPOSITORY/deploy/first-transition.py" "$1" "$TRANSITION_RUN_ID" "$DEPLOY_COMMIT" "${@:2}"; }
+transition() { sudo --preserve-env=LARAFASHION_ACTION_RUN_ID,LARAFASHION_AUTHORIZATION_MODE python3 -B "$REPOSITORY/deploy/first-transition.py" "$1" "$TRANSITION_RUN_ID" "$DEPLOY_COMMIT" "${@:2}"; }
 EVIDENCE_SOURCE="${LARAFASHION_PRE_IDENTITY_EVIDENCE_PATH:--}"
 EVIDENCE_SHA="${LARAFASHION_PRE_IDENTITY_EVIDENCE_SHA256:--}"
 WRITER_SERVICES="${LARAFASHION_WRITER_SERVICES:-$SERVICE_NAME}"
@@ -341,7 +341,7 @@ while IFS= read -r -d '' previous_state; do
 done < <(find "$BACKUP_DIR/deploy-attempts" -mindepth 2 -maxdepth 2 -type f -name state.json -print0)
 stage Prepared
 PREPARED=1
-[[ "$FIRST_TRANSITION" == 0 ]] || transition deadline 3600
+[[ "$FIRST_TRANSITION" == 0 ]] || transition check
 STOP_ATTEMPTED=1
 stage WritersStopAttempted
 stop_writers || fail 'Cannot prove writers stopped'
@@ -354,7 +354,7 @@ if [[ "$FIRST_TRANSITION" == 1 ]]; then
     log "Cutover encrypted recovery package ready: $TRANSITION_RUN_ID; awaiting verified private external copy"
     RECEIPT_READY=0
     for _ in {1..120}; do
-        transition deadline 2400 || fail 'Insufficient time for external recovery verification and recovery reserve'
+        transition check || fail 'Transition authorization is no longer active'
         if [[ -f "$TRANSITION_ROOT/cutover-external-verified.json" ]] && transition verify-receipt cutover; then RECEIPT_READY=1; break; fi
         sleep 5
     done
@@ -369,19 +369,19 @@ maintenance --verify-review-upgrade --plan "$PLAN_FILE"
 stage RehearsalVerified
 writers_stopped || fail 'Writer appeared during rehearsal'
 stage EvidencePrepareAttempted
-[[ "$FIRST_TRANSITION" == 0 ]] || transition deadline 2400
+[[ "$FIRST_TRANSITION" == 0 ]] || transition check
 maintenance --prepare-legacy-review --plan "$PLAN_FILE" "$DATABASE_PATH"
 stage EvidenceVerified
 writers_stopped || fail 'Writer appeared before migration'
 stage SchemaChangeAttempted
-[[ "$FIRST_TRANSITION" == 0 ]] || transition deadline 2400
+[[ "$FIRST_TRANSITION" == 0 ]] || transition check
 maintenance --deployment-apply "$DATABASE_PATH" "$PLAN_FILE"
 maintenance --deployment-verify "$DATABASE_PATH" "$PLAN_FILE"
 stage SchemaVerified
 writers_stopped || fail 'Writer appeared before swap'
 FILES_SWAP_ATTEMPTED=1
 stage FilesSwapAttempted
-[[ "$FIRST_TRANSITION" == 0 ]] || transition deadline 2100
+[[ "$FIRST_TRANSITION" == 0 ]] || transition check
 [[ "$(stat -c '%d:%i' -- "$LIVE_DIR")" == "$PREVIOUS_ID" && "$(stat -c '%d:%i' -- "$STAGING_DIR")" == "$CANDIDATE_ID" ]] || fail 'Release directories changed during preparation'
 rename_release "$LIVE_DIR" "$ROLLBACK_DIR" || fail 'Previous release rename refused'
 rename_release "$STAGING_DIR" "$LIVE_DIR" || fail 'Candidate release rename refused'

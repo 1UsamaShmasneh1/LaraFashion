@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Synthetic policy and real filesystem/crypto tests; no SSH, service or production access."""
-import copy, datetime as dt, hashlib, importlib.util, json, os, pathlib, shutil, subprocess, tempfile
+import contextlib, copy, hashlib, importlib.util, io, json, os, pathlib, shutil, subprocess, sys, tempfile
 BASE=pathlib.Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('first_transition',BASE/'deploy/first-transition.py')
 m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
@@ -10,7 +10,7 @@ def passed(name):
     count+=1; print('PASS first-transition '+name,flush=True)
 def rejects(action):
     try: action()
-    except (RuntimeError,ValueError,json.JSONDecodeError): return
+    except (RuntimeError,ValueError,json.JSONDecodeError,FileNotFoundError): return
     raise AssertionError('Expected transition refusal')
 manifest={'OriginalCommit':m.LEGACY_COMMIT,'ApplicationSha256':m.LEGACY_DLL,'SchemaDigest':'synthetic-schema','DatabaseIdentity':'1:2'}
 observed={'Pid':123,'ApplicationSha256':m.LEGACY_DLL,'SchemaDigest':'synthetic-schema','DatabaseIdentity':'1:2'}
@@ -27,33 +27,58 @@ for body,status,name in [(b'{"status":"healthy"}',307,'redirect'),(b'<html>healt
 for key in ('OriginalCommit','ApplicationSha256','SchemaDigest','DatabaseIdentity'):
     wrong=dict(manifest); wrong[key]='different'
     rejects(lambda:m.legacy_validate(wrong,observed,b'{"status":"healthy"}',200)); passed('reject-unbound-manifest-'+key)
-auth={'AuthorizedUntilUtc':m.UNTIL}
-end=dt.datetime.fromisoformat(m.UNTIL.replace('Z','+00:00'))
-assert m.remaining(auth,3600,end-dt.timedelta(seconds=3601))==3601; passed('stop-budget-preserves-thirty-minute-recovery-reserve')
-for now,minimum,name in [(end,1,'exact-expiry'),(end+dt.timedelta(seconds=1),0,'expired'),(end-dt.timedelta(seconds=3599),3600,'insufficient-stop-budget')]:
-    rejects(lambda:m.remaining(auth,minimum,now)); passed('reject-'+name)
-wrong=dict(auth); wrong['AuthorizedUntilUtc']=(end+dt.timedelta(hours=3)).isoformat()
-rejects(lambda:m.remaining(wrong,0,end)); passed('reconnect-cannot-extend-fixed-deadline')
+auth={'AuthorizationMode':m.AUTHORIZATION_MODE,'Host':m.HOST,'HostFingerprint':m.PIN,'State':'Authorized','Closed':False,'Cancelled':False}
+m.authorization(auth); passed('explicit-task-lifecycle-authorization-without-fake-date')
+for key,value,name in [('AuthorizationMode',None,'missing-mode'),('AuthorizationMode','','blank-mode'),
+                     ('AuthorizationMode','2026-10-11T23:38:00Z','legacy-date-is-not-permission'),
+                     ('AuthorizedUntilUtc','','missing-date-does-not-grant-permission'),
+                     ('AuthorizedUntilUtc','2099-01-01T00:00:00Z','distant-date-not-a-bypass'),
+                     ('Host','other-host','different-host'),('HostFingerprint','other-key','different-fingerprint'),
+                     ('Closed',True,'closed'),('Cancelled',True,'cancelled'),('State','Closed','closed-state'),
+                     ('State','Cancelled','cancelled-state'),('State','','missing-state'),('Closed',None,'missing-closed-marker')]:
+    wrong=dict(auth); wrong[key]=value
+    rejects(lambda:m.authorization(wrong)); passed('reject-'+name)
 root=pathlib.Path(tempfile.mkdtemp(prefix='LaraFashionFirstTransitionSynthetic-')); os.chmod(root,0o700)
 assert os.geteuid()==0, 'Run the first-transition filesystem policy fixtures with sudo; they use only this synthetic /tmp root'
-saved_auth,saved_base,saved_utc=m.AUTH,m.BASE,m.utc
-m.AUTH=root/'authorization.json'; m.BASE=root/'persistent'; m.utc=lambda:end-dt.timedelta(hours=2)
+saved_auth,saved_base=m.AUTH,m.BASE
+m.AUTH=root/'authorization.json'; m.BASE=root/'persistent'
 run_id='lf-cutover-synthetic-bound'; commit='1'*40
 attempt=m.BASE/'backups/first-transition'/run_id; attempt.mkdir(parents=True); attempt.chmod(0o700); os.chown(attempt,1001,1001)
-record={'RunId':run_id,'CandidateCommit':commit,'HostFingerprint':m.PIN,'AuthorizedUntilUtc':m.UNTIL,'Closed':False}
+cert=root/'public-recipient-reference'; cert.write_text('synthetic public reference; no private key')
+record=dict(auth,RunId=run_id,CandidateCommit=commit,RecipientCertificate=str(cert),RecipientCertificateSha256=m.digest(cert))
 m.save(m.AUTH,record)
-assert m.context(run_id,commit,3600,claimed=False)[1]==attempt; passed('actual-root-owned-authorization-and-private-attempt-directory')
+assert m.context(run_id,commit,claimed=False)[1]==attempt; passed('actual-root-owned-authorization-and-private-attempt-directory')
 for invalid_run,invalid_commit,name in [('lf-cutover-other',commit,'other-attempt'),(run_id,'2'*40,'other-commit')]:
-    rejects(lambda:m.context(invalid_run,invalid_commit,0,claimed=False)); passed('reject-'+name+'-authorization')
+    rejects(lambda:m.context(invalid_run,invalid_commit,claimed=False)); passed('reject-'+name+'-authorization')
 for mode in (0o644,0o640):
-    m.AUTH.chmod(mode); rejects(lambda:m.context(run_id,commit,0,claimed=False)); passed('reject-authorization-mode-'+oct(mode))
+    m.AUTH.chmod(mode); rejects(lambda:m.context(run_id,commit,claimed=False)); passed('reject-authorization-mode-'+oct(mode))
 m.AUTH.chmod(0o600)
-record['ClaimedActionRunId']='12345'; m.save(m.AUTH,record)
-os.environ['LARAFASHION_ACTION_RUN_ID']='12345'; assert m.context(run_id,commit,0)[0]['ClaimedActionRunId']=='12345'; passed('claim-bound-to-exact-GitHub-action-run')
-os.environ['LARAFASHION_ACTION_RUN_ID']='12346'; rejects(lambda:m.context(run_id,commit,0)); passed('second-action-cannot-reuse-claimed-authorization')
-os.environ['LARAFASHION_ACTION_RUN_ID']='12345'; record['Closed']=True; m.save(m.AUTH,record)
-rejects(lambda:m.context(run_id,commit,0)); passed('closed-authorization-cannot-replay')
-m.AUTH,m.BASE,m.utc=saved_auth,saved_base,saved_utc
+def invoke(op,*args):
+    previous=sys.argv; sys.argv=['first-transition.py',op,run_id,commit,*args]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()) as output: m.main()
+        return json.loads(output.getvalue())
+    finally: sys.argv=previous
+os.environ['LARAFASHION_AUTHORIZATION_MODE']=m.AUTHORIZATION_MODE
+os.environ['LARAFASHION_ACTION_RUN_ID']='12345'
+rejects(lambda:invoke('claim')); passed('unbound-action-cannot-claim')
+assert invoke('bind-action','12345')['Success']; passed('real-root-record-binds-action-before-claim')
+rejects(lambda:invoke('bind-action','12346')); passed('cannot-rebind-action-or-replay-technical-timeout')
+os.environ['LARAFASHION_ACTION_RUN_ID']='12346'; rejects(lambda:invoke('claim')); passed('other-action-refused-before-claim')
+os.environ['LARAFASHION_ACTION_RUN_ID']='12345'
+assert invoke('claim')['Success'] and json.loads(m.AUTH.read_text())['State']=='Claimed'; passed('claim-bound-to-exact-GitHub-action-run')
+rejects(lambda:invoke('claim')); passed('same-action-cannot-claim-twice-or-restart-after-timeout')
+assert invoke('check')['Success']; passed('active-claim-rechecked-without-date-command')
+os.environ['LARAFASHION_ACTION_RUN_ID']='12346'; rejects(lambda:m.context(run_id,commit)); passed('second-action-cannot-reuse-claimed-authorization')
+os.environ['LARAFASHION_ACTION_RUN_ID']='12345'
+rejects(lambda:invoke('cancel')); passed('claimed-attempt-cannot-be-cancelled-as-unclaimed')
+assert invoke('close')['Success']; passed('actual-close-persists-terminal-authorization')
+rejects(lambda:m.context(run_id,commit)); passed('closed-authorization-cannot-replay')
+rejects(lambda:invoke('claim')); passed('closed-claim-cannot-be-reopened')
+m.save(m.AUTH,record); assert invoke('cancel')['Success']; passed('unclaimed-authorization-cancelled-explicitly')
+rejects(lambda:invoke('claim')); passed('cancelled-record-cannot-replay')
+m.AUTH.unlink(); rejects(lambda:m.context(run_id,commit,claimed=False)); passed('missing-root-authorization-rejected')
+m.AUTH,m.BASE=saved_auth,saved_base
 m.save(root/'state.json',{'Stage':'BeforeMutation'}); assert json.loads((root/'state.json').read_text())['Stage']=='BeforeMutation'
 assert not (root/'state.json.new').exists(); passed('atomic-fsynced-state-before-mutation')
 source=root/'source'; source.mkdir(); (source/'all-uploads-including-unreferenced').write_bytes(b'synthetic upload bytes'); (source/'app.dll').write_bytes(b'synthetic previous binary')
@@ -78,8 +103,15 @@ wf=json.loads((BASE/'.github/workflows/deploy.yml').read_text())
 assert wf['jobs']['deploy']['if']=="${{ github.event_name == 'workflow_dispatch' }}"; passed('push-cannot-activate-production')
 script=(BASE/'deploy/deploy-production.sh').read_text()
 assert script.index('transition verify-receipt cutover')<script.index('maintenance --prepare-legacy-review --plan')
-assert script.index('transition deadline 3600')<script.index('stage WritersStopAttempted')
-assert script.index('transition deadline 2100')<script.index('rename_release "$LIVE_DIR" "$ROLLBACK_DIR"')
+assert script.index('transition check')<script.index('stage WritersStopAttempted')
+assert script.rindex('transition check')<script.index('rename_release "$LIVE_DIR" "$ROLLBACK_DIR"')
 assert script.index('stage ApplicationStartAttempted')<script.index("start_writers || fail 'Start failed")
 passed('external-backup-and-time-and-start-intent-precede-critical-actions')
+transport=(BASE/'deploy/actions-ssh.sh').read_text(); remote=(BASE/'deploy/actions-remote.sh').read_text()
+assert transport.index('cat -- "$SCRIPT_DIR/actions-preflight.sh"')<transport.index('cat -- "$SCRIPT_DIR/actions-remote.sh"')
+assert remote.index('transport-preflight')<remote.index('git fetch')
+preflight=(BASE/'deploy/actions-preflight.sh').read_text()
+assert 'transport-preflight' in preflight and 'deploy-production.sh' not in preflight and 'systemctl stop' not in preflight and 'git fetch' not in preflight
+assert 'date -' not in transport+remote+preflight and 'transition deadline' not in script
+passed('actual-Actions-readonly-preflight-before-coordinated-deployment-and-no-date-bypass')
 print('FIRST_TRANSITION_RESULT: '+str(count)+'/'+str(count)+' passed; synthetic fixtures retained in '+str(root))

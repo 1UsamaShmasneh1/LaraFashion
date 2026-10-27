@@ -11,7 +11,8 @@ AUTH = pathlib.Path('/etc/larafashion/first-transition.json')
 LEGACY_COMMIT = 'b196d7268e2b5a5b73b207d963255d5d6a7c0129'
 LEGACY_DLL = '50bdd7f65ca6eb81e98f5f4394b317fb40eb125e491490e244b6ddfcef4c5b6b'
 PIN = 'SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws'
-UNTIL = '2026-10-11T23:38:00Z'
+AUTHORIZATION_MODE = 'UntilTransitionClosed'
+HOST = '82.70.208.68'
 ENV_FILE = pathlib.Path('/etc/larafashion/runtime.env')
 DROPIN = pathlib.Path('/etc/systemd/system/larafashion.service.d/90-first-transition.conf')
 MARKER = BASE/'data/first-transition-maintenance'
@@ -59,20 +60,24 @@ def inventory(folder, allow_private=False):
         rows.append(row)
     return rows
 
-def remaining(auth, minimum, now=None):
-    require(auth['AuthorizedUntilUtc']==UNTIL,'AuthorizationDeadlineMismatch')
-    end=dt.datetime.fromisoformat(UNTIL.replace('Z','+00:00'))
-    seconds=(end-(now or utc())).total_seconds()
-    require(seconds>=minimum,'InsufficientAuthorizationWindow')
-    return int(seconds)
+def authorization(auth):
+    # Missing/blank dates never grant permission. This explicit mode is bound to one transition.
+    require(auth.get('AuthorizationMode')==AUTHORIZATION_MODE and 'AuthorizedUntilUtc' not in auth,'ExplicitTaskAuthorizationRequired')
+    require(auth.get('Host')==HOST and auth.get('HostFingerprint')==PIN,'AuthorizationHostMismatch')
+    require(auth.get('Closed') is False and auth.get('Cancelled') is False
+            and auth.get('State') in ('Authorized','Claimed'),'AuthorizationNotActive')
+    if auth['State']=='Claimed':
+        require(re.fullmatch('[0-9]+',str(auth.get('AuthorizedActionRunId',''))) is not None
+                and auth.get('ClaimedActionRunId')==auth['AuthorizedActionRunId'],'ActionAttemptMismatch')
 
-def context(run, commit, minimum=0, claimed=True, allow_expired=False):
+def context(run, commit, claimed=True):
     require(re.fullmatch(r'lf-cutover-[A-Za-z0-9-]+',run) and re.fullmatch(r'[0-9a-f]{40}',commit),'InvalidTransitionIdentity')
     s=AUTH.lstat(); require(stat.S_ISREG(s.st_mode) and s.st_uid==0 and stat.S_IMODE(s.st_mode)==0o600,'UntrustedAuthorizationFile')
     auth=json.loads(AUTH.read_text())
-    require(auth['RunId']==run and auth['CandidateCommit']==commit and auth['HostFingerprint']==PIN and not auth.get('Closed'),'AuthorizationBindingMismatch')
-    if not allow_expired: remaining(auth,minimum)
-    if claimed: require(auth.get('ClaimedActionRunId')==os.environ.get('LARAFASHION_ACTION_RUN_ID') and re.fullmatch(r'[0-9]+',auth['ClaimedActionRunId']),'ActionAttemptMismatch')
+    authorization(auth)
+    require(auth['RunId']==run and auth['CandidateCommit']==commit,'AuthorizationBindingMismatch')
+    if claimed: require(auth['State']=='Claimed' and auth.get('ClaimedActionRunId')==os.environ.get('LARAFASHION_ACTION_RUN_ID')
+                        and os.environ.get('LARAFASHION_AUTHORIZATION_MODE')==AUTHORIZATION_MODE,'ActionAttemptMismatch')
     root=BASE/'backups/first-transition'/run
     require(root.is_dir() and not root.is_symlink() and root.stat().st_uid==1001 and stat.S_IMODE(root.stat().st_mode)==0o700,'UntrustedTransitionRoot')
     return auth,root
@@ -217,13 +222,28 @@ def current_stamp():
 
 def main():
     require(os.geteuid()==0,'RootEvidenceProbeRequired')
-    op,run,commit=sys.argv[1:4]; auth,root=context(run,commit,0,claimed=op not in ('claim','prepare','practice-package','verify-receipt'),allow_expired=op=='close')
+    op,run,commit=sys.argv[1:4]; auth,root=context(run,commit,claimed=op not in ('claim','prepare','practice-package','verify-receipt','bind-action','transport-preflight','cancel'))
     cert=pathlib.Path(auth['RecipientCertificate']); require(digest(cert)==auth['RecipientCertificateSha256'],'RecipientCertificateChanged')
-    if op=='claim':
-        remaining(auth,3600); require(not auth.get('ClaimedActionRunId'),'AuthorizationAlreadyConsumed')
+    if op=='bind-action':
+        action=sys.argv[4]; require(re.fullmatch('[0-9]+',action) and auth['State']=='Authorized'
+                and not auth.get('AuthorizedActionRunId') and not auth.get('ClaimedActionRunId'),'AuthorizationAlreadyBound')
+        auth['AuthorizedActionRunId']=action; save(AUTH,auth); event(root,'ActionAuthorized',ActionRunId=action)
+    elif op in ('claim','transport-preflight'):
+        require(auth['State']=='Authorized' and not auth.get('ClaimedActionRunId'),'AuthorizationAlreadyConsumed')
         action=os.environ.get('LARAFASHION_ACTION_RUN_ID',''); require(re.fullmatch('[0-9]+',action),'GitHubActionRunRequired')
-        auth['ClaimedActionRunId']=action; auth['ClaimedAtUtc']=stamp(); save(AUTH,auth); event(root,'AuthorizationClaimed',ActionRunId=action,CandidateCommit=commit)
-    elif op=='deadline': remaining(auth,int(sys.argv[4]))
+        require(auth.get('AuthorizedActionRunId')==action and os.environ.get('LARAFASHION_AUTHORIZATION_MODE')==AUTHORIZATION_MODE,'ActionAttemptMismatch')
+        if op=='claim':
+            auth['State']='Claimed'; auth['ClaimedActionRunId']=action; auth['ClaimedAtUtc']=stamp(); save(AUTH,auth); event(root,'AuthorizationClaimed',ActionRunId=action,CandidateCommit=commit)
+        else:
+            # Real Actions authentication, limited read-only evidence before Git/stop/migration.
+            manifest=json.loads((root/'legacy-recovery.json').read_text()); pid=int(command('systemctl','show','larafashion.service','-p','MainPID','--value'))
+            response=urllib.request.build_opener(NoRedirect).open('http://127.0.0.1:5000/health',timeout=5)
+            legacy_validate(manifest,process_observation(pid),response.read(4096),response.status)
+            require(not ENV_FILE.exists() and not DROPIN.exists() and not MARKER.exists(),'UnexpectedExistingTransitionActivation')
+    elif op=='check': authorization(auth)
+    elif op=='cancel':
+        require(auth['State']=='Authorized' and not auth.get('ClaimedActionRunId'),'ClaimedAttemptNeedsInspection')
+        auth.update(State='Cancelled',Cancelled=True,Closed=True,ClosedAtUtc=stamp()); save(AUTH,auth); event(root,'AuthorizationCancelled')
     elif op=='writers':
         require(command('systemctl','show','larafashion.service','-p','MainPID','--value')=='0','PrimaryWriterStillPresent')
         group=command('systemctl','show','larafashion.service','-p','ControlGroup','--value')
@@ -263,11 +283,11 @@ def main():
         require(inventory(previous)==manifest['ApplicationFiles'] and digest(previous/'LaraFashion.dll')==LEGACY_DLL and schema(snapshot)==manifest['SchemaDigest'],'LegacyRecoveryPairMismatch')
     elif op=='practice-package': package(root,None,cert,'practice')
     elif op=='recovery-package':
-        remaining(auth,2700); snapshot=pathlib.Path(sys.argv[4]); require(snapshot.is_file() and not snapshot.is_symlink(),'MissingCutoverSnapshot')
+        snapshot=pathlib.Path(sys.argv[4]); require(snapshot.is_file() and not snapshot.is_symlink(),'MissingCutoverSnapshot')
         require(schema(snapshot)==schema(DB),'CutoverSnapshotSchemaMismatch'); package(root,snapshot,cert,'cutover')
     elif op=='verify-receipt': receipt(root,sys.argv[4])
     elif op=='activate':
-        remaining(auth,2100); receipt(root,'cutover'); event(root,'ConfigurationActivationAttempted')
+        receipt(root,'cutover'); event(root,'ConfigurationActivationAttempted')
         require(not ENV_FILE.exists() and not DROPIN.exists(),'ActivationDestinationChanged')
         require(all(digest(p)==r['Sha256'] for r in json.loads((root/'original-config-manifest.json').read_text()) for p in [pathlib.Path(r['Path'])]),'OriginalConfigChangedBeforeActivation')
         if not ENV_FILE.parent.exists(): ENV_FILE.parent.mkdir(mode=0o750); os.chown(ENV_FILE.parent,0,1001)
@@ -312,9 +332,9 @@ def main():
         os.chmod(path,0o600); encrypt(path,root/'after.cms',cert)
         event(root,'PostUpgradeBackupVerified',SnapshotSha256=digest(path),EncryptedSha256=digest(root/'after.cms'),CaptureEndedUtc=stamp())
     elif op=='close':
-        auth['Closed']=True; auth['ClosedAtUtc']=stamp(); save(AUTH,auth); event(root,'AuthorizationClosed')
+        auth['State']='Closed'; auth['Closed']=True; auth['ClosedAtUtc']=stamp(); save(AUTH,auth); event(root,'AuthorizationClosed')
     else: raise RuntimeError('UnknownFirstTransitionOperation')
-    print(json.dumps({'Success':True,'Operation':op,'RunId':run,'Utc':stamp(),'RemainingSeconds':remaining(auth,0) if op!='close' else None}))
+    print(json.dumps({'Success':True,'Operation':op,'RunId':run,'Utc':stamp(),'AuthorizationMode':AUTHORIZATION_MODE}))
 
 if __name__=='__main__':
     try: main()

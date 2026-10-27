@@ -7,9 +7,9 @@ umask 077
 [[ "${LARAFASHION_TRANSITION_RUN_ID:-}" =~ ^lf-cutover-[A-Za-z0-9-]+$ ]]
 [[ "${LARAFASHION_ACTION_RUN_ID:-}" =~ ^[0-9]+$ ]]
 [[ "${LARAFASHION_FIRST_TRANSITION:-}" == 1 ]]
-[[ "${AUTHORIZED_UNTIL_UTC:-}" == 2026-10-11T23:38:00Z ]]
+[[ "${LARAFASHION_AUTHORIZATION_MODE:-}" == UntilTransitionClosed ]]
+[[ "${SSH_HOST:-}" == 82.70.208.68 ]]
 [[ "${SSH_HOST_FINGERPRINT:-}" == SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws ]]
-(( $(date -u -d "$AUTHORIZED_UNTIL_UTC" +%s) - $(date -u +%s) >= 3600 ))
 [[ -n "${SSH_KEY:-}" && -d "${RUNNER_TEMP:-}" ]]
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 [[ -f "$SCRIPT_DIR/actions-remote.sh" ]]
@@ -62,9 +62,17 @@ Host 82.70.208.68
     ServerAliveCountMax 3
 EOF
 # Fixed, validated non-secret fields only. The private key stays on this ephemeral runner.
-{
-    for name in DEPLOY_COMMIT LARAFASHION_FIRST_TRANSITION LARAFASHION_TRANSITION_RUN_ID LARAFASHION_ACTION_RUN_ID AUTHORIZED_UNTIL_UTC; do
+fields() {
+    for name in DEPLOY_COMMIT LARAFASHION_FIRST_TRANSITION LARAFASHION_TRANSITION_RUN_ID LARAFASHION_ACTION_RUN_ID LARAFASHION_AUTHORIZATION_MODE; do
         printf 'export %s=%q\n' "$name" "${!name}"
     done
+}
+# Test the actual Actions key with a read-only command, never a full deploy as a probe.
+{
+    fields
+    cat -- "$SCRIPT_DIR/actions-preflight.sh"
+} | ssh -F "$SSH_TMP/config" 82.70.208.68 bash -s
+{
+    fields
     cat -- "$SCRIPT_DIR/actions-remote.sh"
 } | ssh -F "$SSH_TMP/config" 82.70.208.68 bash -s

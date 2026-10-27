@@ -53,7 +53,7 @@ foreach ($folder in @('LaraFashion','LaraFashion.IntegrationTests')) {
 }
 $files += Get-ChildItem -LiteralPath $repo -File | Where-Object { $_.Name -match '^(Directory\.Build\.(props|targets)|global\.json|LaraFashion\.slnx|\.gitattributes)$' }
 $files += Get-Item -LiteralPath (Join-Path $repo '.config/dotnet-tools.json'),(Join-Path $repo '.github/workflows/deploy.yml'),(Join-Path $repo 'deploy/deploy-production.sh')
-$files += Get-Item -LiteralPath (Join-Path $repo 'deploy/first-transition.py'),(Join-Path $repo 'deploy/actions-ssh.sh'),(Join-Path $repo 'deploy/actions-remote.sh')
+$files += Get-Item -LiteralPath (Join-Path $repo 'deploy/first-transition.py'),(Join-Path $repo 'deploy/actions-ssh.sh'),(Join-Path $repo 'deploy/actions-remote.sh'),(Join-Path $repo 'deploy/actions-preflight.sh')
 $files += Get-ChildItem -LiteralPath $PSScriptRoot -File | Where-Object { $_.Extension -in @('.py','.sh','.ps1') }
 $files = @($files | Sort-Object FullName -Unique)
 $manifest = @()

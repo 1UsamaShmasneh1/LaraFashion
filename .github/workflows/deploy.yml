@@ -18,9 +18,9 @@
           "description": "Exact validated full commit SHA",
           "type": "string"
         },
-        "authorized_until_utc": {
+        "authorization_mode": {
           "required": true,
-          "description": "Fixed authorization end in UTC",
+          "description": "Explicit UntilTransitionClosed authorization for this transition only",
           "type": "string"
         },
         "host_fingerprint": {
@@ -62,7 +62,7 @@
         },
         {
           "name": "Validate workflow and Bash syntax",
-          "run": "python3 -m json.tool .github/workflows/deploy.yml >/dev/null\nbash -n deploy/deploy-production.sh deploy/actions-ssh.sh deploy/actions-remote.sh\nbash -n deploy/tests/run-harness.sh\npython3 -m py_compile deploy/tests/harness.py\npython3 -m py_compile deploy/first-transition.py\nsudo python3 deploy/tests/first-transition-tests.py\npython3 deploy/tests/ssh-transport.py"
+          "run": "python3 -m json.tool .github/workflows/deploy.yml >/dev/null\nbash -n deploy/deploy-production.sh deploy/actions-ssh.sh deploy/actions-remote.sh deploy/actions-preflight.sh\nbash -n deploy/tests/run-harness.sh\npython3 -m py_compile deploy/tests/harness.py\npython3 -m py_compile deploy/first-transition.py\nsudo python3 deploy/tests/first-transition-tests.py\npython3 deploy/tests/ssh-transport.py"
         },
         {
           "name": "Test safe checkout with isolated local Git fixtures",
@@ -107,15 +107,16 @@
       "timeout-minutes": 240,
       "steps": [
         {
-          "name": "Require exact SHA and one bounded first-transition authorization",
+          "name": "Require exact SHA and explicit task authorization",
           "env": {
             "SSH_HOST_FINGERPRINT": "${{ inputs.host_fingerprint }}",
             "TRANSITION_RUN_ID": "${{ inputs.run_id }}",
             "DEPLOY_COMMIT": "${{ github.sha }}",
-            "AUTHORIZED_UNTIL_UTC": "${{ inputs.authorized_until_utc }}",
+            "LARAFASHION_AUTHORIZATION_MODE": "${{ inputs.authorization_mode }}",
+            "SSH_HOST": "82.70.208.68",
             "REQUESTED_COMMIT": "${{ inputs.commit }}"
           },
-          "run": "set +x\nset -Eeuo pipefail\n[[ \"$DEPLOY_COMMIT\" =~ ^[0-9a-f]{40}$ && \"$REQUESTED_COMMIT\" == \"$DEPLOY_COMMIT\" ]]\n[[ \"$TRANSITION_RUN_ID\" =~ ^lf-cutover-[A-Za-z0-9-]+$ ]]\n[[ \"$AUTHORIZED_UNTIL_UTC\" == 2026-10-11T23:38:00Z ]]\n[[ \"$SSH_HOST_FINGERPRINT\" == SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws ]]\n(( $(date -u -d \"$AUTHORIZED_UNTIL_UTC\" +%s) - $(date -u +%s) >= 3600 ))"
+          "run": "set +x\nset -Eeuo pipefail\n[[ \"$DEPLOY_COMMIT\" =~ ^[0-9a-f]{40}$ && \"$REQUESTED_COMMIT\" == \"$DEPLOY_COMMIT\" ]]\n[[ \"$TRANSITION_RUN_ID\" =~ ^lf-cutover-[A-Za-z0-9-]+$ ]]\n[[ \"$LARAFASHION_AUTHORIZATION_MODE\" == UntilTransitionClosed ]]\n[[ \"$SSH_HOST\" == 82.70.208.68 ]]\n[[ \"$SSH_HOST_FINGERPRINT\" == SHA256:PY1p4k7jJ1WXl+Mz2ze1wUFQX9oEfM4YKsBAO6gRKws ]]"
         },
         {
           "name": "Check out verified transport",
@@ -129,7 +130,8 @@
           "name": "Deploy verified SHA through one deployment script",
           "env": {
             "LARAFASHION_FIRST_TRANSITION": "1",
-            "AUTHORIZED_UNTIL_UTC": "${{ inputs.authorized_until_utc }}",
+            "LARAFASHION_AUTHORIZATION_MODE": "${{ inputs.authorization_mode }}",
+            "SSH_HOST": "82.70.208.68",
             "DEPLOY_COMMIT": "${{ github.sha }}",
             "LARAFASHION_ACTION_RUN_ID": "${{ github.run_id }}",
             "LARAFASHION_TRANSITION_RUN_ID": "${{ inputs.run_id }}",
