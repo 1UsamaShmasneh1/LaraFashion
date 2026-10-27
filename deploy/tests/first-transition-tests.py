@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Synthetic policy and real filesystem/crypto tests; no SSH, service or production access."""
-import contextlib, copy, hashlib, importlib.util, io, json, os, pathlib, shutil, subprocess, sys, tempfile
+import contextlib, copy, hashlib, importlib.util, io, json, os, pathlib, shlex, shutil, stat, subprocess, sys, tempfile
 BASE=pathlib.Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('first_transition',BASE/'deploy/first-transition.py')
 m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
@@ -79,6 +79,56 @@ m.save(m.AUTH,record); assert invoke('cancel')['Success']; passed('unclaimed-aut
 rejects(lambda:invoke('claim')); passed('cancelled-record-cannot-replay')
 m.AUTH.unlink(); rejects(lambda:m.context(run_id,commit,claimed=False)); passed('missing-root-authorization-rejected')
 m.AUTH,m.BASE=saved_auth,saved_base
+# Real filesystem regression: appsettings belongs to the renamed original release, never the new publish.
+saved_paths={name:getattr(m,name) for name in ('BASE','LIVE','AUTH','ENV_FILE','DROPIN','MARKER')}
+saved_command,saved_run=m.command,m.subprocess.run
+try:
+    m.BASE=root/'activation/persistent'; m.LIVE=m.BASE/'publish'; m.AUTH=root/'activation/authorization.json'
+    m.ENV_FILE=root/'activation/etc/runtime.env'; m.DROPIN=root/'activation/system/service.d/transition.conf'; m.MARKER=m.BASE/'data/maintenance'
+    m.LIVE.mkdir(parents=True);m.MARKER.parent.mkdir();(m.BASE/'releases').mkdir();m.DROPIN.parent.parent.mkdir(parents=True)
+    old_settings=m.LIVE/'appsettings.json';old_settings.write_text('{"SyntheticOnly":true}')
+    (m.LIVE/'LaraFashion.dll').write_bytes(b'synthetic previous application')
+    original_files=m.inventory(m.LIVE)
+    unit=root/'activation/etc/old.service';unit.parent.mkdir();unit.write_text('[Service]\nUser=synthetic\n')
+    def config_row(path):
+        s=path.stat();return dict(Path=str(path),Sha256=m.digest(path),Mode=stat.S_IMODE(s.st_mode),Uid=s.st_uid,Gid=s.st_gid)
+    config_rows=[config_row(unit),config_row(old_settings)]
+    activation_root=m.BASE/'backups/first-transition'/run_id;activation_root.mkdir(parents=True);activation_root.chmod(0o700);os.chown(activation_root,1001,1001)
+    m.save(activation_root/'legacy-recovery.json',dict(ApplicationFiles=original_files))
+    m.save(activation_root/'original-config-manifest.json',config_rows)
+    previous=m.BASE/'releases/previous-synthetic';m.LIVE.rename(previous);m.LIVE.mkdir();(m.LIVE/'LaraFashion.dll').write_bytes(b'synthetic new candidate')
+    assert not (m.LIVE/'appsettings.json').exists()
+    m.verify_original_configuration(activation_root,previous);passed('renamed-original-config-verified-with-no-appsettings-in-candidate')
+    outside=root/'outside-previous';shutil.copytree(previous,outside)
+    rejects(lambda:m.verify_original_configuration(activation_root,outside));passed('previous-config-outside-release-root-refused')
+    linked=m.BASE/'releases/previous-link';linked.symlink_to(previous,target_is_directory=True)
+    rejects(lambda:m.verify_original_configuration(activation_root,linked));passed('symlink-previous-release-refused')
+    original=unit.read_bytes();unit.write_bytes(b'changed unit')
+    rejects(lambda:m.verify_original_configuration(activation_root,previous));passed('changed-original-unit-refused-after-release-swap');unit.write_bytes(original)
+    previous_settings=previous/'appsettings.json';original=previous_settings.read_bytes();previous_settings.write_bytes(b'changed original settings')
+    rejects(lambda:m.verify_original_configuration(activation_root,previous));passed('changed-renamed-auth-config-refused');previous_settings.write_bytes(original)
+    mode=stat.S_IMODE(previous_settings.stat().st_mode);previous_settings.chmod(0o644 if mode!=0o644 else 0o600)
+    rejects(lambda:m.verify_original_configuration(activation_root,previous));passed('changed-original-config-mode-refused');previous_settings.chmod(mode)
+    (activation_root/'runtime.env').write_text("ASPNETCORE_ENVIRONMENT='Production'\nSYNTHETIC_SETTING='not-real-secret'\n")
+    package_dir=activation_root/'cutover';package_dir.mkdir()
+    envelope=package_dir/'synthetic.cms';envelope.write_bytes(b'synthetic envelope for activation-only fixture')
+    transfer=dict(RunId=run_id,Files={'synthetic.cms':{'Sha256':m.digest(envelope)}})
+    m.save(package_dir/'transfer-manifest.json',transfer)
+    m.save(activation_root/'cutover-external-verified.json',dict(RunId=run_id,Package=transfer,DecryptedRestoreVerified=True,AllFilesAndModesVerified=True))
+    m.save(m.AUTH,dict(record,State='Claimed',AuthorizedActionRunId='12345',ClaimedActionRunId='12345'))
+    def reload_only(args,**kwargs):
+        assert args==['systemctl','daemon-reload'];return subprocess.CompletedProcess(args,0)
+    m.subprocess.run=reload_only
+    m.command=lambda *args: str(m.ENV_FILE)+' (ignore_errors=no)' if args==('systemctl','show','larafashion.service','-p','EnvironmentFiles','--value') else (_ for _ in ()).throw(AssertionError('Unexpected service command'))
+    assert invoke('activate',str(previous))['Success']
+    assert m.ENV_FILE.read_bytes()==(activation_root/'runtime.env').read_bytes() and stat.S_IMODE(m.ENV_FILE.stat().st_mode)==0o640
+    assert m.ENV_FILE.stat().st_uid==0 and m.ENV_FILE.stat().st_gid==1001
+    assert m.MARKER.read_text()==run_id+'\n' and m.DROPIN.read_text()=='[Service]\nEnvironmentFile='+str(m.ENV_FILE)+'\n'
+    assert not (m.LIVE/'appsettings.json').exists()
+    passed('actual-activation-after-rename-keeps-auth-outside-candidate-and-private')
+finally:
+    m.command,m.subprocess.run=saved_command,saved_run
+    for name,value in saved_paths.items():setattr(m,name,value)
 m.save(root/'state.json',{'Stage':'BeforeMutation'}); assert json.loads((root/'state.json').read_text())['Stage']=='BeforeMutation'
 assert not (root/'state.json.new').exists(); passed('atomic-fsynced-state-before-mutation')
 source=root/'source'; source.mkdir(); (source/'all-uploads-including-unreferenced').write_bytes(b'synthetic upload bytes'); (source/'app.dll').write_bytes(b'synthetic previous binary')
@@ -114,4 +164,13 @@ preflight=(BASE/'deploy/actions-preflight.sh').read_text()
 assert 'transport-preflight' in preflight and 'deploy-production.sh' not in preflight and 'systemctl stop' not in preflight and 'git fetch' not in preflight
 assert 'date -' not in transport+remote+preflight and 'transition deadline' not in script
 passed('actual-Actions-readonly-preflight-before-coordinated-deployment-and-no-date-bypass')
+readiness=script.split('# BEGIN LEGACY READINESS\n',1)[1].split('# END LEGACY READINESS',1)[0]
+for name,ready_at,expected_calls,success in [('immediate',1,1,True),('delayed',3,3,True),('unavailable',99,12,False)]:
+    count_path=root/('readiness-'+name);count_path.write_text('0')
+    command='set -Eeuo pipefail\n'+readiness+'\ntransition() { n=$(cat '+shlex.quote(str(count_path))+'); n=$((n+1)); echo "$n" > '+shlex.quote(str(count_path))+'; [[ "$n" -ge '+str(ready_at)+' ]]; }\nsleep() { [[ "$1" == 5 ]]; }\nwait_for_legacy_health\n'
+    result=subprocess.run(['bash','-c',command],capture_output=True,text=True,timeout=10)
+    assert (result.returncode==0)==success and int(count_path.read_text())==expected_calls
+    passed('bounded-legacy-readiness-'+name+'-without-another-start-or-restore')
+assert '! wait_for_legacy_health;' in script and 'transition activate "$ROLLBACK_DIR"' in script
+passed('coordinator-uses-typed-readiness-wait-and-explicit-original-release-reference')
 print('FIRST_TRANSITION_RESULT: '+str(count)+'/'+str(count)+' passed; synthetic fixtures retained in '+str(root))

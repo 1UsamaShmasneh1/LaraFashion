@@ -220,6 +220,20 @@ def receipt(root,label):
 def current_stamp():
     return {'Database':digest(DB),'Wal':digest(str(DB)+'-wal') if pathlib.Path(str(DB)+'-wal').exists() else None}
 
+def verify_original_configuration(root, previous):
+    previous=pathlib.Path(previous)
+    require(previous.is_dir() and not previous.is_symlink() and previous.name.startswith('previous-')
+            and previous.parent.resolve()==(BASE/'releases').resolve(),'UntrustedPreviousRelease')
+    manifest=json.loads((root/'legacy-recovery.json').read_text())
+    require(inventory(previous)==manifest['ApplicationFiles'],'PreviousReleaseChangedBeforeActivation')
+    for row in json.loads((root/'original-config-manifest.json').read_text()):
+        original=pathlib.Path(row['Path'])
+        path=previous/original.relative_to(LIVE) if LIVE in original.parents else original
+        s=path.lstat()
+        require(stat.S_ISREG(s.st_mode) and digest(path)==row['Sha256'] and stat.S_IMODE(s.st_mode)==row['Mode']
+                and s.st_uid==row['Uid'] and s.st_gid==row['Gid'],'OriginalConfigChangedBeforeActivation')
+
+
 def main():
     require(os.geteuid()==0,'RootEvidenceProbeRequired')
     op,run,commit=sys.argv[1:4]; auth,root=context(run,commit,claimed=op not in ('claim','prepare','practice-package','verify-receipt','bind-action','transport-preflight','cancel'))
@@ -289,7 +303,8 @@ def main():
     elif op=='activate':
         receipt(root,'cutover'); event(root,'ConfigurationActivationAttempted')
         require(not ENV_FILE.exists() and not DROPIN.exists(),'ActivationDestinationChanged')
-        require(all(digest(p)==r['Sha256'] for r in json.loads((root/'original-config-manifest.json').read_text()) for p in [pathlib.Path(r['Path'])]),'OriginalConfigChangedBeforeActivation')
+        require(len(sys.argv)==5,'PreviousReleaseReferenceRequired')
+        verify_original_configuration(root,pathlib.Path(sys.argv[4]))
         if not ENV_FILE.parent.exists(): ENV_FILE.parent.mkdir(mode=0o750); os.chown(ENV_FILE.parent,0,1001)
         shutil.copy2(root/'runtime.env',ENV_FILE); os.chown(ENV_FILE,0,1001); os.chmod(ENV_FILE,0o640)
         DROPIN.parent.mkdir(mode=0o755,exist_ok=True)

@@ -225,6 +225,16 @@ rename_release() {
     [[ ! -e "$source" && ! -L "$source" && -d "$destination" && ! -L "$destination"
         && "$(stat -c '%d:%i' -- "$destination")" == "$identity" ]]
 }
+# BEGIN LEGACY READINESS
+wait_for_legacy_health() {
+    local attempt
+    for attempt in {1..12}; do
+        if transition legacy-health; then return 0; fi
+        sleep 5
+    done
+    return 1
+}
+# END LEGACY READINESS
 recover() {
     local code="$1"; trap - ERR INT TERM HUP; set +e
     [[ "$FINISHED" == 1 ]] && return
@@ -276,7 +286,7 @@ recover() {
     [[ "$FIRST_TRANSITION" == 0 ]] || transition restore-config || { stage ManualRecoveryRequired; exit "$code"; }
     START_ATTEMPTED=1
     stage RecoveryStartAttempted || { log 'Recovery intent write failed'; exit "$code"; }
-    if ! start_writers || { if [[ "$FIRST_TRANSITION" == 1 ]]; then ! transition legacy-health; else ! wait_for_health --deployment-recovery-health "$LIVE_DIR/release-version.json"; fi; }; then
+    if ! start_writers || { if [[ "$FIRST_TRANSITION" == 1 ]]; then ! wait_for_legacy_health; else ! wait_for_health --deployment-recovery-health "$LIVE_DIR/release-version.json"; fi; }; then
         if ! stop_writers; then log 'Recovery writers not proven stopped'; fi
         stage ManualRecoveryRequired || log 'Recovery state write failed'
         log 'MANUAL_RECOVERY_REQUIRED: recovery start or typed health failed; current DB retained'; exit "$code"
@@ -386,7 +396,7 @@ stage FilesSwapAttempted
 rename_release "$LIVE_DIR" "$ROLLBACK_DIR" || fail 'Previous release rename refused'
 rename_release "$STAGING_DIR" "$LIVE_DIR" || fail 'Candidate release rename refused'
 stage FilesSwapped
-[[ "$FIRST_TRANSITION" == 0 ]] || transition activate
+[[ "$FIRST_TRANSITION" == 0 ]] || transition activate "$ROLLBACK_DIR"
 START_ATTEMPTED=1
 stage ApplicationStartAttempted
 start_writers || fail 'Start failed; do not assume no writes occurred'
